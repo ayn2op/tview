@@ -29,16 +29,14 @@ type Box struct {
 	// If set to true, the background of this box is not cleared while drawing.
 	dontClear bool
 
-	// Visible borders
-	borders Borders
-	// The border style.
+	// Border
+	borders     Borders
+	borderSet   BorderSet
 	borderStyle tcell.Style
 
-	// The title. Only visible if there is a border, too.
-	title string
-	// The title style.
-	titleStyle tcell.Style
-	// The alignment of the title.
+	// Title
+	title          string
+	titleStyle     tcell.Style
 	titleAlignment Alignment
 
 	// Whether or not this box has focus. This is typically ignored for
@@ -71,7 +69,9 @@ func NewBox() *Box {
 		height:          10,
 		innerX:          -1, // Mark as uninitialized.
 		backgroundColor: Styles.PrimitiveBackgroundColor,
-		borderStyle:     tcell.StyleDefault.Foreground(Styles.BorderColor).Background(Styles.PrimitiveBackgroundColor),
+
+		borderStyle: tcell.StyleDefault.Foreground(Styles.BorderColor).Background(Styles.PrimitiveBackgroundColor),
+		borderSet:   BorderSetPlain(),
 
 		titleStyle:     tcell.StyleDefault.Foreground(Styles.TitleColor),
 		titleAlignment: AlignmentCenter,
@@ -310,6 +310,11 @@ func (b *Box) SetBorders(flag Borders) *Box {
 	return b
 }
 
+func (b *Box) SetBorderSet(borderSet BorderSet) *Box {
+	b.borderSet = borderSet
+	return b
+}
+
 // SetBorderStyle sets the box's border style.
 func (b *Box) SetBorderStyle(style tcell.Style) *Box {
 	b.borderStyle = style
@@ -373,61 +378,44 @@ func (b *Box) DrawForSubclass(screen tcell.Screen, p Primitive) {
 
 	// Draw border.
 	if b.borders != BordersNone && b.width >= 2 && b.height >= 2 {
-		var vertical, horizontal, topLeft, topRight, bottomLeft, bottomRight rune
-		if p.HasFocus() {
-			horizontal = BordersSet.HorizontalFocus
-			vertical = BordersSet.VerticalFocus
-			topLeft = BordersSet.TopLeftFocus
-			topRight = BordersSet.TopRightFocus
-			bottomLeft = BordersSet.BottomLeftFocus
-			bottomRight = BordersSet.BottomRightFocus
-		} else {
-			horizontal = BordersSet.Horizontal
-			vertical = BordersSet.Vertical
-			topLeft = BordersSet.TopLeft
-			topRight = BordersSet.TopRight
-			bottomLeft = BordersSet.BottomLeft
-			bottomRight = BordersSet.BottomRight
-		}
-
 		if b.borders.Has(BordersTop) {
 			for x := b.x + 1; x < b.x+b.width-1; x++ {
-				screen.SetContent(x, b.y, horizontal, nil, b.borderStyle)
+				screen.SetContent(x, b.y, b.borderSet.Top, nil, b.borderStyle)
 			}
 		}
 
 		if b.borders.Has(BordersBottom) {
 			for x := b.x + 1; x < b.x+b.width-1; x++ {
-				screen.SetContent(x, b.y+b.height-1, horizontal, nil, b.borderStyle)
+				screen.SetContent(x, b.y+b.height-1, b.borderSet.Bottom, nil, b.borderStyle)
 			}
 		}
 
 		if b.borders.Has(BordersLeft) {
 			for y := b.y + 1; y < b.y+b.height-1; y++ {
-				screen.SetContent(b.x, y, vertical, nil, b.borderStyle)
+				screen.SetContent(b.x, y, b.borderSet.Left, nil, b.borderStyle)
 			}
 		}
 
 		if b.borders.Has(BordersRight) {
 			for y := b.y + 1; y < b.y+b.height-1; y++ {
-				screen.SetContent(b.x+b.width-1, y, vertical, nil, b.borderStyle)
+				screen.SetContent(b.x+b.width-1, y, b.borderSet.Right, nil, b.borderStyle)
 			}
 		}
 
 		if b.borders.Has(BordersTop | BordersLeft) {
-			screen.SetContent(b.x, b.y, topLeft, nil, b.borderStyle)
+			screen.SetContent(b.x, b.y, b.borderSet.TopLeft, nil, b.borderStyle)
 		}
 
 		if b.borders.Has(BordersTop | BordersRight) {
-			screen.SetContent(b.x+b.width-1, b.y, topRight, nil, b.borderStyle)
+			screen.SetContent(b.x+b.width-1, b.y, b.borderSet.TopRight, nil, b.borderStyle)
 		}
 
 		if b.borders.Has(BordersBottom | BordersLeft) {
-			screen.SetContent(b.x, b.y+b.height-1, bottomLeft, nil, b.borderStyle)
+			screen.SetContent(b.x, b.y+b.height-1, b.borderSet.BottomLeft, nil, b.borderStyle)
 		}
 
 		if b.borders.Has(BordersBottom | BordersRight) {
-			screen.SetContent(b.x+b.width-1, b.y+b.height-1, bottomRight, nil, b.borderStyle)
+			screen.SetContent(b.x+b.width-1, b.y+b.height-1, b.borderSet.BottomRight, nil, b.borderStyle)
 		}
 	}
 

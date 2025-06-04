@@ -591,11 +591,11 @@ ItemLoop:
 				}
 				by := item.y - 1
 				if by >= 0 && by < screenHeight {
-					PrintJoinedSemigraphics(screen, bx, by, BordersSet.Horizontal, borderStyle)
+					PrintJoinedSemigraphics(screen, bx, by, g.borderSet.Top, borderStyle)
 				}
 				by = item.y + item.h
 				if by >= 0 && by < screenHeight {
-					PrintJoinedSemigraphics(screen, bx, by, BordersSet.Horizontal, borderStyle)
+					PrintJoinedSemigraphics(screen, bx, by, g.borderSet.Bottom, borderStyle)
 				}
 			}
 			for by := item.y; by < item.y+item.h; by++ { // Left/right lines.
@@ -604,28 +604,28 @@ ItemLoop:
 				}
 				bx := item.x - 1
 				if bx >= 0 && bx < screenWidth {
-					PrintJoinedSemigraphics(screen, bx, by, BordersSet.Vertical, borderStyle)
+					PrintJoinedSemigraphics(screen, bx, by, g.borderSet.Left, borderStyle)
 				}
 				bx = item.x + item.w
 				if bx >= 0 && bx < screenWidth {
-					PrintJoinedSemigraphics(screen, bx, by, BordersSet.Vertical, borderStyle)
+					PrintJoinedSemigraphics(screen, bx, by, g.borderSet.Right, borderStyle)
 				}
 			}
 			bx, by := item.x-1, item.y-1 // Top-left corner.
 			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				PrintJoinedSemigraphics(screen, bx, by, BordersSet.TopLeft, borderStyle)
+				PrintJoinedSemigraphics(screen, bx, by, g.borderSet.TopLeft, borderStyle)
 			}
 			bx, by = item.x+item.w, item.y-1 // Top-right corner.
 			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				PrintJoinedSemigraphics(screen, bx, by, BordersSet.TopRight, borderStyle)
+				PrintJoinedSemigraphics(screen, bx, by, g.borderSet.TopRight, borderStyle)
 			}
 			bx, by = item.x-1, item.y+item.h // Bottom-left corner.
 			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				PrintJoinedSemigraphics(screen, bx, by, BordersSet.BottomLeft, borderStyle)
+				PrintJoinedSemigraphics(screen, bx, by, g.borderSet.BottomLeft, borderStyle)
 			}
 			bx, by = item.x+item.w, item.y+item.h // Bottom-right corner.
 			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				PrintJoinedSemigraphics(screen, bx, by, BordersSet.BottomRight, borderStyle)
+				PrintJoinedSemigraphics(screen, bx, by, g.borderSet.BottomRight, borderStyle)
 			}
 		}
 	}

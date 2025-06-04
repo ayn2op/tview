@@ -1,47 +1,67 @@
 package tview
 
-// BordersSet defines various borders used when primitives are drawn.
-// These may be changed to accommodate a different look and feel.
-var BordersSet = struct {
-	Horizontal  rune
-	Vertical    rune
+// BorderSet defines various borders used when primitives are drawn.
+type BorderSet struct {
+	Top         rune
+	Bottom      rune
+	Left        rune
+	Right       rune
 	TopLeft     rune
 	TopRight    rune
 	BottomLeft  rune
 	BottomRight rune
+}
 
-	LeftT   rune
-	RightT  rune
-	TopT    rune
-	BottomT rune
-	Cross   rune
+func BorderSetPlain() BorderSet {
+	return BorderSet{
+		Top:         BoxDrawingsLightHorizontal,
+		Bottom:      BoxDrawingsLightHorizontal,
+		Left:        BoxDrawingsLightVertical,
+		Right:       BoxDrawingsLightVertical,
+		TopLeft:     BoxDrawingsLightDownAndRight,
+		TopRight:    BoxDrawingsLightDownAndLeft,
+		BottomLeft:  BoxDrawingsLightUpAndRight,
+		BottomRight: BoxDrawingsLightUpAndLeft,
+	}
+}
 
-	HorizontalFocus  rune
-	VerticalFocus    rune
-	TopLeftFocus     rune
-	TopRightFocus    rune
-	BottomLeftFocus  rune
-	BottomRightFocus rune
-}{
-	Horizontal:  BoxDrawingsLightHorizontal,
-	Vertical:    BoxDrawingsLightVertical,
-	TopLeft:     BoxDrawingsLightDownAndRight,
-	TopRight:    BoxDrawingsLightDownAndLeft,
-	BottomLeft:  BoxDrawingsLightUpAndRight,
-	BottomRight: BoxDrawingsLightUpAndLeft,
+func BorderSetRounded() BorderSet {
+	return BorderSet{
+		Top:         BoxDrawingsLightHorizontal,
+		Bottom:      BoxDrawingsLightHorizontal,
+		Left:        BoxDrawingsLightVertical,
+		Right:       BoxDrawingsLightVertical,
+		TopLeft:     BoxDrawingsLightArcDownAndRight,
+		TopRight:    BoxDrawingsLightArcDownAndLeft,
+		BottomLeft:  BoxDrawingsLightArcUpAndRight,
+		BottomRight: BoxDrawingsLightArcUpAndLeft,
+	}
+}
 
-	LeftT:   BoxDrawingsLightVerticalAndRight,
-	RightT:  BoxDrawingsLightVerticalAndLeft,
-	TopT:    BoxDrawingsLightDownAndHorizontal,
-	BottomT: BoxDrawingsLightUpAndHorizontal,
-	Cross:   BoxDrawingsLightVerticalAndHorizontal,
+func BorderSetThick() BorderSet {
+	return BorderSet{
+		Top:         BoxDrawingsHeavyHorizontal,
+		Bottom:      BoxDrawingsHeavyHorizontal,
+		Left:        BoxDrawingsHeavyVertical,
+		Right:       BoxDrawingsHeavyVertical,
+		TopLeft:     BoxDrawingsHeavyDownAndRight,
+		TopRight:    BoxDrawingsHeavyDownAndLeft,
+		BottomLeft:  BoxDrawingsHeavyUpAndRight,
+		BottomRight: BoxDrawingsHeavyUpAndLeft,
+	}
+}
 
-	HorizontalFocus:  BoxDrawingsDoubleHorizontal,
-	VerticalFocus:    BoxDrawingsDoubleVertical,
-	TopLeftFocus:     BoxDrawingsDoubleDownAndRight,
-	TopRightFocus:    BoxDrawingsDoubleDownAndLeft,
-	BottomLeftFocus:  BoxDrawingsDoubleUpAndRight,
-	BottomRightFocus: BoxDrawingsDoubleUpAndLeft,
+func BorderSetDouble() BorderSet {
+	return BorderSet{
+		Top:         BoxDrawingsDoubleHorizontal,
+		Bottom:      BoxDrawingsDoubleHorizontal,
+		Left:        BoxDrawingsDoubleVertical,
+		Right:       BoxDrawingsDoubleVertical,
+		TopLeft:     BoxDrawingsDoubleDownAndRight,
+		TopRight:    BoxDrawingsDoubleDownAndLeft,
+		BottomLeft:  BoxDrawingsDoubleUpAndRight,
+		BottomRight: BoxDrawingsDoubleUpAndLeft,
+	}
 }
 
 type Borders uint

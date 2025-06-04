@@ -25,7 +25,7 @@ func BorderSetPlain() BorderSet {
 	}
 }
 
-func BorderSetRounded() BorderSet {
+func BorderSetRound() BorderSet {
 	return BorderSet{
 		Top:         BoxDrawingsLightHorizontal,
 		Bottom:      BoxDrawingsLightHorizontal,

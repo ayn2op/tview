@@ -2,6 +2,7 @@ package tview
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"slices"
 )
 
 // page represents one page of a Pages object.
@@ -94,7 +95,7 @@ func (p *Pages) AddAndSwitchToPage(item Primitive, resize bool) int {
 // visible page, visibility is assigned to the last page.
 func (p *Pages) RemovePage(index int) *Pages {
 	hasFocus := p.HasFocus()
-	p.pages = append(p.pages[:index], p.pages[index+1:]...)
+	p.pages = slices.Delete(p.pages, index, index+1)
 	if p.pages[index].visible {
 		if p.changed != nil {
 			p.changed()
@@ -167,7 +168,7 @@ func (p *Pages) SwitchToPage(index int) *Pages {
 // visible).
 func (p *Pages) SendToFront(index int) *Pages {
 	if int(index) < len(p.pages)-1 {
-		p.pages = append(append(p.pages[:index], p.pages[index+1:]...), p.pages[index])
+		p.pages = append(slices.Delete(p.pages, index, index+1), p.pages[index])
 	}
 	if p.pages[index].visible && p.changed != nil {
 		p.changed()

@@ -612,6 +612,62 @@ func (t *TextArea) GetCursor() (fromRow, fromColumn, toRow, toColumn int) {
 	return
 }
 
+// GetWordUnderCursor returns the absolute cursor position and the word under
+// the cursor (upto but not including the character under the cursor).
+// A word is something that all of its runes satisfy f(r).
+// The last rune that didn't satisfy f(r) is also returned.
+func (t *TextArea) GetWordUnderCursor(f func(rune) bool) (int, string, rune) {
+	if t.length == 0 || t.cursor.pos[0] == t.spans[0].next && t.cursor.pos[1] == 0 {
+		return 0, "", 0
+	}
+
+	pos := t.cursor.pos[1]
+	var word strings.Builder
+	var lastRune rune
+	var s string
+	for spanIndex := t.spans[0].next; spanIndex != 1; spanIndex = t.spans[spanIndex].next {
+		span := t.spans[spanIndex]
+		length := span.length
+		if length < 0 {
+			s = t.initialText[span.offset : span.offset-length]
+		} else {
+			s = t.editText.String()[span.offset : span.offset+length]
+		}
+		if t.cursor.pos[0] == spanIndex {
+			index := t.cursor.pos[1]
+			for _, r := range s {
+				index--
+				if index < 0 {
+					break
+				}
+				if f(r) {
+					word.WriteRune(r)
+				} else {
+					lastRune = r
+					word.Reset()
+				}
+			}
+			return pos, word.String(), lastRune
+		}
+		if length < 0 {
+			pos -= length
+		} else {
+			pos += length
+		}
+		for _, r := range s {
+			if f(r) {
+				word.WriteRune(r)
+			} else {
+				lastRune = r
+				word.Reset()
+			}
+		}
+	}
+	// Opps, we couldn't actually find the cursor
+	// Possible causes: it's at the end of text or at an unknown location
+	return pos, word.String(), lastRune
+}
+
 // GetTextLength returns the string length of the text in the text area.
 func (t *TextArea) GetTextLength() int {
 	return t.length

@@ -16,6 +16,23 @@ type BorderSet struct {
 	RightT      rune
 }
 
+func BorderSetHidden() BorderSet {
+	return BorderSet{
+		Top:         ' ',
+		Bottom:      ' ',
+		Left:        ' ',
+		Right:       ' ',
+		TopLeft:     ' ',
+		TopRight:    ' ',
+		BottomLeft:  ' ',
+		BottomRight: ' ',
+		TopT:        ' ',
+		BottomT:     ' ',
+		LeftT:       ' ',
+		RightT:      ' ',
+	}
+}
+
 func BorderSetPlain() BorderSet {
 	return BorderSet{
 		Top:         BoxDrawingsLightHorizontal,

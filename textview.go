@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
-	colorful "github.com/lucasb-eyer/go-colorful"
 )
 
 // TabSize is the number of spaces with which a tab character will be replaced.
@@ -1241,18 +1240,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 					}
 				}
 				if highlighted {
-					fg, bg, _ := style.Decompose()
-					if bg == t.backgroundColor {
-						r, g, b := fg.RGB()
-						c := colorful.Color{R: float64(r) / 255, G: float64(g) / 255, B: float64(b) / 255}
-						_, _, li := c.Hcl()
-						if li < .5 {
-							bg = tcell.ColorWhite
-						} else {
-							bg = tcell.ColorBlack
-						}
-					}
-					style = style.Background(fg).Foreground(bg)
+					style = style.Reverse(true)
 				}
 
 				// Paint on screen.

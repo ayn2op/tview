@@ -151,9 +151,10 @@ func step(str string, state *stepState, opts stepOptions) (cluster, rest string,
 				state.escapedTagState = etChar
 			}
 		case etChar:
-			if cluster[0] == ']' { // In theory, this should not happen.
+			switch cluster[0] {
+			case ']': // In theory, this should not happen.
 				state.escapedTagState = etNone
-			} else if cluster[0] == '[' { // Starting closing sequence.
+			case '[': // Starting closing sequence.
 				// Swallow the first one.
 				cluster, rest, state.boundaries, state.unisegState = uniseg.StepString(rest, preState)
 				state.grossLength += len(cluster)
@@ -304,11 +305,12 @@ func parseTag(str string, state *stepState) (length int, style tcell.Style, regi
 				}
 			}
 		case tagStateEndForeground:
-			if ch == ']' { // End of tag.
+			switch ch {
+			case ']': // End of tag.
 				tagState = tagStateDoneTag
-			} else if ch == ':' {
+			case ':':
 				tagState = tagStateStartBackground
-			} else { // Invalid tag.
+			default: // Invalid tag.
 				return
 			}
 		case tagStateNumericForeground:
@@ -365,11 +367,12 @@ func parseTag(str string, state *stepState) (length int, style tcell.Style, regi
 				}
 			}
 		case tagStateEndBackground:
-			if ch == ']' { // End of tag.
+			switch ch {
+			case ']': // End of tag.
 				tagState = tagStateDoneTag
-			} else if ch == ':' { // Start of attributes.
+			case ':': // Start of attributes.
 				tagState = tagStateStartAttributes
-			} else { // Invalid tag.
+			default: // Invalid tag.
 				return
 			}
 		case tagStateNumericBackground:
@@ -445,20 +448,22 @@ func parseTag(str string, state *stepState) (length int, style tcell.Style, regi
 				return
 			}
 		case tagStateEndAttributes:
-			if ch == ']' { // End of tag.
+			switch ch {
+			case ']': // End of tag.
 				tagState = tagStateDoneTag
-			} else if ch == ':' { // Start of URL.
+			case ':': // Start of URL.
 				tagState = tagStateStartURL
-			} else { // Invalid tag.
+			default: // Invalid tag.
 				return
 			}
 		case tagStateStartURL:
-			if ch == ']' { // End of tag.
+			switch ch {
+			case ']': // End of tag.
 				tagState = tagStateDoneTag
-			} else if ch == '-' { // Reset URL.
+			case '-': // Reset URL.
 				tStyle = tStyle.Url("").UrlId("")
 				tagState = tagStateEndURL
-			} else { // URL character.
+			default: // URL character.
 				tempStr.Reset()
 				tempStr.WriteByte(ch)
 				tStyle = tStyle.UrlId(strconv.Itoa(int(rand.Uint32()))) // Generate a unique ID for this URL.

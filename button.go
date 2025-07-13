@@ -141,7 +141,7 @@ func (b *Button) Draw(screen tcell.Screen) {
 	}
 	_, backgroundColor, _ := style.Decompose()
 	b.SetBackgroundColor(backgroundColor)
-	b.Box.DrawForSubclass(screen, b)
+	b.DrawForSubclass(screen, b)
 
 	// Draw label.
 	x, y, width, height := b.GetInnerRect()
@@ -184,10 +184,11 @@ func (b *Button) MouseHandler() func(action MouseAction, event *tcell.EventMouse
 		}
 
 		// Process mouse event.
-		if action == MouseLeftDown {
+		switch action {
+		case MouseLeftDown:
 			setFocus(b)
 			consumed = true
-		} else if action == MouseLeftClick {
+		case MouseLeftClick:
 			if b.selected != nil {
 				b.selected()
 			}

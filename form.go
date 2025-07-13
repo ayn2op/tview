@@ -488,7 +488,7 @@ func (f *Form) SetCancelFunc(callback func()) *Form {
 
 // Draw draws this primitive onto the screen.
 func (f *Form) Draw(screen tcell.Screen) {
-	f.Box.DrawForSubclass(screen, f)
+	f.DrawForSubclass(screen, f)
 
 	// Determine the actual item that has focus.
 	if index := f.focusIndex(); index >= 0 {
@@ -594,9 +594,10 @@ func (f *Form) Draw(screen tcell.Screen) {
 
 	// Where do we place them?
 	if !f.horizontal && x+buttonsWidth < rightLimit {
-		if f.buttonsAlignment == AlignmentRight {
+		switch f.buttonsAlignment {
+		case AlignmentRight:
 			x = rightLimit - buttonsWidth
-		} else if f.buttonsAlignment == AlignmentCenter {
+		case AlignmentCenter:
 			x = (x + rightLimit - buttonsWidth) / 2
 		}
 

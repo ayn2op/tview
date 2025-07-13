@@ -237,7 +237,7 @@ func (c *Checkbox) Focus(delegate func(p Primitive)) {
 
 // Draw draws this primitive onto the screen.
 func (c *Checkbox) Draw(screen tcell.Screen) {
-	c.Box.DrawForSubclass(screen, c)
+	c.DrawForSubclass(screen, c)
 
 	// Prepare
 	x, y, width, height := c.GetInnerRect()
@@ -318,10 +318,11 @@ func (c *Checkbox) MouseHandler() func(action MouseAction, event *tcell.EventMou
 
 		// Process mouse event.
 		if y == rectY {
-			if action == MouseLeftDown {
+			switch action {
+			case MouseLeftDown:
 				setFocus(c)
 				consumed = true
-			} else if action == MouseLeftClick {
+			case MouseLeftClick:
 				c.checked = !c.checked
 				if c.changed != nil {
 					c.changed(c.checked)

@@ -75,7 +75,8 @@ func printWithStyle(screen tcell.Screen, text string, x, y, skipWidth, maxWidth 
 	state = &newState
 
 	// Reduce all alignments to AlignLeft.
-	if alignment == AlignmentRight {
+	switch alignment {
+	case AlignmentRight:
 		// Chop off characters on the left until it fits.
 		for len(text) > 0 && textWidth > maxWidth {
 			_, text, state = step(text, state, stepOptionsStyle)
@@ -83,7 +84,7 @@ func printWithStyle(screen tcell.Screen, text string, x, y, skipWidth, maxWidth 
 			start += state.GrossLength()
 		}
 		x, maxWidth = x+maxWidth-textWidth, textWidth
-	} else if alignment == AlignmentCenter {
+	case AlignmentCenter:
 		// Chop off characters on the left until it fits.
 		subtracted := (textWidth - maxWidth) / 2
 		for len(text) > 0 && subtracted > 0 {

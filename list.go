@@ -501,7 +501,7 @@ func (l *List) Clear() *List {
 
 // Draw draws this primitive onto the screen.
 func (l *List) Draw(screen tcell.Screen) {
-	l.Box.DrawForSubclass(screen, l)
+	l.DrawForSubclass(screen, l)
 
 	// Determine the dimensions.
 	x, y, width, height := l.GetInnerRect()

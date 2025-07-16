@@ -305,6 +305,10 @@ func (a *Application) Run() error {
 		} else {
 			a.screen.DisablePaste()
 		}
+
+		if a.title != "" {
+			a.screen.SetTitle(a.title)
+		}
 	}
 
 	// We catch panics to clean up because they mess up the terminal.
@@ -372,6 +376,9 @@ func (a *Application) Run() error {
 				screen.EnablePaste()
 			} else {
 				screen.DisablePaste()
+			}
+			if a.title != "" {
+				screen.SetTitle(a.title)
 			}
 			a.draw()
 		}

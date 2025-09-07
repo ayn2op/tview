@@ -1,8 +1,19 @@
 package tview
 
-import (
-	"github.com/gdamore/tcell/v2"
-)
+import "github.com/gdamore/tcell/v2"
+
+// Borders is a set of various types of characters to use for borders.
+type Borders struct {
+	Top    rune
+	Bottom rune
+	Left   rune
+	Right  rune
+
+	TopLeft     rune
+	TopRight    rune
+	BottomLeft  rune
+	BottomRight rune
+}
 
 // Box implements the Primitive interface with an empty background and optional
 // elements such as a border and a title. Box itself does not hold any content
@@ -39,6 +50,9 @@ type Box struct {
 
 	// The border style.
 	borderStyle tcell.Style
+
+	// The set of borders to use.
+	borders Borders
 
 	// The title. Only visible if there is a border, too.
 	title string
@@ -91,6 +105,17 @@ func NewBox() *Box {
 		borderStyle:     tcell.StyleDefault.Foreground(Styles.BorderColor).Background(Styles.PrimitiveBackgroundColor),
 		titleStyle:      tcell.StyleDefault.Foreground(Styles.TitleColor),
 		titleAlign:      AlignCenter,
+		borders: Borders{
+			Top:    BoxDrawingsLightHorizontal,
+			Bottom: BoxDrawingsLightHorizontal,
+			Left:   BoxDrawingsLightVertical,
+			Right:  BoxDrawingsLightVertical,
+
+			TopLeft:     BoxDrawingsLightDownAndRight,
+			TopRight:    BoxDrawingsLightDownAndLeft,
+			BottomLeft:  BoxDrawingsLightUpAndRight,
+			BottomRight: BoxDrawingsLightUpAndLeft,
+		},
 	}
 	b.Primitive = b
 	return b
@@ -355,6 +380,15 @@ func (b *Box) SetBorderColor(color tcell.Color) *Box {
 	return b
 }
 
+func (b *Box) GetBorders() Borders {
+	return b.borders
+}
+
+func (b *Box) SetBorders(borders Borders) *Box {
+	b.borders = borders
+	return b
+}
+
 // SetBorderAttributes sets the border's style attributes. You can combine
 // different attributes using bitmask operations:
 //
@@ -445,34 +479,18 @@ func (b *Box) DrawForSubclass(screen tcell.Screen, p Primitive) {
 
 	// Draw border.
 	if b.border && b.width >= 2 && b.height >= 2 {
-		var vertical, horizontal, topLeft, topRight, bottomLeft, bottomRight rune
-		if p.HasFocus() {
-			horizontal = Borders.HorizontalFocus
-			vertical = Borders.VerticalFocus
-			topLeft = Borders.TopLeftFocus
-			topRight = Borders.TopRightFocus
-			bottomLeft = Borders.BottomLeftFocus
-			bottomRight = Borders.BottomRightFocus
-		} else {
-			horizontal = Borders.Horizontal
-			vertical = Borders.Vertical
-			topLeft = Borders.TopLeft
-			topRight = Borders.TopRight
-			bottomLeft = Borders.BottomLeft
-			bottomRight = Borders.BottomRight
-		}
 		for x := b.x + 1; x < b.x+b.width-1; x++ {
-			screen.SetContent(x, b.y, horizontal, nil, b.borderStyle)
-			screen.SetContent(x, b.y+b.height-1, horizontal, nil, b.borderStyle)
+			screen.SetContent(x, b.y, b.borders.Top, nil, b.borderStyle)
+			screen.SetContent(x, b.y+b.height-1, b.borders.Bottom, nil, b.borderStyle)
 		}
 		for y := b.y + 1; y < b.y+b.height-1; y++ {
-			screen.SetContent(b.x, y, vertical, nil, b.borderStyle)
-			screen.SetContent(b.x+b.width-1, y, vertical, nil, b.borderStyle)
+			screen.SetContent(b.x, y, b.borders.Left, nil, b.borderStyle)
+			screen.SetContent(b.x+b.width-1, y, b.borders.Right, nil, b.borderStyle)
 		}
-		screen.SetContent(b.x, b.y, topLeft, nil, b.borderStyle)
-		screen.SetContent(b.x+b.width-1, b.y, topRight, nil, b.borderStyle)
-		screen.SetContent(b.x, b.y+b.height-1, bottomLeft, nil, b.borderStyle)
-		screen.SetContent(b.x+b.width-1, b.y+b.height-1, bottomRight, nil, b.borderStyle)
+		screen.SetContent(b.x, b.y, b.borders.TopLeft, nil, b.borderStyle)
+		screen.SetContent(b.x+b.width-1, b.y, b.borders.TopRight, nil, b.borderStyle)
+		screen.SetContent(b.x, b.y+b.height-1, b.borders.BottomLeft, nil, b.borderStyle)
+		screen.SetContent(b.x+b.width-1, b.y+b.height-1, b.borders.BottomRight, nil, b.borderStyle)
 
 		// Draw title.
 		if b.title != "" && b.width >= 4 {

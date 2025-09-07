@@ -13,7 +13,7 @@ const (
 	DitheringFloydSteinberg        // Floyd-Steinberg dithering (the default).
 )
 
-// The number of colors supported by true color terminals (R*G*B = 256*256*256).
+// TrueColor is the number of colors supported by true color terminals (R*G*B = 256*256*256).
 const TrueColor = 16777216
 
 // This map describes what each block element looks like. A 1 bit represents a

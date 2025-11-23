@@ -269,9 +269,9 @@ func (d *DropDown) SetListStyles(unselected, selected tcell.Style) *DropDown {
 }
 
 // SetFormAttributes sets attributes shared by all form items.
-func (d *DropDown) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
+func (d *DropDown) SetFormAttributes(labelWidth int, labelStyle tcell.Style, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
 	d.labelWidth = labelWidth
-	d.SetLabelColor(labelColor)
+	d.SetLabelStyle(labelStyle)
 	d.SetBackgroundColor(bgColor)
 	d.SetFieldStyle(tcell.StyleDefault.Foreground(fieldTextColor).Background(fieldBgColor))
 	return d

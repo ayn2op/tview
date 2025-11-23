@@ -170,9 +170,9 @@ func (c *Checkbox) SetUncheckedString(unchecked string) *Checkbox {
 }
 
 // SetFormAttributes sets attributes shared by all form items.
-func (c *Checkbox) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
+func (c *Checkbox) SetFormAttributes(labelWidth int, labelStyle tcell.Style, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
 	c.labelWidth = labelWidth
-	c.SetLabelColor(labelColor)
+	c.SetLabelStyle(labelStyle)
 	c.backgroundColor = bgColor
 	c.SetFieldTextColor(fieldTextColor)
 	c.SetFieldBackgroundColor(fieldBgColor)

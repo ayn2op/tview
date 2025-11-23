@@ -1037,10 +1037,10 @@ func (t *TextArea) Focus(delegate func(p Primitive)) {
 }
 
 // SetFormAttributes sets attributes shared by all form items.
-func (t *TextArea) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
+func (t *TextArea) SetFormAttributes(labelWidth int, labelStyle tcell.Style, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
 	t.labelWidth = labelWidth
 	t.backgroundColor = bgColor
-	t.labelStyle = t.labelStyle.Foreground(labelColor)
+	t.labelStyle = labelStyle
 	t.textStyle = tcell.StyleDefault.Foreground(fieldTextColor).Background(fieldBgColor)
 	return t
 }

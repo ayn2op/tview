@@ -267,8 +267,8 @@ func (i *InputField) SetAutocompleteUseTags(useTags bool) *InputField {
 }
 
 // SetFormAttributes sets attributes shared by all form items.
-func (i *InputField) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
-	i.textArea.SetFormAttributes(labelWidth, labelColor, bgColor, fieldTextColor, fieldBgColor)
+func (i *InputField) SetFormAttributes(labelWidth int, labelStyle tcell.Style, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
+	i.textArea.SetFormAttributes(labelWidth, labelStyle, bgColor, fieldTextColor, fieldBgColor)
 	return i
 }
 

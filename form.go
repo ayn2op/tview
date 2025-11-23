@@ -26,7 +26,7 @@ type FormItem interface {
 	GetLabel() string
 
 	// SetFormAttributes sets a number of item attributes at once.
-	SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem
+	SetFormAttributes(labelWidth int, labelStyle tcell.Style, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem
 
 	// GetFieldWidth returns the width of the form item's field (the area which
 	// is manipulated by the user) in number of screen cells. A value of 0
@@ -81,8 +81,8 @@ type Form struct {
 	// focus so that the last element that had focus keeps it.
 	focusedElement int
 
-	// The label color.
-	labelColor tcell.Color
+	// The label style.
+	labelStyle tcell.Style
 
 	// The style of the input area.
 	fieldStyle tcell.Style
@@ -111,7 +111,7 @@ func NewForm() *Form {
 	f := &Form{
 		Box:                  box,
 		itemPadding:          1,
-		labelColor:           Styles.SecondaryTextColor,
+		labelStyle:           tcell.StyleDefault.Foreground(Styles.SecondaryTextColor),
 		fieldStyle:           tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.PrimaryTextColor),
 		buttonStyle:          tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.PrimaryTextColor),
 		buttonActivatedStyle: tcell.StyleDefault.Reverse(true),
@@ -142,7 +142,13 @@ func (f *Form) SetHorizontal(horizontal bool) *Form {
 
 // SetLabelColor sets the color of the labels.
 func (f *Form) SetLabelColor(color tcell.Color) *Form {
-	f.labelColor = color
+	f.labelStyle = f.labelStyle.Foreground(color)
+	return f
+}
+
+// SetLabelStyle sets the style of the labels.
+func (f *Form) SetLabelStyle(style tcell.Style) *Form {
+	f.labelStyle = style
 	return f
 }
 
@@ -561,7 +567,7 @@ func (f *Form) Draw(screen tcell.Screen) {
 		fieldTextColor, fieldBackgroundColor, _ := f.fieldStyle.Decompose()
 		item.SetFormAttributes(
 			labelWidth,
-			f.labelColor,
+			f.labelStyle,
 			f.backgroundColor,
 			fieldTextColor,
 			fieldBackgroundColor,

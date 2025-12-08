@@ -1,6 +1,6 @@
 package tview
 
-import "github.com/gdamore/tcell/v2"
+import "github.com/gdamore/tcell/v3"
 
 // Semigraphics provides easy access to Unicode characters for drawing.
 // Using strings with \u escapes to keep the source ASCII-safe.

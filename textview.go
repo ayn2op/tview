@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 )
 
 // TabSize is the number of spaces with which a tab character will be replaced.

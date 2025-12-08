@@ -212,7 +212,7 @@ func (n *TreeNode) SetText(text string) *TreeNode {
 
 // GetColor returns the node's text color.
 func (n *TreeNode) GetColor() tcell.Color {
-	color, _, _ := n.textStyle.Decompose()
+	color := n.textStyle.GetForeground()
 	return color
 }
 

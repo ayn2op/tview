@@ -139,7 +139,7 @@ func (b *Button) Draw(screen tcell.Screen) {
 	if b.HasFocus() && !b.disabled {
 		style = b.activatedStyle
 	}
-	_, backgroundColor, _ := style.Decompose()
+	backgroundColor := style.GetBackground()
 	b.SetBackgroundColor(backgroundColor)
 	b.DrawForSubclass(screen, b)
 

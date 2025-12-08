@@ -1142,7 +1142,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 	t.pageSize = height
 
 	// Draw label.
-	_, labelBg, _ := t.labelStyle.Decompose()
+	labelBg := t.labelStyle.GetBackground()
 	if t.labelWidth > 0 {
 		labelWidth := min(t.labelWidth, width)
 		printWithStyle(screen, t.label, x, y, 0, labelWidth, AlignmentLeft, t.labelStyle, labelBg == tcell.ColorDefault)
@@ -1166,7 +1166,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 	}
 
 	// Draw the text element if necessary.
-	_, bg, _ := t.textStyle.Decompose()
+	bg := t.textStyle.GetBackground()
 	if bg != t.backgroundColor {
 		for row := range height {
 			for column := range width {

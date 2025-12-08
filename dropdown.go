@@ -263,7 +263,7 @@ func (d *DropDown) SetPrefixStyle(style tcell.Style) *DropDown {
 // used in the future.
 func (d *DropDown) SetListStyles(unselected, selected tcell.Style) *DropDown {
 	d.list.SetMainTextStyle(unselected).SetSelectedStyle(selected)
-	_, bg, _ := unselected.Decompose()
+	bg := unselected.GetBackground()
 	d.list.SetBackgroundColor(bg)
 	return d
 }

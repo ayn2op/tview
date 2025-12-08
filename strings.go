@@ -116,7 +116,9 @@ func step(str string, state *stepState, opts stepOptions) (cluster, rest string,
 		}
 	}
 	if state.unisegState < 0 {
-		state.initialForeground, state.initialBackground, state.initialAttributes = state.style.Decompose()
+		state.initialForeground = state.style.GetForeground()
+		state.initialBackground = state.style.GetBackground()
+		state.initialAttributes = state.style.GetAttributes()
 	}
 	if len(str) == 0 {
 		newState = state
@@ -441,7 +443,7 @@ func parseTag(str string, state *stepState, opts stepOptions) (length int, style
 		case tagStateAttributes:
 			if ch == ']' || ch == ':' {
 				flags := tempStr.String()
-				_, _, a := tStyle.Decompose()
+				a := tStyle.GetAttributes()
 				for index := range len(flags) {
 					ch := flags[index]
 					switch {

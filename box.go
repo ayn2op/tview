@@ -441,7 +441,7 @@ func (b *Box) DrawForSubclass(screen tcell.Screen, p Primitive) {
 				xEllipsis = b.x + 1
 			}
 			_, style, _ := screen.Get(xEllipsis, b.y)
-			fg, _, _ := style.Decompose()
+			fg := style.GetForeground()
 			Print(screen, string(SemigraphicsHorizontalEllipsis), xEllipsis, b.y, 1, AlignmentLeft, fg)
 		}
 	}

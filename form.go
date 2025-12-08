@@ -544,7 +544,8 @@ func (f *Form) Draw(screen tcell.Screen) {
 		if x+itemWidth >= rightLimit {
 			itemWidth = rightLimit - x
 		}
-		fieldTextColor, fieldBackgroundColor, _ := f.fieldStyle.Decompose()
+		fieldTextColor := f.fieldStyle.GetForeground()
+		fieldBackgroundColor := f.fieldStyle.GetBackground()
 		item.SetFormAttributes(
 			labelWidth,
 			f.labelColor,

@@ -2132,13 +2132,13 @@ func (t *TextArea) InputHandler() func(event *tcell.EventKey, setFocus func(p Pr
 				}
 			} else {
 				// Other keys are simply accepted as regular characters.
-				r := event.Str()
+				str := event.Str()
 				from, to, row := t.getSelection()
 				newLastAction = taActionTypeNonSpace
-				if unicode.IsSpace(r) {
+				if str == " " {
 					newLastAction = taActionTypeSpace
 				}
-				t.cursor.pos = t.replace(from, to, string(r), newLastAction == t.lastAction || t.lastAction == taActionTypeNonSpace && newLastAction == taActionTypeSpace)
+				t.cursor.pos = t.replace(from, to, str, newLastAction == t.lastAction || t.lastAction == taActionTypeNonSpace && newLastAction == taActionTypeSpace)
 				t.cursor.row = -1
 				t.truncateLines(row - 1)
 				t.findCursor(true, row)

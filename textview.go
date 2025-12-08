@@ -1422,22 +1422,22 @@ func (t *TextView) InputHandler() func(event *tcell.EventKey, setFocus func(p Pr
 
 		switch key {
 		case tcell.KeyRune:
-			switch event.Rune() {
-			case 'g': // Home.
+			switch event.Str() {
+			case "g": // Home.
 				t.trackEnd = false
 				t.lineOffset = 0
 				t.columnOffset = 0
-			case 'G': // End.
+			case "G": // End.
 				t.trackEnd = true
 				t.columnOffset = 0
-			case 'j': // Down.
+			case "j": // Down.
 				t.lineOffset++
-			case 'k': // Up.
+			case "k": // Up.
 				t.trackEnd = false
 				t.lineOffset--
-			case 'h': // Left.
+			case "h": // Left.
 				t.columnOffset--
-			case 'l': // Right.
+			case "l": // Right.
 				t.columnOffset++
 			}
 		case tcell.KeyHome:

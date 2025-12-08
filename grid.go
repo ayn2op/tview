@@ -666,18 +666,18 @@ func (g *Grid) InputHandler() func(event *tcell.EventKey, setFocus func(p Primit
 		// Process our own key events if we have direct focus.
 		switch event.Key() {
 		case tcell.KeyRune:
-			switch event.Rune() {
-			case 'g':
+			switch event.Str() {
+			case "g":
 				g.rowOffset, g.columnOffset = 0, 0
-			case 'G':
+			case "G":
 				g.rowOffset = math.MaxInt32
-			case 'j':
+			case "j":
 				g.rowOffset++
-			case 'k':
+			case "k":
 				g.rowOffset--
-			case 'h':
+			case "h":
 				g.columnOffset--
-			case 'l':
+			case "l":
 				g.columnOffset++
 			}
 		case tcell.KeyHome:

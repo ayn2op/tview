@@ -290,7 +290,7 @@ func (c *Checkbox) InputHandler() func(event *tcell.EventKey, setFocus func(p Pr
 		// Process key event.
 		switch key := event.Key(); key {
 		case tcell.KeyRune, tcell.KeyEnter: // Check.
-			if key == tcell.KeyRune && event.Rune() != ' ' {
+			if key == tcell.KeyRune && event.Str() != " " {
 				break
 			}
 			c.checked = !c.checked

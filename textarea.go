@@ -2116,15 +2116,15 @@ func (t *TextArea) InputHandler() func(event *tcell.EventKey, setFocus func(p Pr
 		case tcell.KeyRune:
 			if event.Modifiers()&tcell.ModAlt > 0 {
 				// We accept some Alt- key combinations.
-				switch event.Rune() {
-				case 'f':
+				switch event.Str() {
+				case "f":
 					if event.Modifiers()&tcell.ModShift == 0 {
 						t.moveWordRight(false, true)
 						t.selectionStart = t.cursor
 					} else {
 						t.moveWordRight(true, true)
 					}
-				case 'b':
+				case "b":
 					t.moveWordLeft(true)
 					if event.Modifiers()&tcell.ModShift == 0 {
 						t.selectionStart = t.cursor
@@ -2132,7 +2132,7 @@ func (t *TextArea) InputHandler() func(event *tcell.EventKey, setFocus func(p Pr
 				}
 			} else {
 				// Other keys are simply accepted as regular characters.
-				r := event.Rune()
+				r := event.Str()
 				from, to, row := t.getSelection()
 				newLastAction = taActionTypeNonSpace
 				if unicode.IsSpace(r) {

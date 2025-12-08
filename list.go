@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gdamore/tcell/v3"
 	"slices"
+
+	"github.com/gdamore/tcell/v3"
 )
 
 // listItem represents one item in a List.
@@ -657,7 +658,12 @@ func (l *List) InputHandler() func(event *tcell.EventKey, setFocus func(p Primit
 				}
 			}
 		case tcell.KeyRune:
-			ch := event.Rune()
+			str := event.Str()
+			if str == "" {
+				return
+			}
+
+			ch := []rune(str)[0]
 			if ch != ' ' {
 				// It's not a space bar. Is it a shortcut?
 				var found bool

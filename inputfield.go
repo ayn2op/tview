@@ -2,7 +2,6 @@ package tview
 
 import (
 	"math"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -15,37 +14,6 @@ const (
 	AutocompletedTab             // The user selected an autocomplete entry using the tab key.
 	AutocompletedEnter           // The user selected an autocomplete entry using the enter key.
 	AutocompletedClick           // The user selected an autocomplete entry by clicking the mouse button on it.
-)
-
-// Predefined InputField acceptance functions.
-var (
-	// InputFieldInteger accepts integers.
-	InputFieldInteger = func(text string, ch rune) bool {
-		if text == "-" {
-			return true
-		}
-		_, err := strconv.Atoi(text)
-		return err == nil
-	}
-
-	// InputFieldFloat accepts floating-point numbers.
-	InputFieldFloat = func(text string, ch rune) bool {
-		if text == "-" || text == "." || text == "-." {
-			return true
-		}
-		_, err := strconv.ParseFloat(text, 64)
-		return err == nil
-	}
-
-	// InputFieldMaxLength returns an input field accept handler which accepts
-	// input strings up to a given length. Use it like this:
-	//
-	//   inputField.SetAcceptanceFunc(InputFieldMaxLength(10)) // Accept up to 10 characters.
-	InputFieldMaxLength = func(maxLength int) func(text string, ch rune) bool {
-		return func(text string, ch rune) bool {
-			return len([]rune(text)) <= maxLength
-		}
-	}
 )
 
 // InputField is a one-line box into which the user can enter text. Use
@@ -110,9 +78,6 @@ type InputField struct {
 	// autocomplete list should be closed. If nil, the input field will be
 	// updated automatically when the user navigates the autocomplete list.
 	autocompleted func(text string, index int, source int) bool
-
-	// An optional function which may reject the last character that was entered.
-	accept func(text string, ch rune) bool
 
 	// An optional function which is called when the input has changed.
 	changed func(text string)
@@ -411,22 +376,6 @@ func (i *InputField) Autocomplete() *InputField {
 	return i
 }
 
-// SetAcceptanceFunc sets a handler which may reject the last character that was
-// entered, by returning false. The handler receives the text as it would be
-// after the change and the last character entered. If the handler is nil, all
-// input is accepted. The function is only called when a single rune is inserted
-// at the current cursor position.
-//
-// This package defines a number of variables prefixed with InputField which may
-// be used for common input (e.g. numbers, maximum text length). See for example
-// [InputFieldInteger].
-//
-// When text is pasted, lastChar is 0.
-func (i *InputField) SetAcceptanceFunc(handler func(textToCheck string, lastChar rune) bool) *InputField {
-	i.accept = handler
-	return i
-}
-
 // SetChangedFunc sets a handler which is called whenever the text of the input
 // field has changed. It receives the current text (after the change).
 func (i *InputField) SetChangedFunc(handler func(text string)) *InputField {
@@ -618,19 +567,7 @@ func (i *InputField) InputHandler() func(event *tcell.EventKey, setFocus func(p 
 		case tcell.KeyEnter, tcell.KeyEscape, tcell.KeyTab, tcell.KeyBacktab:
 			finish(key)
 		case tcell.KeyCtrlV:
-			if i.accept != nil && !i.accept(i.textArea.getTextBeforeCursor()+i.textArea.GetClipboardText()+i.textArea.getTextAfterCursor(), 0) {
-				return
-			}
 			i.textArea.InputHandler()(event, setFocus)
-		case tcell.KeyRune:
-			if event.Modifiers()&tcell.ModAlt == 0 && i.accept != nil {
-				// Check if this rune is accepted.
-				r := event.Rune()
-				if !i.accept(i.textArea.getTextBeforeCursor()+string(r)+i.textArea.getTextAfterCursor(), r) {
-					return
-				}
-			}
-			fallthrough
 		default:
 			// Forward other key events to the text area.
 			i.textArea.InputHandler()(event, setFocus)
@@ -705,11 +642,6 @@ func (i *InputField) PasteHandler() func(pastedText string, setFocus func(p Prim
 		i.autocompleteListMutex.Lock()
 		defer i.autocompleteListMutex.Unlock()
 		if i.autocompleteList != nil {
-			return
-		}
-
-		// We may not accept this text.
-		if i.accept != nil && !i.accept(i.textArea.getTextBeforeCursor()+pastedText+i.textArea.getTextAfterCursor(), 0) {
 			return
 		}
 

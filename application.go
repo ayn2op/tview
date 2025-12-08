@@ -289,7 +289,7 @@ func (a *Application) Run() error {
 	a.RLock()
 	screen := a.screen
 	a.RUnlock()
-	go screen.ChannelEvents(a.events, a.quit)
+	a.events = screen.EventQ()
 
 	// Start event loop.
 	var (
@@ -311,7 +311,7 @@ EventLoop:
 				if pasting {
 					switch event.Key() {
 					case tcell.KeyRune:
-						pasteBuffer.WriteRune(event.Rune())
+						pasteBuffer.WriteString(event.Str())
 					case tcell.KeyEnter:
 						pasteBuffer.WriteRune('\n')
 					case tcell.KeyTab:

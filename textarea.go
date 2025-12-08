@@ -458,63 +458,6 @@ func (t *TextArea) GetText() string {
 	return text.String()
 }
 
-// getTextBeforeCursor returns the text of the text area up until the cursor.
-// Note that this will result in a new allocation for the returned text.
-func (t *TextArea) getTextBeforeCursor() string {
-	if t.length == 0 || t.cursor.pos[0] == t.spans[0].next && t.cursor.pos[1] == 0 {
-		return ""
-	}
-
-	var text strings.Builder
-	spanIndex := t.spans[0].next
-	for spanIndex != 1 {
-		span := &t.spans[spanIndex]
-		length := span.length
-		if length < 0 {
-			if t.cursor.pos[0] == spanIndex {
-				length = -t.cursor.pos[1]
-			}
-			text.WriteString(t.initialText[span.offset : span.offset-length])
-		} else {
-			if t.cursor.pos[0] == spanIndex {
-				length = t.cursor.pos[1]
-			}
-			text.WriteString(t.editText.String()[span.offset : span.offset+length])
-		}
-		if t.cursor.pos[0] == spanIndex {
-			break
-		}
-		spanIndex = t.spans[spanIndex].next
-	}
-
-	return text.String()
-}
-
-// getTextAfterCursor returns the text of the text area after the cursor. Note
-// that this will result in a new allocation for the returned text.
-func (t *TextArea) getTextAfterCursor() string {
-	if t.length == 0 || t.cursor.pos[0] == 1 {
-		return ""
-	}
-
-	var text strings.Builder
-	spanIndex := t.cursor.pos[0]
-	cursorOffset := t.cursor.pos[1]
-	for spanIndex != 1 {
-		span := &t.spans[spanIndex]
-		length := span.length
-		if length < 0 {
-			text.WriteString(t.initialText[span.offset+cursorOffset : span.offset-length])
-		} else {
-			text.WriteString(t.editText.String()[span.offset+cursorOffset : span.offset+length])
-		}
-		spanIndex = t.spans[spanIndex].next
-		cursorOffset = 0
-	}
-
-	return text.String()
-}
-
 // HasSelection returns whether the selected text is non-empty.
 func (t *TextArea) HasSelection() bool {
 	return t.selectionStart != t.cursor

@@ -278,15 +278,13 @@ func (f *Form) AddTextView(label, text string, fieldWidth, fieldHeight int, dyna
 
 // AddInputField adds an input field to the form. It has a label, an optional
 // initial value, a field width (a value of 0 extends it as far as possible),
-// an optional accept function to validate the item's value (set to nil to
-// accept any text), and an (optional) callback function which is invoked when
-// the input field's text has changed.
-func (f *Form) AddInputField(label, value string, fieldWidth int, accept func(textToCheck string, lastChar rune) bool, changed func(text string)) *Form {
+// and an (optional) callback function which is invoked when the input field's
+// text has changed.
+func (f *Form) AddInputField(label, value string, fieldWidth int, changed func(text string)) *Form {
 	inputField := NewInputField().
 		SetLabel(label).
 		SetText(value).
 		SetFieldWidth(fieldWidth).
-		SetAcceptanceFunc(accept).
 		SetChangedFunc(changed)
 	inputField.SetFinishedFunc(f.finished)
 	f.items = append(f.items, inputField)

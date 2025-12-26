@@ -11,10 +11,12 @@ import (
 
 // listItem represents one item in a List.
 type listItem struct {
-	MainText      string // The main text of the list item.
-	SecondaryText string // A secondary text to be shown underneath the main text.
-	Shortcut      rune   // The key to select the list item directly, 0 if there is no shortcut.
-	Selected      func() // The optional function which is called when the item is selected.
+	MainText      string      // The main text of the list item.
+	SecondaryText string      // A secondary text to be shown underneath the main text.
+	Shortcut      rune        // The key to select the list item directly, 0 if there is no shortcut.
+	Selected      func()      // The optional function which is called when the item is selected.
+	Style         tcell.Style // Style of the element when it's not being selected
+	HasStyle      bool        // Should display the item style
 }
 
 // List displays rows of items, each of which can be selected. List items can be
@@ -393,6 +395,8 @@ func (l *List) InsertItem(index int, mainText, secondaryText string, shortcut ru
 		SecondaryText: secondaryText,
 		Shortcut:      shortcut,
 		Selected:      selected,
+		Style:         tcell.StyleDefault,
+		HasStyle:      false,
 	}
 
 	// Shift index to range.
@@ -450,6 +454,21 @@ func (l *List) SetItemText(index int, main, secondary string) *List {
 	item := l.items[index]
 	item.MainText = main
 	item.SecondaryText = secondary
+	return l
+}
+
+// SetItemStyle sets an item's non-selected style. Panics if the index is
+// out of range.
+func (l *List) SetItemStyle(index int, style tcell.Style) *List {
+	l.items[index].Style = style
+	l.items[index].HasStyle = true
+	return l
+}
+
+// EnableItemStyle enables/disables an item's non-selected style.
+// Panics if the index is out of range.
+func (l *List) EnableItemStyle(index int, enable bool) *List {
+	l.items[index].HasStyle = enable
 	return l
 }
 
@@ -561,6 +580,9 @@ func (l *List) Draw(screen tcell.Screen) {
 		// Main text.
 		selected := index == l.currentItem && (!l.selectedFocusOnly || l.HasFocus())
 		style := l.mainTextStyle
+		if l.items[index].HasStyle {
+			style = l.items[index].Style
+		}
 		if selected {
 			style = l.selectedStyle
 		}

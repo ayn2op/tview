@@ -128,24 +128,6 @@ func (i *InputField) GetLabelStyle() tcell.Style {
 	return i.textArea.GetLabelStyle()
 }
 
-// SetFieldBackgroundColor sets the background color of the input area.
-func (i *InputField) SetFieldBackgroundColor(color tcell.Color) *InputField {
-	style := i.textArea.GetTextStyle().Background(color)
-	if i.textArea.GetTextStyle() != style {
-		i.textArea.SetTextStyle(style)
-	}
-	return i
-}
-
-// SetFieldTextColor sets the text color of the input area.
-func (i *InputField) SetFieldTextColor(color tcell.Color) *InputField {
-	style := i.textArea.GetTextStyle().Foreground(color)
-	if i.textArea.GetTextStyle() != style {
-		i.textArea.SetTextStyle(style)
-	}
-	return i
-}
-
 // SetFieldStyle sets the style of the input area (when no placeholder is
 // shown).
 func (i *InputField) SetFieldStyle(style tcell.Style) *InputField {
@@ -159,15 +141,6 @@ func (i *InputField) SetFieldStyle(style tcell.Style) *InputField {
 // shown).
 func (i *InputField) GetFieldStyle() tcell.Style {
 	return i.textArea.GetTextStyle()
-}
-
-// SetPlaceholderTextColor sets the text color of placeholder text.
-func (i *InputField) SetPlaceholderTextColor(color tcell.Color) *InputField {
-	style := i.textArea.GetPlaceholderStyle().Foreground(color)
-	if i.textArea.GetPlaceholderStyle() != style {
-		i.textArea.SetPlaceholderStyle(style)
-	}
-	return i
 }
 
 // SetPlaceholderStyle sets the style of the input area (when a placeholder is

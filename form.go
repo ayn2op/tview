@@ -164,28 +164,7 @@ func (f *Form) SetLabelColor(color tcell.Color) *Form {
 	return f
 }
 
-// SetFieldBackgroundColor sets the background color of the input areas.
-func (f *Form) SetFieldBackgroundColor(color tcell.Color) *Form {
-	style := f.fieldStyle.Background(color)
-	if f.fieldStyle != style {
-		f.fieldStyle = style
-		f.MarkDirty()
-	}
-	return f
-}
-
-// SetFieldTextColor sets the text color of the input areas.
-func (f *Form) SetFieldTextColor(color tcell.Color) *Form {
-	style := f.fieldStyle.Foreground(color)
-	if f.fieldStyle != style {
-		f.fieldStyle = style
-		f.MarkDirty()
-	}
-	return f
-}
-
-// SetFieldStyle sets the style of the input areas. Attributes are currently
-// still ignored to maintain backwards compatibility.
+// SetFieldStyle sets the style of the input areas.
 func (f *Form) SetFieldStyle(style tcell.Style) *Form {
 	if f.fieldStyle != style {
 		f.fieldStyle = style
@@ -198,32 +177,6 @@ func (f *Form) SetFieldStyle(style tcell.Style) *Form {
 func (f *Form) SetButtonsAlignment(alignment Alignment) *Form {
 	if f.buttonsAlignment != alignment {
 		f.buttonsAlignment = alignment
-		f.MarkDirty()
-	}
-	return f
-}
-
-// SetButtonBackgroundColor sets the background color of the buttons. This is
-// also the text color of the buttons when they are focused.
-func (f *Form) SetButtonBackgroundColor(color tcell.Color) *Form {
-	buttonStyle := f.buttonStyle.Background(color)
-	buttonActivatedStyle := f.buttonActivatedStyle.Foreground(color)
-	if f.buttonStyle != buttonStyle || f.buttonActivatedStyle != buttonActivatedStyle {
-		f.buttonStyle = buttonStyle
-		f.buttonActivatedStyle = buttonActivatedStyle
-		f.MarkDirty()
-	}
-	return f
-}
-
-// SetButtonTextColor sets the color of the button texts. This is also the
-// background of the buttons when they are focused.
-func (f *Form) SetButtonTextColor(color tcell.Color) *Form {
-	buttonStyle := f.buttonStyle.Foreground(color)
-	buttonActivatedStyle := f.buttonActivatedStyle.Background(color)
-	if f.buttonStyle != buttonStyle || f.buttonActivatedStyle != buttonActivatedStyle {
-		f.buttonStyle = buttonStyle
-		f.buttonActivatedStyle = buttonActivatedStyle
 		f.MarkDirty()
 	}
 	return f

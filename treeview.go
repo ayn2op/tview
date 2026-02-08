@@ -269,15 +269,11 @@ func (n *TreeNode) GetColor() tcell.Color {
 	return color
 }
 
-// SetColor sets the node's text color. For compatibility reasons, this also
-// sets the background color of the selected text style. For more control over
-// styles, use [TreeNode.SetTextStyle] and [TreeNode.SetSelectedTextStyle].
+// SetColor sets the node's text color.
 func (n *TreeNode) SetColor(color tcell.Color) *TreeNode {
 	textStyle := n.textStyle.Foreground(color)
-	selectedTextStyle := n.selectedTextStyle.Background(color)
-	if n.textStyle != textStyle || n.selectedTextStyle != selectedTextStyle {
+	if n.textStyle != textStyle {
 		n.textStyle = textStyle
-		n.selectedTextStyle = selectedTextStyle
 		n.markDirty()
 	}
 	return n

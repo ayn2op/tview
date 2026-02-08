@@ -265,15 +265,9 @@ func (t *TextView) SetTextAlign(alignment Alignment) *TextView {
 }
 
 // SetBackgroundColor overrides its implementation in Box to set the background
-// color of this primitive. For backwards compatibility reasons, it also sets
-// the background color of the default text style.
+// color of this primitive.
 func (t *TextView) SetBackgroundColor(color tcell.Color) *Box {
 	t.Box.SetBackgroundColor(color)
-	style := t.textStyle.Background(color)
-	if t.textStyle != style {
-		t.textStyle = style
-		t.MarkDirty()
-	}
 	return t.Box
 }
 

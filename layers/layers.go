@@ -102,10 +102,8 @@ func (l *Layers) GetLayerNames(visibleOnly bool) []string {
 	return names
 }
 
-// GetVisibile returns whether the given layer is visible.
-// NOTE: This method preserves the historical misspelling for compatibility
-// with existing code that used Pages.GetVisibile.
-func (l *Layers) GetVisibile(name string) bool {
+// GetVisible returns whether the given layer is visible.
+func (l *Layers) GetVisible(name string) bool {
 	for _, layer := range l.layers {
 		if name == layer.name {
 			return layer.visible

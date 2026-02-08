@@ -67,18 +67,6 @@ func (m *Modal) SetTextColor(color tcell.Color) *Modal {
 	return m
 }
 
-// SetButtonBackgroundColor sets the background color of the buttons.
-func (m *Modal) SetButtonBackgroundColor(color tcell.Color) *Modal {
-	m.form.SetButtonBackgroundColor(color)
-	return m
-}
-
-// SetButtonTextColor sets the color of the button texts.
-func (m *Modal) SetButtonTextColor(color tcell.Color) *Modal {
-	m.form.SetButtonTextColor(color)
-	return m
-}
-
 // SetButtonStyle sets the style of the buttons when they are not focused.
 func (m *Modal) SetButtonStyle(style tcell.Style) *Modal {
 	m.form.SetButtonStyle(style)

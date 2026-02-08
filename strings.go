@@ -16,6 +16,83 @@ type Segment struct {
 // Line is a list of styled segments.
 type Line []Segment
 
+// LineBuilder incrementally builds styled lines from text writes.
+type LineBuilder struct {
+	lines   []Line
+	current Line
+}
+
+// NewLineBuilder returns a new line builder.
+func NewLineBuilder() *LineBuilder {
+	return &LineBuilder{}
+}
+
+// Write appends text with style and splits on newline boundaries.
+func (b *LineBuilder) Write(text string, style tcell.Style) {
+	if text == "" {
+		return
+	}
+	for len(text) > 0 {
+		nl := strings.IndexByte(text, '\n')
+		if nl < 0 {
+			b.writeSegment(text, style)
+			return
+		}
+		if nl > 0 {
+			b.writeSegment(text[:nl], style)
+		}
+		b.NewLine()
+		text = text[nl+1:]
+	}
+}
+
+func (b *LineBuilder) writeSegment(text string, style tcell.Style) {
+	if text == "" {
+		return
+	}
+	if n := len(b.current); n > 0 && b.current[n-1].Style == style {
+		b.current[n-1].Text += text
+		return
+	}
+	b.current = append(b.current, Segment{Text: text, Style: style})
+}
+
+// AppendLines appends fully built lines into the builder.
+func (b *LineBuilder) AppendLines(lines []Line) {
+	if len(lines) == 0 {
+		return
+	}
+	for i, line := range lines {
+		if i > 0 {
+			b.NewLine()
+		}
+		for _, segment := range line {
+			b.writeSegment(segment.Text, segment.Style)
+		}
+	}
+}
+
+// NewLine flushes the current line into the builder output.
+func (b *LineBuilder) NewLine() {
+	line := make(Line, len(b.current))
+	copy(line, b.current)
+	b.lines = append(b.lines, line)
+	b.current = nil
+}
+
+// HasCurrentLine returns true when unflushed segments exist.
+func (b *LineBuilder) HasCurrentLine() bool {
+	return len(b.current) > 0
+}
+
+// Finish returns all built lines.
+func (b *LineBuilder) Finish() []Line {
+	if len(b.current) > 0 || len(b.lines) == 0 {
+		b.NewLine()
+	}
+	return b.lines
+}
+
 // stepState represents the current state of the grapheme parser.
 type stepState struct {
 	unisegState int

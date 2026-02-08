@@ -101,8 +101,8 @@ func (m *Modal) SetDoneFunc(handler func(buttonIndex int, buttonLabel string)) *
 }
 
 // SetText sets the message text of the window. The text may contain line
-// breaks but style tag states will not transfer to following lines. Note that
-// words are wrapped, too, based on the final size of the window.
+// breaks. Note that words are wrapped, too, based on the final size of the
+// window.
 func (m *Modal) SetText(text string) *Modal {
 	if m.text != text {
 		m.text = text

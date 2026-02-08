@@ -187,9 +187,7 @@ func (c *Checkbox) SetActivatedStyle(style tcell.Style) *Checkbox {
 }
 
 // SetCheckedString sets the string to be displayed when the checkbox is
-// checked (defaults to "X"). The string may contain color tags (consider
-// adapting the checkbox's various styles accordingly). See [Escape] in
-// case you want to display square brackets.
+// checked (defaults to "X").
 func (c *Checkbox) SetCheckedString(checked string) *Checkbox {
 	if c.checkedString != checked {
 		c.checkedString = checked
@@ -199,9 +197,7 @@ func (c *Checkbox) SetCheckedString(checked string) *Checkbox {
 }
 
 // SetUncheckedString sets the string to be displayed when the checkbox is
-// not checked (defaults to the empty space " "). The string may contain color
-// tags (consider adapting the checkbox's various styles accordingly). See
-// [Escape] in case you want to display square brackets.
+// not checked (defaults to the empty space " ").
 func (c *Checkbox) SetUncheckedString(unchecked string) *Checkbox {
 	if c.uncheckedString != unchecked {
 		c.uncheckedString = unchecked

@@ -305,17 +305,15 @@ func (f *Form) AddTextArea(label, text string, fieldWidth, fieldHeight, maxLengt
 // AddTextView adds a text view to the form. It has a label and text, a size
 // (width and height) referring to the actual text element (a fieldWidth of 0
 // extends it as far right as possible, a fieldHeight of 0 will cause it to be
-// [DefaultFormFieldHeight]), a flag to turn on/off dynamic colors, and a flag
-// to turn on/off scrolling. If scrolling is turned off, the text view will not
-// receive focus.
-func (f *Form) AddTextView(label, text string, fieldWidth, fieldHeight int, dynamicColors, scrollable bool) *Form {
+// [DefaultFormFieldHeight]), and a flag to turn on/off scrolling. If scrolling
+// is turned off, the text view will not receive focus.
+func (f *Form) AddTextView(label, text string, fieldWidth, fieldHeight int, scrollable bool) *Form {
 	if fieldHeight == 0 {
 		fieldHeight = DefaultFormFieldHeight
 	}
 	textArea := NewTextView().
 		SetLabel(label).
 		SetSize(fieldHeight, fieldWidth).
-		SetDynamicColors(dynamicColors).
 		SetScrollable(scrollable).
 		SetText(text)
 	textArea.SetFinishedFunc(f.finished)

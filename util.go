@@ -2,7 +2,6 @@ package tview
 
 import (
 	"math"
-	"regexp"
 
 	"github.com/gdamore/tcell/v3"
 )
@@ -15,22 +14,11 @@ const (
 	AlignmentRight
 )
 
-var (
-	// Regular expression used to escape style tags.
-	escapePattern = regexp.MustCompile(`(\[[a-zA-Z0-9_,;: \-\."#]+\[*)\]`)
-
-	// Regular expression used to unescape escaped style tags.
-	unescapePattern = regexp.MustCompile(`(\[[a-zA-Z0-9_,;: \-\."#]+\[*)\[\]`)
-)
-
 // Print prints text onto the screen into the given box at (x,y,maxWidth,1),
 // not exceeding that box. The screen's background color will not be changed.
 //
-// You can change the colors and text styles mid-text by inserting a style tag.
-// See the package description for details.
-//
-// Returns the number of actual bytes of the text printed (including style tags)
-// and the actual width used for the printed runes.
+// Returns the number of actual bytes of the text printed and the actual width
+// used for the printed runes.
 func Print(screen tcell.Screen, text string, x, y, maxWidth int, alignment Alignment, color tcell.Color) (int, int) {
 	start, end, width := printWithStyle(screen, text, x, y, 0, maxWidth, alignment, tcell.StyleDefault.Foreground(color), true)
 	return end - start, width
@@ -57,12 +45,11 @@ func printWithStyle(screen tcell.Screen, text string, x, y, skipWidth, maxWidth 
 	var textWidth int
 	state := &stepState{
 		unisegState: -1,
-		style:       style,
 	}
 	newState := *state
 	str := text
 	for len(str) > 0 {
-		_, str, state = step(str, state, stepOptionsStyle)
+		_, str, state = step(str, state)
 		if skipWidth > 0 {
 			skipWidth -= state.Width()
 			text = str
@@ -79,7 +66,7 @@ func printWithStyle(screen tcell.Screen, text string, x, y, skipWidth, maxWidth 
 	case AlignmentRight:
 		// Chop off characters on the left until it fits.
 		for len(text) > 0 && textWidth > maxWidth {
-			_, text, state = step(text, state, stepOptionsStyle)
+			_, text, state = step(text, state)
 			textWidth -= state.Width()
 			start += state.GrossLength()
 		}
@@ -88,7 +75,7 @@ func printWithStyle(screen tcell.Screen, text string, x, y, skipWidth, maxWidth 
 		// Chop off characters on the left until it fits.
 		subtracted := (textWidth - maxWidth) / 2
 		for len(text) > 0 && subtracted > 0 {
-			_, text, state = step(text, state, stepOptionsStyle)
+			_, text, state = step(text, state)
 			subtracted -= state.Width()
 			textWidth -= state.Width()
 			start += state.GrossLength()
@@ -103,14 +90,14 @@ func printWithStyle(screen tcell.Screen, text string, x, y, skipWidth, maxWidth 
 	rightBorder := x + maxWidth
 	for len(text) > 0 && x < rightBorder && x < totalWidth {
 		var c string
-		c, text, state = step(text, state, stepOptionsStyle)
+		c, text, state = step(text, state)
 		if c == "" {
-			break // We don't care about the style at the end.
+			break
 		}
 		width := state.Width()
 
 		if width > 0 {
-			finalStyle := state.Style()
+			finalStyle := style
 			if maintainBackground {
 				backgroundColor := finalStyle.GetBackground()
 				if backgroundColor == tcell.ColorDefault {

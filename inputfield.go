@@ -59,16 +59,18 @@ type InputField struct {
 	autocomplete func(text string) []string
 
 	// The List object which shows the selectable autocomplete entries. If not
-	// nil, the list's main texts represent the current autocomplete entries.
+	// nil, the list's items represent the current autocomplete entries.
 	autocompleteList      *List
 	autocompleteListMutex sync.Mutex
+	autocompleteEntries   []string    // Canonical entry text by index.
+	autocompleteItems     []*TextView // Cached non-selected row views.
+	autocompleteSelected  *TextView   // Reused selected-row view.
 
 	// The styles of the autocomplete entries.
 	autocompleteStyles struct {
 		main       tcell.Style
 		selected   tcell.Style
 		background tcell.Color
-		useTags    bool
 	}
 
 	// An optional function which is called when the user selects an
@@ -93,12 +95,72 @@ type InputField struct {
 }
 
 func (i *InputField) clearAutocompleteListLocked() {
-	if i.autocompleteList == nil {
+	if i.autocompleteList != nil {
+		unbindDirtyParent(i.autocompleteList, i.Box)
+		i.autocompleteList = nil
+	}
+	i.autocompleteEntries = nil
+	i.autocompleteItems = nil
+	i.autocompleteSelected = nil
+	i.MarkDirty()
+}
+
+func (i *InputField) newAutocompleteItem(text string, style tcell.Style) *TextView {
+	return NewTextView().
+		SetScrollable(false).
+		SetWrap(false).
+		SetWordWrap(false).
+		SetTextStyle(style).
+		SetLines([]Line{{{Text: text, Style: style}}})
+}
+
+func (i *InputField) rebuildAutocompleteItemsLocked(entries []string) {
+	i.autocompleteEntries = append(i.autocompleteEntries[:0], entries...)
+	i.autocompleteItems = make([]*TextView, len(i.autocompleteEntries))
+
+	for index, entry := range i.autocompleteEntries {
+		i.autocompleteItems[index] = i.newAutocompleteItem(entry, i.autocompleteStyles.main)
+	}
+	if i.autocompleteSelected == nil {
+		i.autocompleteSelected = i.newAutocompleteItem("", i.autocompleteStyles.selected)
+	}
+
+	i.autocompleteList.SetBuilder(func(index int, cursor int) ListItem {
+		if index < 0 || index >= len(i.autocompleteEntries) {
+			return nil
+		}
+		if index == cursor {
+			style := i.autocompleteStyles.selected
+			i.autocompleteSelected.SetTextStyle(style)
+			i.autocompleteSelected.SetLines([]Line{{{Text: i.autocompleteEntries[index], Style: style}}})
+			return i.autocompleteSelected
+		}
+		return i.autocompleteItems[index]
+	})
+}
+
+func (i *InputField) selectAutocompleteEntryLocked(index int, source int, currentText *string, skipAutocomplete *bool) {
+	if index < 0 || index >= len(i.autocompleteEntries) {
 		return
 	}
-	unbindDirtyParent(i.autocompleteList, i.Box)
-	i.autocompleteList = nil
-	i.MarkDirty()
+
+	text := i.autocompleteEntries[index]
+	if i.autocompleted != nil {
+		if i.autocompleted(text, index, source) {
+			i.clearAutocompleteListLocked()
+			*currentText = i.GetText()
+		}
+		return
+	}
+
+	i.SetText(text)
+	if source == AutocompletedNavigate {
+		*currentText = text
+		return
+	}
+
+	*skipAutocomplete = true
+	i.clearAutocompleteListLocked()
 }
 
 // NewInputField returns a new input field.
@@ -118,7 +180,6 @@ func NewInputField() *InputField {
 	i.autocompleteStyles.main = tcell.StyleDefault.Background(Styles.MoreContrastBackgroundColor).Foreground(Styles.PrimitiveBackgroundColor)
 	i.autocompleteStyles.selected = tcell.StyleDefault.Background(Styles.PrimaryTextColor).Foreground(Styles.PrimitiveBackgroundColor)
 	i.autocompleteStyles.background = Styles.MoreContrastBackgroundColor
-	i.autocompleteStyles.useTags = true
 	return i
 }
 
@@ -245,24 +306,12 @@ func (i *InputField) GetPlaceholderStyle() tcell.Style {
 	return i.textArea.GetPlaceholderStyle()
 }
 
-// SetAutocompleteStyles sets the colors and style of the autocomplete entries.
-// For details, see [List.SetMainTextStyle], [List.SetSelectedStyle], and
-// [Box.SetBackgroundColor].
+// SetAutocompleteStyles sets the colors and styles of autocomplete entries.
 func (i *InputField) SetAutocompleteStyles(background tcell.Color, main, selected tcell.Style) *InputField {
 	if i.autocompleteStyles.background != background || i.autocompleteStyles.main != main || i.autocompleteStyles.selected != selected {
 		i.autocompleteStyles.background = background
 		i.autocompleteStyles.main = main
 		i.autocompleteStyles.selected = selected
-		i.MarkDirty()
-	}
-	return i
-}
-
-// SetAutocompleteUseTags sets whether or not the autocomplete entries may
-// contain style tags affecting their appearance. The default is true.
-func (i *InputField) SetAutocompleteUseTags(useTags bool) *InputField {
-	if i.autocompleteStyles.useTags != useTags {
-		i.autocompleteStyles.useTags = useTags
 		i.MarkDirty()
 	}
 	return i
@@ -341,7 +390,7 @@ func (i *InputField) SetAutocompleteFunc(callback func(currentText string) (entr
 
 // SetAutocompletedFunc sets a callback function which is invoked when the user
 // selects an entry from the autocomplete drop-down list. The function is passed
-// the text of the selected entry (stripped of any style tags), the index of the
+// the text of the selected entry, the index of the
 // entry, and the user action that caused the selection, for example
 // [AutocompletedNavigate]. It returns true if the autocomplete drop-down should
 // be closed after the callback returns or false if it should remain open, in
@@ -385,25 +434,20 @@ func (i *InputField) Autocomplete() *InputField {
 	if i.autocompleteList == nil {
 		i.autocompleteList = NewList()
 		bindDirtyParent(i.autocompleteList, i.Box)
-		i.autocompleteList.ShowSecondaryText(false).
-			SetMainTextStyle(i.autocompleteStyles.main).
-			SetSelectedStyle(i.autocompleteStyles.selected).
-			SetUseStyleTags(i.autocompleteStyles.useTags, i.autocompleteStyles.useTags).
-			SetHighlightFullLine(true).
+		i.autocompleteList.SetSnapToItems(true).
 			SetBackgroundColor(i.autocompleteStyles.background)
 	}
 
 	// Fill it with the entries.
-	currentIndex := i.autocompleteList.GetCurrentItem()
+	currentIndex := i.autocompleteList.Cursor()
 	var currentSelection string
-	if currentIndex >= 0 && currentIndex < i.autocompleteList.GetItemCount() {
-		currentSelection, _ = i.autocompleteList.GetItemText(currentIndex)
+	if currentIndex >= 0 && currentIndex < len(i.autocompleteEntries) {
+		currentSelection = i.autocompleteEntries[currentIndex]
 	}
 	currentEntry := -1
 	suffixLength := math.MaxInt
-	i.autocompleteList.Clear()
+	i.rebuildAutocompleteItemsLocked(entries)
 	for index, entry := range entries {
-		i.autocompleteList.AddItem(entry, "", 0, nil)
 		if currentSelection != "" && entry == currentSelection {
 			currentEntry = index
 		}
@@ -414,9 +458,7 @@ func (i *InputField) Autocomplete() *InputField {
 	}
 
 	// Set the selection if we have one.
-	if currentEntry >= 0 {
-		i.autocompleteList.SetCurrentItem(currentEntry)
-	}
+	i.autocompleteList.SetCursor(currentEntry)
 
 	return i
 }
@@ -525,10 +567,9 @@ func (i *InputField) Draw(screen tcell.Screen) {
 	defer i.autocompleteListMutex.Unlock()
 	if i.autocompleteList != nil && i.HasFocus() {
 		// How much space do we need?
-		lheight := i.autocompleteList.GetItemCount()
+		lheight := len(i.autocompleteEntries)
 		lwidth := 0
-		for index := range lheight {
-			entry, _ := i.autocompleteList.GetItemText(index)
+		for _, entry := range i.autocompleteEntries {
 			width := TaggedStringWidth(entry)
 			if width > lwidth {
 				lwidth = width
@@ -575,41 +616,20 @@ func (i *InputField) InputHandler() func(event *tcell.EventKey, setFocus func(p 
 		defer i.autocompleteListMutex.Unlock()
 		if i.autocompleteList != nil {
 			i.autocompleteList.SetChangedFunc(nil)
-			i.autocompleteList.SetSelectedFunc(nil)
 			switch key := event.Key(); key {
 			case tcell.KeyEscape: // Close the list.
 				i.clearAutocompleteListLocked()
 				return
 			case tcell.KeyEnter, tcell.KeyTab: // Intentional selection.
-				index := i.autocompleteList.GetCurrentItem()
-				text, _ := i.autocompleteList.GetItemText(index)
-				if i.autocompleted != nil {
-					source := AutocompletedEnter
-					if key == tcell.KeyTab {
-						source = AutocompletedTab
-					}
-					if i.autocompleted(stripTags(text), index, source) {
-						i.clearAutocompleteListLocked()
-						currentText = i.GetText()
-					}
-				} else {
-					i.SetText(text)
-					skipAutocomplete = true
-					i.clearAutocompleteListLocked()
+				source := AutocompletedEnter
+				if key == tcell.KeyTab {
+					source = AutocompletedTab
 				}
+				i.selectAutocompleteEntryLocked(i.autocompleteList.Cursor(), source, &currentText, &skipAutocomplete)
 				return
 			case tcell.KeyDown, tcell.KeyUp, tcell.KeyPgDn, tcell.KeyPgUp:
-				i.autocompleteList.SetChangedFunc(func(index int, text, secondaryText string, shortcut rune) {
-					text = stripTags(text)
-					if i.autocompleted != nil {
-						if i.autocompleted(text, index, AutocompletedNavigate) {
-							i.clearAutocompleteListLocked()
-							currentText = i.GetText()
-						}
-					} else {
-						i.SetText(text)
-						currentText = stripTags(text) // We want to keep the autocomplete list open and unchanged.
-					}
+				i.autocompleteList.SetChangedFunc(func(index int) {
+					i.selectAutocompleteEntryLocked(index, AutocompletedNavigate, &currentText, &skipAutocomplete)
 				})
 				i.autocompleteList.InputHandler()(event, setFocus)
 				return
@@ -666,21 +686,14 @@ func (i *InputField) MouseHandler() func(action MouseAction, event *tcell.EventM
 		defer i.autocompleteListMutex.Unlock()
 		if i.autocompleteList != nil {
 			i.autocompleteList.SetChangedFunc(nil)
-			i.autocompleteList.SetSelectedFunc(func(index int, text, secondaryText string, shortcut rune) {
-				text = stripTags(text)
-				if i.autocompleted != nil {
-					if i.autocompleted(text, index, AutocompletedClick) {
-						i.clearAutocompleteListLocked()
-						currentText = i.GetText()
-					}
-					return
-				}
-				i.SetText(text)
-				skipAutocomplete = true
-				i.clearAutocompleteListLocked()
-			})
+			previousCursor := i.autocompleteList.Cursor()
 			if consumed, _ = i.autocompleteList.MouseHandler()(action, event, setFocus); consumed {
 				setFocus(i)
+				if action == MouseLeftClick {
+					i.selectAutocompleteEntryLocked(i.autocompleteList.Cursor(), AutocompletedClick, &currentText, &skipAutocomplete)
+				} else if i.autocompleteList.Cursor() != previousCursor {
+					i.selectAutocompleteEntryLocked(i.autocompleteList.Cursor(), AutocompletedNavigate, &currentText, &skipAutocomplete)
+				}
 				return
 			}
 		}

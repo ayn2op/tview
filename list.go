@@ -1,858 +1,952 @@
 package tview
 
 import (
-	"fmt"
-	"strings"
-
-	"slices"
-
 	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
 )
 
-// listItem represents one item in a List.
-type listItem struct {
-	MainText      string // The main text of the list item.
-	SecondaryText string // A secondary text to be shown underneath the main text.
-	Shortcut      rune   // The key to select the list item directly, 0 if there is no shortcut.
-	Selected      func() // The optional function which is called when the item is selected.
+// ListItem represents a primitive which can be measured for a given width.
+//
+// Scroll list items are responsible for reporting their own height so the list can
+// layout and scroll variable-height items.
+type ListItem interface {
+	Primitive
+	Height(width int) int
 }
 
-// List displays rows of items, each of which can be selected. List items can be
-// shown as a single line or as two lines. They can be selected by pressing
-// their assigned shortcut key, navigating to them and pressing Enter, or
-// clicking on them with the mouse. The following key binds are available:
-//
-//   - Down arrow / tab: Move down one item.
-//   - Up arrow / backtab: Move up one item.
-//   - Home: Move to the first item.
-//   - End: Move to the last item.
-//   - Page down: Move down one page.
-//   - Page up: Move up one page.
-//   - Enter / Space: Select the current item.
-//   - Right / left: Scroll horizontally. Only if the list is wider than the
-//     available space.
-//
-// By default, list item texts can contain style tags. Use
-// [List.SetUseStyleTags] to disable this feature.
-//
-// See [List.SetChangedFunc] for a way to be notified when the user navigates
-// to a list item. See [List.SetSelectedFunc] for a way to be notified when a
-// list item was selected.
-//
-// See https://github.com/ayn2op/tview/wiki/List for an example.
+// ListBuilder returns a list item for the given index and cursor position.
+// It must return nil when the index is out of range.
+type ListBuilder func(index int, cursor int) ListItem
+
+// List displays a virtual list of primitives returned by a builder function.
 type List struct {
 	*Box
 
-	// The items of the list.
-	items []*listItem
+	Builder      ListBuilder
+	gap          int
+	snapToItems  bool
+	centerCursor bool
+	trackEnd     bool
+	atEnd        bool
 
-	// The index of the currently selected item.
-	currentItem int
+	cursor int
+	scroll listState
 
-	// Whether or not to show the secondary item texts.
-	showSecondaryText bool
+	changed func(index int)
 
-	// The item main text style.
-	mainTextStyle tcell.Style
-
-	// The item secondary text style.
-	secondaryTextStyle tcell.Style
-
-	// The item shortcut text style.
-	shortcutStyle tcell.Style
-
-	// The style for selected items.
-	selectedStyle tcell.Style
-
-	// If true, the selection is only shown when the list has focus.
-	selectedFocusOnly bool
-
-	// If true, the entire row is highlighted when selected.
-	highlightFullLine bool
-
-	// Whether or not style tags can be used in the main text.
-	mainStyleTags bool
-
-	// Whether or not style tags can be used in the secondary text.
-	secondaryStyleTags bool
-
-	// Whether or not navigating the list will wrap around.
-	wrapAround bool
-
-	// The number of list items skipped at the top before the first item is
-	// drawn.
-	itemOffset int
-
-	// The number of cells skipped on the left side of an item text. Shortcuts
-	// are not affected.
-	horizontalOffset int
-
-	// An optional function which is called when the user has navigated to a
-	// list item.
-	changed func(index int, mainText, secondaryText string, shortcut rune)
-
-	// An optional function which is called when a list item was selected. This
-	// function will be called even if the list item defines its own callback.
-	selected func(index int, mainText, secondaryText string, shortcut rune)
-
-	// An optional function which is called when the user presses the Escape key.
-	done func()
+	lastDraw []listDrawnItem
+	lastRect listRect
 }
 
-// NewList returns a new list.
+type listState struct {
+	// Index of the top item in the viewport.
+	top int
+	// Line offset into the top item; negative values mean the item is scrolled up.
+	offset int
+	// Pending scroll delta in lines to apply on the next draw.
+	pending int
+	// Ensure the cursor is visible on the next draw.
+	wantsCursor bool
+}
+
+type listDrawnItem struct {
+	index  int
+	item   ListItem
+	row    int
+	height int
+}
+
+type listRect struct {
+	x      int
+	y      int
+	width  int
+	height int
+}
+
+// NewList returns a new scroll list.
 func NewList() *List {
 	return &List{
-		Box:                NewBox(),
-		showSecondaryText:  true,
-		wrapAround:         true,
-		mainTextStyle:      tcell.StyleDefault.Foreground(Styles.PrimaryTextColor).Background(Styles.PrimitiveBackgroundColor),
-		secondaryTextStyle: tcell.StyleDefault.Foreground(Styles.TertiaryTextColor).Background(Styles.PrimitiveBackgroundColor),
-		shortcutStyle:      tcell.StyleDefault.Foreground(Styles.SecondaryTextColor).Background(Styles.PrimitiveBackgroundColor),
-		selectedStyle:      tcell.StyleDefault.Reverse(true),
-		mainStyleTags:      true,
-		secondaryStyleTags: true,
+		Box:          NewBox(),
+		centerCursor: true,
+		cursor:       -1,
 	}
 }
 
-// SetCurrentItem sets the currently selected item by its index, starting at 0
-// for the first item. If a negative index is provided, items are referred to
-// from the back (-1 = last item, -2 = second-to-last item, and so on). Out of
-// range indices are clamped to the beginning/end.
-//
-// Calling this function triggers a "changed" event if the selection changes.
-func (l *List) SetCurrentItem(index int) *List {
-	if index < 0 {
-		index = len(l.items) + index
-	}
-	if index >= len(l.items) {
-		index = len(l.items) - 1
-	}
-	if index < 0 {
-		index = 0
-	}
-
-	if index != l.currentItem && l.changed != nil {
-		item := l.items[index]
-		l.changed(index, item.MainText, item.SecondaryText, item.Shortcut)
-	}
-
-	if l.currentItem != index {
-		l.currentItem = index
-		l.MarkDirty()
-	}
-
-	return l
-}
-
-// GetCurrentItem returns the index of the currently selected list item,
-// starting at 0 for the first item.
-func (l *List) GetCurrentItem() int {
-	return l.currentItem
-}
-
-// SetOffset sets the number of items to be skipped (vertically) as well as the
-// number of cells skipped horizontally when the list is drawn. Note that one
-// item corresponds to two rows when there are secondary texts. Shortcuts are
-// always drawn.
-//
-// These values may change when the list is drawn to ensure the currently
-// selected item is visible and item texts move out of view. Users can also
-// modify these values by interacting with the list.
-func (l *List) SetOffset(items, horizontal int) *List {
-	if l.itemOffset != items || l.horizontalOffset != horizontal {
-		l.itemOffset = items
-		l.horizontalOffset = horizontal
+// SetBuilder sets the builder used to create list items on demand.
+func (l *List) SetBuilder(builder ListBuilder) *List {
+	if l.Builder != nil || builder != nil {
+		l.Builder = builder
 		l.MarkDirty()
 	}
 	return l
 }
 
-// GetOffset returns the number of items skipped while drawing, as well as the
-// number of cells item text is moved to the left. See also SetOffset() for more
-// information on these values.
-func (l *List) GetOffset() (int, int) {
-	return l.itemOffset, l.horizontalOffset
+// Clear removes all items from the list by clearing the builder and resetting
+// scroll state.
+func (l *List) Clear() *List {
+	changed := l.Builder != nil || l.cursor != -1 || l.scroll != (listState{}) || len(l.lastDraw) > 0 || l.lastRect != (listRect{}) || l.atEnd
+	l.Builder = nil
+	l.cursor = -1
+	l.scroll = listState{}
+	l.setLastDraw(nil)
+	l.lastRect = listRect{}
+	l.atEnd = false
+	if changed {
+		l.MarkDirty()
+	}
+	return l
 }
 
-// RemoveItem removes the item with the given index (starting at 0) from the
-// list. If a negative index is provided, items are referred to from the back
-// (-1 = last item, -2 = second-to-last item, and so on). Out of range indices
-// are clamped to the beginning/end, i.e. unless the list is empty, an item is
-// always removed.
-//
-// The currently selected item is shifted accordingly. If it is the one that is
-// removed, a "changed" event is fired, unless no items are left.
-func (l *List) RemoveItem(index int) *List {
-	if len(l.items) == 0 {
+// SetGap sets the number of blank rows between items.
+func (l *List) SetGap(gap int) *List {
+	if gap < 0 {
+		gap = 0
+	}
+	if l.gap != gap {
+		l.gap = gap
+		l.MarkDirty()
+	}
+	return l
+}
+
+// SetSnapToItems toggles snapping so only fully visible items are shown.
+func (l *List) SetSnapToItems(snap bool) *List {
+	if l.snapToItems != snap {
+		l.snapToItems = snap
+		l.MarkDirty()
+	}
+	return l
+}
+
+// SetCenterCursor controls whether the cursor is kept centered whenever
+// possible.
+func (l *List) SetCenterCursor(center bool) *List {
+	if l.centerCursor != center {
+		l.centerCursor = center
+		l.MarkDirty()
+	}
+	return l
+}
+
+// SetTrackEnd toggles auto-scrolling when the view is already at the end.
+func (l *List) SetTrackEnd(track bool) *List {
+	if l.trackEnd != track {
+		l.trackEnd = track
+		l.MarkDirty()
+	}
+	return l
+}
+
+// ScrollToStart resets the scroll position to the top (index 0), without
+// changing the cursor.
+func (l *List) ScrollToStart() *List {
+	if l.scroll.top != 0 || l.scroll.offset != 0 || l.scroll.wantsCursor || l.atEnd {
+		l.scroll.top = 0
+		l.scroll.offset = 0
+		l.scroll.wantsCursor = false
+		l.atEnd = false
+		l.MarkDirty()
+	}
+	return l
+}
+
+// ScrollToEnd scrolls the view so the last items are visible.
+func (l *List) ScrollToEnd() *List {
+	_, _, width, height := l.GetInnerRect()
+	if width <= 0 || height <= 0 {
 		return l
 	}
+	top, offset := l.endScrollState(width, height)
+	if l.scroll.top != top || l.scroll.offset != offset || l.scroll.wantsCursor || !l.atEnd {
+		l.scroll.top, l.scroll.offset = top, offset
+		l.scroll.wantsCursor = false
+		l.atEnd = true
+		l.MarkDirty()
+	}
+	return l
+}
 
-	// Adjust index.
-	if index < 0 {
-		index = len(l.items) + index
+// SetCursor sets the currently selected item index.
+func (l *List) SetCursor(index int) *List {
+	if index < -1 {
+		index = -1
 	}
-	if index >= len(l.items) {
-		index = len(l.items) - 1
+	if l.cursor != index {
+		l.cursor = index
+		l.atEnd = false
+		l.ensureScroll()
+		l.MarkDirty()
+		if l.changed != nil {
+			l.changed(l.cursor)
+		}
 	}
-	if index < 0 {
-		index = 0
-	}
+	return l
+}
 
-	// Remove item.
-	l.items = slices.Delete(l.items, index, index+1)
+// Cursor returns the current cursor index.
+func (l *List) Cursor() int {
+	return l.cursor
+}
+
+// SetPendingScroll sets a pending scroll amount, in lines. Positive numbers
+// scroll down.
+func (l *List) SetPendingScroll(lines int) *List {
+	if l.scroll.pending != lines {
+		l.scroll.pending = lines
+		l.MarkDirty()
+	}
+	return l
+}
+
+// ScrollUp scrolls the list up by one line.
+func (l *List) ScrollUp() *List {
+	l.scroll.pending -= 1
 	l.MarkDirty()
-
-	// If there is nothing left, we're done.
-	if len(l.items) == 0 {
-		return l
-	}
-
-	// Shift current item.
-	previousCurrentItem := l.currentItem
-	if l.currentItem > index || l.currentItem == len(l.items) {
-		l.currentItem--
-	}
-
-	// Fire "changed" event for removed items.
-	if previousCurrentItem == index && l.changed != nil {
-		item := l.items[l.currentItem]
-		l.changed(l.currentItem, item.MainText, item.SecondaryText, item.Shortcut)
-	}
-
 	return l
 }
 
-// SetMainTextColor sets the color of the items' main text.
-func (l *List) SetMainTextColor(color tcell.Color) *List {
-	style := l.mainTextStyle.Foreground(color)
-	if l.mainTextStyle != style {
-		l.mainTextStyle = style
+// ScrollDown scrolls the list down by one line.
+func (l *List) ScrollDown() *List {
+	l.scroll.pending += 1
+	l.MarkDirty()
+	return l
+}
+
+// NextItem moves the cursor to the next item, if any.
+func (l *List) NextItem() bool {
+	if l.Builder == nil {
+		return false
+	}
+	if l.cursor < 0 {
+		if l.Builder(0, l.cursor) == nil {
+			return false
+		}
+		l.cursor = 0
+		l.ensureScroll()
 		l.MarkDirty()
+		if l.changed != nil {
+			l.changed(l.cursor)
+		}
+		return true
 	}
-	return l
-}
-
-// SetMainTextStyle sets the style of the items' main text. Note that the
-// background color is ignored in order not to override the background color of
-// the list itself.
-func (l *List) SetMainTextStyle(style tcell.Style) *List {
-	if l.mainTextStyle != style {
-		l.mainTextStyle = style
-		l.MarkDirty()
+	if l.Builder(l.cursor+1, l.cursor) == nil {
+		return false
 	}
-	return l
-}
-
-// SetSecondaryTextColor sets the color of the items' secondary text.
-func (l *List) SetSecondaryTextColor(color tcell.Color) *List {
-	style := l.secondaryTextStyle.Foreground(color)
-	if l.secondaryTextStyle != style {
-		l.secondaryTextStyle = style
-		l.MarkDirty()
+	l.cursor++
+	l.ensureScroll()
+	l.MarkDirty()
+	if l.changed != nil {
+		l.changed(l.cursor)
 	}
-	return l
+	return true
 }
 
-// SetSecondaryTextStyle sets the style of the items' secondary text. Note that
-// the background color is ignored in order not to override the background color
-// of the list itself.
-func (l *List) SetSecondaryTextStyle(style tcell.Style) *List {
-	if l.secondaryTextStyle != style {
-		l.secondaryTextStyle = style
-		l.MarkDirty()
+// PrevItem moves the cursor to the previous item, if any.
+func (l *List) PrevItem() bool {
+	if l.cursor <= 0 {
+		return false
 	}
-	return l
-}
-
-// SetShortcutColor sets the color of the items' shortcut.
-func (l *List) SetShortcutColor(color tcell.Color) *List {
-	style := l.shortcutStyle.Foreground(color)
-	if l.shortcutStyle != style {
-		l.shortcutStyle = style
-		l.MarkDirty()
+	if l.Builder == nil {
+		return false
 	}
-	return l
-}
-
-// SetShortcutStyle sets the style of the items' shortcut. Note that the
-// background color is ignored in order not to override the background color of
-// the list itself.
-func (l *List) SetShortcutStyle(style tcell.Style) *List {
-	if l.shortcutStyle != style {
-		l.shortcutStyle = style
-		l.MarkDirty()
+	if l.Builder(l.cursor-1, l.cursor) == nil {
+		return false
 	}
-	return l
-}
-
-// SetSelectedTextColor sets the text color of selected items. Note that the
-// color of main text characters that are different from the main text color
-// (e.g. style tags) is maintained.
-func (l *List) SetSelectedTextColor(color tcell.Color) *List {
-	style := l.selectedStyle.Foreground(color)
-	if l.selectedStyle != style {
-		l.selectedStyle = style
-		l.MarkDirty()
+	l.cursor--
+	l.ensureScroll()
+	l.MarkDirty()
+	if l.changed != nil {
+		l.changed(l.cursor)
 	}
-	return l
+	return true
 }
 
-// SetSelectedBackgroundColor sets the background color of selected items.
-func (l *List) SetSelectedBackgroundColor(color tcell.Color) *List {
-	style := l.selectedStyle.Background(color)
-	if l.selectedStyle != style {
-		l.selectedStyle = style
-		l.MarkDirty()
-	}
-	return l
-}
-
-// SetSelectedStyle sets the style of the selected items. Note that the color of
-// main text characters that are different from the main text color (e.g. color
-// tags) is maintained.
-func (l *List) SetSelectedStyle(style tcell.Style) *List {
-	if l.selectedStyle != style {
-		l.selectedStyle = style
-		l.MarkDirty()
-	}
-	return l
-}
-
-// SetUseStyleTags sets a flag which determines whether style tags are used in
-// the main and secondary texts. The default is true.
-func (l *List) SetUseStyleTags(mainStyleTags, secondaryStyleTags bool) *List {
-	if l.mainStyleTags != mainStyleTags || l.secondaryStyleTags != secondaryStyleTags {
-		l.mainStyleTags = mainStyleTags
-		l.secondaryStyleTags = secondaryStyleTags
-		l.MarkDirty()
-	}
-	return l
-}
-
-// GetUseStyleTags returns whether style tags are used in the main and secondary
-// texts.
-func (l *List) GetUseStyleTags() (mainStyleTags, secondaryStyleTags bool) {
-	return l.mainStyleTags, l.secondaryStyleTags
-}
-
-// SetSelectedFocusOnly sets a flag which determines when the currently selected
-// list item is highlighted. If set to true, selected items are only highlighted
-// when the list has focus. If set to false, they are always highlighted.
-func (l *List) SetSelectedFocusOnly(focusOnly bool) *List {
-	if l.selectedFocusOnly != focusOnly {
-		l.selectedFocusOnly = focusOnly
-		l.MarkDirty()
-	}
-	return l
-}
-
-// SetHighlightFullLine sets a flag which determines whether the colored
-// background of selected items spans the entire width of the view. If set to
-// true, the highlight spans the entire view. If set to false, only the text of
-// the selected item from beginning to end is highlighted.
-func (l *List) SetHighlightFullLine(highlight bool) *List {
-	if l.highlightFullLine != highlight {
-		l.highlightFullLine = highlight
-		l.MarkDirty()
-	}
-	return l
-}
-
-// ShowSecondaryText determines whether or not to show secondary item texts.
-func (l *List) ShowSecondaryText(show bool) *List {
-	if l.showSecondaryText != show {
-		l.showSecondaryText = show
-		l.MarkDirty()
-	}
-	return l
-}
-
-// SetWrapAround sets the flag that determines whether navigating the list will
-// wrap around. That is, navigating downwards on the last item will move the
-// selection to the first item (similarly in the other direction). If set to
-// false, the selection won't change when navigating downwards on the last item
-// or navigating upwards on the first item.
-func (l *List) SetWrapAround(wrapAround bool) *List {
-	if l.wrapAround != wrapAround {
-		l.wrapAround = wrapAround
-		l.MarkDirty()
-	}
-	return l
-}
-
-// SetChangedFunc sets the function which is called when the user navigates to
-// a list item. The function receives the item's index in the list of items
-// (starting with 0), its main text, secondary text, and its shortcut rune.
-//
-// This function is also called when the first item is added or when
-// SetCurrentItem() is called.
-func (l *List) SetChangedFunc(handler func(index int, mainText string, secondaryText string, shortcut rune)) *List {
+// SetChangedFunc sets a handler that is called when the cursor changes.
+func (l *List) SetChangedFunc(handler func(index int)) *List {
 	l.changed = handler
 	return l
 }
 
-// SetSelectedFunc sets the function which is called when the user selects a
-// list item by pressing Enter on the current selection. The function receives
-// the item's index in the list of items (starting with 0), its main text,
-// secondary text, and its shortcut rune.
-func (l *List) SetSelectedFunc(handler func(int, string, string, rune)) *List {
-	l.selected = handler
-	return l
+func (l *List) setLastDraw(children []listDrawnItem) {
+	for _, child := range l.lastDraw {
+		unbindDirtyParent(child.item, l.Box)
+	}
+	l.lastDraw = children
+	for _, child := range l.lastDraw {
+		bindDirtyParent(child.item, l.Box)
+	}
 }
 
-// GetSelectedFunc returns the function set with [List.SetSelectedFunc] or nil
-// if no such function was set.
-func (l *List) GetSelectedFunc() func(int, string, string, rune) {
-	return l.selected
-}
-
-// SetDoneFunc sets a function which is called when the user presses the Escape
-// key.
-func (l *List) SetDoneFunc(handler func()) *List {
-	l.done = handler
-	return l
-}
-
-// AddItem calls [List.InsertItem] with an index of -1.
-func (l *List) AddItem(mainText, secondaryText string, shortcut rune, selected func()) *List {
-	l.InsertItem(-1, mainText, secondaryText, shortcut, selected)
-	return l
-}
-
-// InsertItem adds a new item to the list at the specified index. An index of 0
-// will insert the item at the beginning, an index of 1 before the second item,
-// and so on. An index of [List.GetItemCount] or higher will insert the item at
-// the end of the list. Negative indices are also allowed: An index of -1 will
-// insert the item at the end of the list, an index of -2 before the last item,
-// and so on. An index of -GetItemCount()-1 or lower will insert the item at the
-// beginning.
-//
-// An item has a main text which will be highlighted when selected. It also has
-// a secondary text which is shown underneath the main text (if it is set to
-// visible) but which may remain empty.
-//
-// The shortcut is a key binding. If the specified rune is entered, the item
-// is selected immediately. Set to 0 for no binding.
-//
-// The "selected" callback will be invoked when the user selects the item. You
-// may provide nil if no such callback is needed or if all events are handled
-// through the selected callback set with [List.SetSelectedFunc].
-//
-// The currently selected item will shift its position accordingly. If the list
-// was previously empty, a "changed" event is fired because the new item becomes
-// selected.
-func (l *List) InsertItem(index int, mainText, secondaryText string, shortcut rune, selected func()) *List {
-	item := &listItem{
-		MainText:      mainText,
-		SecondaryText: secondaryText,
-		Shortcut:      shortcut,
-		Selected:      selected,
+// IsDirty returns whether this primitive or one of its visible children needs redraw.
+func (l *List) IsDirty() bool {
+	if l.Box.IsDirty() {
+		return true
 	}
-
-	// Shift index to range.
-	if index < 0 {
-		index = len(l.items) + index + 1
-	}
-	if index < 0 {
-		index = 0
-	} else if index > len(l.items) {
-		index = len(l.items)
-	}
-
-	// Shift current item.
-	if l.currentItem < len(l.items) && l.currentItem >= index {
-		l.currentItem++
-	}
-
-	// Insert item (make space for the new item, then shift and insert).
-	l.items = append(l.items, nil)
-	if index < len(l.items)-1 { // -1 because l.items has already grown by one item.
-		copy(l.items[index+1:], l.items[index:])
-	}
-	l.items[index] = item
-
-	// Fire a "change" event for the first item in the list.
-	if len(l.items) == 1 && l.changed != nil {
-		item := l.items[0]
-		l.changed(0, item.MainText, item.SecondaryText, item.Shortcut)
-	}
-	l.MarkDirty()
-
-	return l
-}
-
-// GetItemCount returns the number of items in the list.
-func (l *List) GetItemCount() int {
-	return len(l.items)
-}
-
-// GetItemSelectedFunc returns the function which is called when the user
-// selects the item with the given index, if such a function was set. If no
-// function was set, nil is returned. Panics if the index is out of range.
-func (l *List) GetItemSelectedFunc(index int) func() {
-	return l.items[index].Selected
-}
-
-// GetItemText returns an item's texts (main and secondary). Panics if the index
-// is out of range.
-func (l *List) GetItemText(index int) (main, secondary string) {
-	return l.items[index].MainText, l.items[index].SecondaryText
-}
-
-// SetItemText sets an item's main and secondary text. Panics if the index is
-// out of range.
-func (l *List) SetItemText(index int, main, secondary string) *List {
-	item := l.items[index]
-	if item.MainText != main || item.SecondaryText != secondary {
-		item.MainText = main
-		item.SecondaryText = secondary
-		l.MarkDirty()
-	}
-	return l
-}
-
-// FindItems searches the main and secondary texts for the given strings and
-// returns a list of item indices in which those strings are found. One of the
-// two search strings may be empty, it will then be ignored. Indices are always
-// returned in ascending order.
-//
-// If mustContainBoth is set to true, mainSearch must be contained in the main
-// text AND secondarySearch must be contained in the secondary text. If it is
-// false, only one of the two search strings must be contained.
-//
-// Set ignoreCase to true for case-insensitive search.
-func (l *List) FindItems(mainSearch, secondarySearch string, mustContainBoth, ignoreCase bool) (indices []int) {
-	if mainSearch == "" && secondarySearch == "" {
-		return
-	}
-
-	if ignoreCase {
-		mainSearch = strings.ToLower(mainSearch)
-		secondarySearch = strings.ToLower(secondarySearch)
-	}
-
-	for index, item := range l.items {
-		mainText := item.MainText
-		secondaryText := item.SecondaryText
-		if ignoreCase {
-			mainText = strings.ToLower(mainText)
-			secondaryText = strings.ToLower(secondaryText)
-		}
-
-		// strings.Contains() always returns true for a "" search.
-		mainContained := strings.Contains(mainText, mainSearch)
-		secondaryContained := strings.Contains(secondaryText, secondarySearch)
-		if mustContainBoth && mainContained && secondaryContained ||
-			!mustContainBoth && (mainSearch != "" && mainContained || secondarySearch != "" && secondaryContained) {
-			indices = append(indices, index)
+	for _, child := range l.lastDraw {
+		if child.item != nil && child.item.IsDirty() {
+			return true
 		}
 	}
-
-	return
+	return false
 }
 
-// Clear removes all items from the list.
-func (l *List) Clear() *List {
-	if len(l.items) > 0 || l.currentItem != 0 {
-		l.items = nil
-		l.currentItem = 0
-		l.MarkDirty()
+// MarkClean marks this primitive and visible children as clean.
+func (l *List) MarkClean() {
+	l.Box.MarkClean()
+	for _, child := range l.lastDraw {
+		if child.item != nil {
+			child.item.MarkClean()
+		}
 	}
-	return l
 }
 
 // Draw draws this primitive onto the screen.
 func (l *List) Draw(screen tcell.Screen) {
 	l.DrawForSubclass(screen, l)
 
-	// Determine the dimensions.
 	x, y, width, height := l.GetInnerRect()
-	bottomLimit := y + height
-	_, totalHeight := screen.Size()
-	if bottomLimit > totalHeight {
-		bottomLimit = totalHeight
-	}
-
-	// Adjust offsets to keep the current item in view.
-	if height == 0 {
+	if width <= 0 || height <= 0 || l.Builder == nil {
 		return
 	}
-	if l.currentItem < l.itemOffset {
-		l.itemOffset = l.currentItem
-	} else if l.showSecondaryText {
-		if 2*(l.currentItem-l.itemOffset) >= height-1 {
-			l.itemOffset = (2*l.currentItem + 3 - height) / 2
-		}
-	} else {
-		if l.currentItem-l.itemOffset >= height {
-			l.itemOffset = l.currentItem + 1 - height
-		}
-	}
-	if l.horizontalOffset < 0 {
-		l.horizontalOffset = 0
+
+	usableWidth := width
+	if usableWidth <= 0 {
+		return
 	}
 
-	// Do we show any shortcuts?
-	var showShortcuts bool
-	for _, item := range l.items {
-		if item.Shortcut != 0 {
-			showShortcuts = true
-			x += 4
-			width -= 4
+	// If we were already at the end, keep following new items without
+	// forcing full scans during normal scrolling.
+	if l.trackEnd && l.atEnd {
+		l.scroll.top, l.scroll.offset = l.endScrollState(usableWidth, height)
+		l.scroll.wantsCursor = false
+	}
+
+	// In snap mode, ensure the cursor item is within the fully visible window.
+	if l.snapToItems && l.scroll.wantsCursor && l.cursor >= 0 {
+		visible := l.visibleItemCount(usableWidth, height)
+		if l.cursor < l.scroll.top || l.cursor >= l.scroll.top+visible {
+			l.scroll.top = l.cursor
+			l.scroll.offset = 0
+		}
+		l.scroll.wantsCursor = false
+	}
+
+	// In non-snap mode, try to center the cursor when there is room.
+	if !l.snapToItems && l.centerCursor && l.scroll.wantsCursor && l.cursor >= 0 {
+		if top, offset, centered := l.centerScrollState(usableWidth, height); centered {
+			l.scroll.top = top
+			l.scroll.offset = offset
+			l.scroll.wantsCursor = false
+		}
+	}
+
+	pendingDelta := l.scroll.pending
+	ah := -(l.scroll.offset + pendingDelta)
+	l.scroll.pending = 0
+
+	if ah > 0 && l.scroll.top == 0 {
+		ah = 0
+		l.scroll.offset = 0
+	}
+
+rebuild:
+	// Rebuild the viewport whenever we change top/offset to keep the cursor in view.
+	children := make([]listDrawnItem, 0, 16)
+	startIndex := l.scroll.top
+
+	if ah > 0 {
+		// We scrolled upward into the previous top item; prepend enough items above.
+		l.insertChildren(&children, usableWidth, ah)
+		if len(children) > 0 {
+			last := children[len(children)-1]
+			ah = last.row + last.height + l.gap
+		}
+	}
+
+	endReached := false
+	for i := startIndex; ; i++ {
+		item := l.Builder(i, l.cursor)
+		if item == nil {
+			endReached = true
 			break
 		}
-	}
 
-	// Draw the list items.
-	var maxWidth int // The maximum printed item width.
-	for index, item := range l.items {
-		if index < l.itemOffset {
+		itemHeight := l.itemHeight(item, usableWidth)
+		children = append(children, listDrawnItem{
+			index:  i,
+			item:   item,
+			row:    ah,
+			height: itemHeight,
+		})
+		ah += itemHeight + l.gap
+
+		if l.scroll.wantsCursor && i <= l.cursor {
 			continue
 		}
-
-		if y >= bottomLimit {
+		if ah >= height {
 			break
-		}
-
-		// Shortcuts.
-		if showShortcuts && item.Shortcut != 0 {
-			printWithStyle(screen, fmt.Sprintf("(%s)", string(item.Shortcut)), x-5, y, 0, 4, AlignmentRight, l.shortcutStyle, false)
-		}
-
-		// Main text.
-		selected := index == l.currentItem && (!l.selectedFocusOnly || l.HasFocus())
-		style := l.mainTextStyle
-		if selected {
-			style = l.selectedStyle
-		}
-		mainText := item.MainText
-		if !l.mainStyleTags {
-			mainText = Escape(mainText)
-		}
-		_, _, printedWidth := printWithStyle(screen, mainText, x, y, l.horizontalOffset, width, AlignmentLeft, style, false)
-		if printedWidth > maxWidth {
-			maxWidth = printedWidth
-		}
-
-		// Draw until the end of the line if requested.
-		if selected && l.highlightFullLine {
-			for bx := printedWidth; bx < width; bx++ {
-				screen.Put(x+bx, y, " ", style)
-			}
-		}
-
-		y++
-		if y >= bottomLimit {
-			break
-		}
-
-		// Secondary text.
-		if l.showSecondaryText {
-			secondaryText := item.SecondaryText
-			if !l.secondaryStyleTags {
-				secondaryText = Escape(secondaryText)
-			}
-			_, _, printedWidth := printWithStyle(screen, secondaryText, x, y, l.horizontalOffset, width, AlignmentLeft, l.secondaryTextStyle, false)
-			if printedWidth > maxWidth {
-				maxWidth = printedWidth
-			}
-			y++
 		}
 	}
 
-	// We don't want the item text to get out of view. If the horizontal offset
-	// is too high, we reset it and redraw. (That should be about as efficient
-	// as calculating everything up front.)
-	if l.horizontalOffset > 0 && maxWidth < width {
-		l.horizontalOffset -= width - maxWidth
-		l.Draw(screen)
+	if len(children) == 0 {
+		l.scroll.top = 0
+		l.scroll.offset = 0
+		l.setLastDraw(nil)
+		l.lastRect = listRect{x: x, y: y, width: width, height: height}
+		l.atEnd = false
+		return
 	}
+
+	// If the cursor item didn't make it into the built slice, restart from it.
+	if l.snapToItems && l.scroll.wantsCursor && l.cursor >= 0 {
+		found := false
+		for _, child := range children {
+			if child.index == l.cursor {
+				found = true
+				break
+			}
+		}
+		if !found {
+			l.scroll.top = l.cursor
+			l.scroll.offset = 0
+			l.scroll.wantsCursor = false
+			goto rebuild
+		}
+	}
+
+	if l.snapToItems {
+		// Drop partial items so only fully visible ones remain.
+		children = l.trimToFullItems(children, height)
+		if len(children) == 0 {
+			l.scroll.top = 0
+			l.scroll.offset = 0
+			l.setLastDraw(nil)
+			l.lastRect = listRect{x: x, y: y, width: width, height: height}
+			l.atEnd = false
+			return
+		}
+
+		// Fill remaining space with fully visible items if possible.
+		nextIndex := children[len(children)-1].index + 1
+		currentBottom := children[len(children)-1].row + children[len(children)-1].height
+		for {
+			item := l.Builder(nextIndex, l.cursor)
+			if item == nil {
+				break
+			}
+			itemHeight := l.itemHeight(item, usableWidth)
+			nextRow := currentBottom + l.gap
+			if nextRow+itemHeight > height {
+				break
+			}
+			children = append(children, listDrawnItem{
+				index:  nextIndex,
+				item:   item,
+				row:    nextRow,
+				height: itemHeight,
+			})
+			currentBottom = nextRow + itemHeight
+			nextIndex++
+		}
+	}
+
+	// When scrolling down at the end, clamp so the last item aligns to the bottom.
+	if endReached && pendingDelta > 0 {
+		last := children[len(children)-1]
+		bottom := last.row + last.height
+		if children[0].row < 0 && bottom < height {
+			adj := height - bottom
+			for i := range children {
+				children[i].row += adj
+			}
+		}
+	}
+
+	// Non-snap mode: adjust rows so the cursor item is fully visible.
+	if l.scroll.wantsCursor {
+		for _, child := range children {
+			if child.index != l.cursor {
+				continue
+			}
+			bottom := child.row + child.height
+			if bottom > height {
+				adj := height - bottom
+				for i := range children {
+					children[i].row += adj
+				}
+			}
+			l.scroll.wantsCursor = false
+			break
+		}
+	}
+
+	if l.snapToItems {
+		// Snap mode uses the first item as the top anchor.
+		l.scroll.top = children[0].index
+		l.scroll.offset = 0
+	} else {
+		// Non-snap mode keeps the first partially visible item as the top anchor.
+		for i := range children {
+			child := children[i]
+			span := child.height
+			if l.gap > 0 {
+				span += l.gap
+			}
+			if child.row <= 0 && child.row+span > 0 {
+				l.scroll.top = child.index
+				l.scroll.offset = -child.row
+				break
+			}
+		}
+	}
+
+	last := children[len(children)-1]
+	if !endReached && l.Builder(last.index+1, l.cursor) == nil {
+		endReached = true
+	}
+	l.atEnd = endReached && last.row+last.height <= height
+
+	l.setLastDraw(children)
+	l.lastRect = listRect{x: x, y: y, width: width, height: height}
+
+	clipped := newClippedScreen(screen, x, y, width, height)
+	for _, child := range children {
+		child.item.SetRect(x, y+child.row, usableWidth, child.height)
+		child.item.Draw(clipped)
+	}
+}
+
+func (l *List) itemHeight(item ListItem, width int) int {
+	if item == nil {
+		return 0
+	}
+	height := max(item.Height(width), 1)
+	return height
+}
+
+func (l *List) insertChildren(children *[]listDrawnItem, width int, ah int) {
+	if l.scroll.top <= 0 {
+		return
+	}
+
+	l.scroll.top--
+	for ah > 0 {
+		// Account for the gap between the inserted item and the current top.
+		if l.gap > 0 {
+			ah -= l.gap
+		}
+		item := l.Builder(l.scroll.top, l.cursor)
+		if item == nil {
+			break
+		}
+		height := l.itemHeight(item, width)
+		ah -= height
+		entry := listDrawnItem{
+			index:  l.scroll.top,
+			item:   item,
+			row:    ah,
+			height: height,
+		}
+		*children = append([]listDrawnItem{entry}, *children...)
+
+		if l.scroll.top == 0 {
+			break
+		}
+		l.scroll.top--
+	}
+
+	l.scroll.offset = ah
+
+	if l.scroll.top == 0 && ah > 0 {
+		// We hit the absolute top; normalize rows to avoid overscrolling.
+		l.scroll.offset = 0
+		row := 0
+		for i := range *children {
+			child := (*children)[i]
+			child.row = row
+			(*children)[i] = child
+			row += child.height + l.gap
+		}
+	}
+}
+
+func (l *List) ensureScroll() {
+	if l.cursor < 0 {
+		l.scroll.wantsCursor = false
+		return
+	}
+	if l.cursor < l.scroll.top {
+		l.scroll.top = l.cursor
+		l.scroll.offset = 0
+	}
+	l.scroll.wantsCursor = true
+}
+
+func (l *List) centerScrollState(width int, height int) (int, int, bool) {
+	if l.Builder == nil || l.cursor < 0 || width <= 0 || height <= 0 {
+		return 0, 0, false
+	}
+	cursorItem := l.Builder(l.cursor, l.cursor)
+	if cursorItem == nil {
+		return 0, 0, false
+	}
+	cursorHeight := l.itemHeight(cursorItem, width)
+	// Compute the space above the cursor so its center aligns to the viewport center.
+	targetCenter := height / 2
+	desiredBefore := max(targetCenter-cursorHeight/2, 0)
+
+	// Build a top/offset that leaves desiredBefore rows ahead of the cursor.
+	top := l.cursor
+	offset := 0
+	remaining := desiredBefore
+	for remaining > 0 && top > 0 {
+		prevIndex := top - 1
+		prevItem := l.Builder(prevIndex, l.cursor)
+		if prevItem == nil {
+			break
+		}
+		prevHeight := l.itemHeight(prevItem, width)
+		span := prevHeight
+		if l.gap > 0 {
+			span += l.gap
+		}
+		if remaining >= span {
+			remaining -= span
+			top = prevIndex
+			offset = 0
+			continue
+		}
+		top = prevIndex
+		if remaining > l.gap {
+			// Scroll partway into the previous item if needed.
+			withinItem := remaining - l.gap
+			offset = max(prevHeight-withinItem, 0)
+		} else {
+			offset = prevHeight
+		}
+		remaining = 0
+	}
+
+	// If we ran out of items above, skip centering.
+	if remaining > 0 {
+		return 0, 0, false
+	}
+
+	// Verify there is enough content below to keep the viewport filled.
+	ah := -offset
+	for i := top; ; i++ {
+		item := l.Builder(i, l.cursor)
+		if item == nil {
+			return 0, 0, false
+		}
+		itemHeight := l.itemHeight(item, width)
+		if ah+itemHeight >= height {
+			break
+		}
+		ah += itemHeight + l.gap
+	}
+
+	return top, offset, true
+}
+
+func (l *List) scrollByItems(delta int, count int, width int, height int) {
+	if l.Builder == nil {
+		return
+	}
+	if count < 1 {
+		count = 1
+	}
+	if delta > 0 {
+		// Step the top index downward without going past the end.
+		for i := 0; i < count; i++ {
+			if l.Builder(l.scroll.top+1, l.cursor) == nil {
+				break
+			}
+			l.scroll.top++
+		}
+	} else {
+		// Step the top index upward without going below zero.
+		for i := 0; i < count; i++ {
+			if l.scroll.top <= 0 {
+				break
+			}
+			l.scroll.top--
+		}
+	}
+	l.scroll.offset = 0
+	l.scroll.wantsCursor = false
+	l.setLastDraw(nil)
+	l.lastRect = listRect{x: 0, y: 0, width: width, height: height}
+}
+
+func (l *List) visibleItemCount(width int, height int) int {
+	if l.Builder == nil || width <= 0 || height <= 0 {
+		return 0
+	}
+	total := 0
+	count := 0
+	for idx := l.scroll.top; ; idx++ {
+		item := l.Builder(idx, l.cursor)
+		if item == nil {
+			break
+		}
+		if count > 0 {
+			total += l.gap
+		}
+		itemHeight := l.itemHeight(item, width)
+		if total+itemHeight > height {
+			break
+		}
+		total += itemHeight
+		count++
+	}
+	// Always move at least one item so navigation feels responsive.
+	if count == 0 {
+		return 1
+	}
+	return count
+}
+
+func (l *List) endScrollState(width int, height int) (int, int) {
+	if l.Builder == nil || width <= 0 || height <= 0 {
+		return 0, 0
+	}
+	start := max(l.scroll.top, 0)
+	// If the current top is past the end, restart from the beginning.
+	if l.Builder(start, l.cursor) == nil && start != 0 {
+		start = 0
+	}
+	last := start
+	for {
+		if l.Builder(last, l.cursor) == nil {
+			last--
+			break
+		}
+		last++
+	}
+	if last < 0 {
+		return 0, 0
+	}
+
+	// Walk upward from the last item until we fill a viewport.
+	total := 0
+	for i := last; i >= 0; i-- {
+		item := l.Builder(i, l.cursor)
+		if item == nil {
+			continue
+		}
+		if total > 0 {
+			total += l.gap
+		}
+		itemHeight := l.itemHeight(item, width)
+		if total+itemHeight > height {
+			offset := max(total+itemHeight-height, 0)
+			return i, offset
+		}
+		total += itemHeight
+		if i == 0 {
+			break
+		}
+	}
+	return 0, 0
 }
 
 // InputHandler returns the handler for this primitive.
 func (l *List) InputHandler() func(event *tcell.EventKey, setFocus func(p Primitive)) {
 	return l.WrapInputHandler(func(event *tcell.EventKey, setFocus func(p Primitive)) {
-		if event.Key() == tcell.KeyEscape {
-			if l.done != nil {
-				l.done()
-			}
-			return
-		} else if len(l.items) == 0 {
-			return
-		}
-
-		previousItem := l.currentItem
-		previousHorizontalOffset := l.horizontalOffset
-
-		switch key := event.Key(); key {
-		case tcell.KeyTab, tcell.KeyDown:
-			l.currentItem++
-		case tcell.KeyBacktab, tcell.KeyUp:
-			l.currentItem--
-		case tcell.KeyRight:
-			l.horizontalOffset += 2 // We shift by 2 to account for two-cell characters.
-		case tcell.KeyLeft:
-			l.horizontalOffset -= 2
-		case tcell.KeyHome:
-			l.currentItem = 0
-		case tcell.KeyEnd:
-			l.currentItem = len(l.items) - 1
+		switch event.Key() {
+		case tcell.KeyDown:
+			l.NextItem()
+		case tcell.KeyUp:
+			l.PrevItem()
 		case tcell.KeyPgDn:
-			_, _, _, height := l.GetInnerRect()
-			l.currentItem += height
-			if l.currentItem >= len(l.items) {
-				l.currentItem = len(l.items) - 1
+			_, _, width, height := l.GetInnerRect()
+			if l.snapToItems {
+				l.scrollByItems(1, l.visibleItemCount(width, height), width, height)
+			} else {
+				if height < 1 {
+					height = 1
+				}
+				l.scroll.pending += height
 			}
 		case tcell.KeyPgUp:
-			_, _, _, height := l.GetInnerRect()
-			l.currentItem -= height
-			if l.currentItem < 0 {
-				l.currentItem = 0
-			}
-		case tcell.KeyEnter:
-			if l.currentItem >= 0 && l.currentItem < len(l.items) {
-				item := l.items[l.currentItem]
-				if item.Selected != nil {
-					item.Selected()
-				}
-				if l.selected != nil {
-					l.selected(l.currentItem, item.MainText, item.SecondaryText, item.Shortcut)
-				}
-			}
-		case tcell.KeyRune:
-			str := event.Str()
-			if str == "" {
-				return
-			}
-
-			ch := []rune(str)[0]
-			if ch != ' ' {
-				// It's not a space bar. Is it a shortcut?
-				var found bool
-				for index, item := range l.items {
-					if item.Shortcut == ch {
-						// We have a shortcut.
-						found = true
-						l.currentItem = index
-						break
-					}
-				}
-				if !found {
-					break
-				}
-			}
-			item := l.items[l.currentItem]
-			if item.Selected != nil {
-				item.Selected()
-			}
-			if l.selected != nil {
-				l.selected(l.currentItem, item.MainText, item.SecondaryText, item.Shortcut)
-			}
-		}
-
-		if l.currentItem < 0 {
-			if l.wrapAround {
-				l.currentItem = len(l.items) - 1
+			_, _, width, height := l.GetInnerRect()
+			if l.snapToItems {
+				l.scrollByItems(-1, l.visibleItemCount(width, height), width, height)
 			} else {
-				l.currentItem = 0
+				if height < 1 {
+					height = 1
+				}
+				l.scroll.pending -= height
 			}
-		} else if l.currentItem >= len(l.items) {
-			if l.wrapAround {
-				l.currentItem = 0
-			} else {
-				l.currentItem = len(l.items) - 1
-			}
-		}
-
-		if l.currentItem != previousItem && l.currentItem < len(l.items) {
-			if l.changed != nil {
-				item := l.items[l.currentItem]
-				l.changed(l.currentItem, item.MainText, item.SecondaryText, item.Shortcut)
-			}
-		}
-		if l.currentItem != previousItem || l.horizontalOffset != previousHorizontalOffset {
-			l.MarkDirty()
 		}
 	})
-}
-
-// indexAtPoint returns the index of the list item found at the given position
-// or a negative value if there is no such list item.
-func (l *List) indexAtPoint(x, y int) int {
-	rectX, rectY, width, height := l.GetInnerRect()
-	if rectX < 0 || rectX >= rectX+width || y < rectY || y >= rectY+height {
-		return -1
-	}
-
-	index := y - rectY
-	if l.showSecondaryText {
-		index /= 2
-	}
-	index += l.itemOffset
-
-	if index >= len(l.items) {
-		return -1
-	}
-	return index
 }
 
 // MouseHandler returns the mouse handler for this primitive.
 func (l *List) MouseHandler() func(action MouseAction, event *tcell.EventMouse, setFocus func(p Primitive)) (consumed bool, capture Primitive) {
 	return l.WrapMouseHandler(func(action MouseAction, event *tcell.EventMouse, setFocus func(p Primitive)) (consumed bool, capture Primitive) {
-		if !l.InRect(event.Position()) {
+		x, y := event.Position()
+		if !l.InRect(x, y) {
 			return false, nil
 		}
 
-		previousCurrentItem := l.currentItem
-		previousItemOffset := l.itemOffset
-		previousHorizontalOffset := l.horizontalOffset
-
-		// Process mouse event.
 		switch action {
 		case MouseLeftClick:
 			setFocus(l)
-			index := l.indexAtPoint(event.Position())
-			if index != -1 {
-				item := l.items[index]
-				if item.Selected != nil {
-					item.Selected()
+			index := l.indexAtPoint(x, y)
+			if index >= 0 {
+				previous := l.cursor
+				l.cursor = index
+				l.ensureScroll()
+				if l.changed != nil && l.cursor != previous {
+					l.changed(l.cursor)
 				}
-				if l.selected != nil {
-					l.selected(index, item.MainText, item.SecondaryText, item.Shortcut)
-				}
-				if index != l.currentItem {
-					if l.changed != nil {
-						l.changed(index, item.MainText, item.SecondaryText, item.Shortcut)
-					}
-				}
-				l.currentItem = index
 			}
-			consumed = true
+			return true, nil
 		case MouseScrollUp:
-			if l.itemOffset > 0 {
-				l.itemOffset--
+			_, _, width, height := l.GetInnerRect()
+			if l.snapToItems {
+				l.scrollByItems(-1, 1, width, height)
+			} else {
+				l.scroll.pending -= 3
 			}
-			consumed = true
+			return true, nil
 		case MouseScrollDown:
-			lines := len(l.items) - l.itemOffset
-			if l.showSecondaryText {
-				lines *= 2
+			_, _, width, height := l.GetInnerRect()
+			if l.snapToItems {
+				l.scrollByItems(1, 1, width, height)
+			} else {
+				l.scroll.pending += 3
 			}
-			if _, _, _, height := l.GetInnerRect(); lines > height {
-				l.itemOffset++
-			}
-			consumed = true
-		case MouseScrollLeft:
-			l.horizontalOffset--
-			consumed = true
-		case MouseScrollRight:
-			l.horizontalOffset++
-			consumed = true
-		}
-		if l.currentItem != previousCurrentItem || l.itemOffset != previousItemOffset || l.horizontalOffset != previousHorizontalOffset {
-			l.MarkDirty()
+			return true, nil
 		}
 
-		return
+		return false, nil
 	})
+}
+
+func (l *List) indexAtPoint(x, y int) int {
+	if len(l.lastDraw) == 0 {
+		return -1
+	}
+	if x < l.lastRect.x || x >= l.lastRect.x+l.lastRect.width || y < l.lastRect.y || y >= l.lastRect.y+l.lastRect.height {
+		return -1
+	}
+
+	row := y - l.lastRect.y
+	for _, child := range l.lastDraw {
+		span := child.height
+		if l.gap > 0 {
+			span += l.gap
+		}
+		if row >= child.row && row < child.row+span {
+			return child.index
+		}
+	}
+	return -1
+}
+
+var _ Primitive = &List{}
+
+type clippedScreen struct {
+	tcell.Screen
+	x      int
+	y      int
+	width  int
+	height int
+}
+
+func newClippedScreen(screen tcell.Screen, x, y, width, height int) *clippedScreen {
+	return &clippedScreen{
+		Screen: screen,
+		x:      x,
+		y:      y,
+		width:  width,
+		height: height,
+	}
+}
+
+func (s *clippedScreen) inBounds(x, y int) bool {
+	return x >= s.x && x < s.x+s.width && y >= s.y && y < s.y+s.height
+}
+
+func (s *clippedScreen) SetContent(x int, y int, primary rune, combining []rune, style tcell.Style) {
+	if !s.inBounds(x, y) {
+		return
+	}
+	s.Screen.SetContent(x, y, primary, combining, style)
+}
+
+func (s *clippedScreen) Put(x int, y int, str string, style tcell.Style) (string, int) {
+	if !s.inBounds(x, y) {
+		return str, 0
+	}
+	return s.Screen.Put(x, y, str, style)
+}
+
+func (s *clippedScreen) PutStr(x int, y int, str string) {
+	s.PutStrStyled(x, y, str, tcell.StyleDefault)
+}
+
+func (s *clippedScreen) PutStrStyled(x int, y int, str string, style tcell.Style) {
+	if y < s.y || y >= s.y+s.height {
+		return
+	}
+
+	gr := uniseg.NewGraphemes(str)
+	for gr.Next() {
+		cluster := gr.Str()
+		width := max(uniseg.StringWidth(cluster), 1)
+		if x >= s.x+s.width {
+			return
+		}
+		if x >= s.x && x+width <= s.x+s.width {
+			s.Screen.Put(x, y, cluster, style)
+		}
+		x += width
+	}
+}
+
+func (s *clippedScreen) ShowCursor(x int, y int) {
+	if !s.inBounds(x, y) {
+		s.Screen.ShowCursor(-1, -1)
+		return
+	}
+	s.Screen.ShowCursor(x, y)
+}
+
+func (l *List) trimToFullItems(children []listDrawnItem, height int) []listDrawnItem {
+	if len(children) == 0 {
+		return children
+	}
+
+	// Drop any items that start above the viewport.
+	start := 0
+	for start < len(children) && children[start].row < 0 {
+		start++
+	}
+	if start > 0 {
+		children = children[start:]
+	}
+	if len(children) == 0 {
+		return children
+	}
+
+	// Realign the first item to row 0 so we can fill below it.
+	shift := -children[0].row
+	if shift != 0 {
+		for i := range children {
+			children[i].row += shift
+		}
+	}
+
+	// Trim trailing items that don't fully fit.
+	end := len(children)
+	for end > 0 && children[end-1].row+children[end-1].height > height {
+		end--
+	}
+	children = children[:end]
+
+	return children
 }

@@ -817,14 +817,8 @@ func (t *TreeView) process(drawingAfter bool) {
 		// Move cursor into viewport.
 		if t.movement != treeScroll {
 			if t.centerCursor && height > 0 {
-				desired := selectedIndex - height/2
-				if desired < 0 {
-					desired = 0
-				}
-				maxOffset := len(t.nodes) - height
-				if maxOffset < 0 {
-					maxOffset = 0
-				}
+				desired := max(selectedIndex-height/2, 0)
+				maxOffset := max(len(t.nodes)-height, 0)
 				if desired > maxOffset {
 					desired = maxOffset
 				}

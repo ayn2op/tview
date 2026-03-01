@@ -1948,13 +1948,6 @@ func (t *TextArea) InputHandler(event *tcell.EventKey) Command {
 		return nil
 	}
 	var cmd Command
-	previousSelectionStart, previousCursor := t.selectionStart, t.cursor
-	previousRowOffset, previousColumnOffset := t.rowOffset, t.columnOffset
-	defer func() {
-		if previousSelectionStart != t.selectionStart || previousCursor != t.cursor ||
-			previousRowOffset != t.rowOffset || previousColumnOffset != t.columnOffset {
-		}
-	}()
 
 	// All actions except a few specific ones are "other" actions.
 	newLastAction := taActionOther
@@ -2343,14 +2336,6 @@ func (t *TextArea) MouseHandler(action MouseAction, event *tcell.EventMouse) (Pr
 	if t.disabled {
 		return nil, nil
 	}
-	previousSelectionStart, previousCursor := t.selectionStart, t.cursor
-	previousRowOffset, previousColumnOffset := t.rowOffset, t.columnOffset
-	previousDragging := t.dragging
-	defer func() {
-		if previousSelectionStart != t.selectionStart || previousCursor != t.cursor ||
-			previousRowOffset != t.rowOffset || previousColumnOffset != t.columnOffset || previousDragging != t.dragging {
-		}
-	}()
 
 	x, y := event.Position()
 	rectX, rectY, _, _ := t.GetInnerRect()

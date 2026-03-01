@@ -914,7 +914,6 @@ func (l *List) MouseHandler(action MouseAction, event *tcell.EventMouse) (Primit
 			}
 			return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
 		case MouseLeftClick:
-			cmd = AppendCommand(cmd, SetFocusCommand{Target: l})
 			if l.scrollBarInteraction.dragMoved {
 				l.scrollBarInteraction.dragMoved = false
 				return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
@@ -930,7 +929,6 @@ func (l *List) MouseHandler(action MouseAction, event *tcell.EventMouse) (Primit
 
 	switch action {
 	case MouseLeftClick:
-		cmd = AppendCommand(cmd, SetFocusCommand{Target: l})
 		index := l.indexAtPoint(x, y)
 		if index >= 0 {
 			previous := l.cursor

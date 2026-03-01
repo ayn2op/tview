@@ -1247,7 +1247,7 @@ func (t *TextArea) Draw(screen tcell.Screen) {
 		t.lastHeight, t.lastWidth = height, width
 		t.cursor.row, t.cursor.column, t.cursor.actualColumn, t.cursor.pos = 0, 0, 0, [3]int{1, 0, -1}
 		t.rowOffset, t.columnOffset = 0, 0
-		if len(t.placeholder) > 0 {
+		if len(t.placeholder.Segments) > 0 {
 			t.drawPlaceholder(screen, x, y, width, height)
 		}
 		return // We're done already.

@@ -18,26 +18,36 @@ func NewSegment(text string, style tcell.Style) Segment {
 	return Segment{Text: text, Style: style}
 }
 
-// Line is a list of styled segments.
-type Line []Segment
+// Line is a list of styled segments with indent used on softwrapping.
+type Line struct {
+	Segments []Segment
+	Indent   []Segment
+}
 
 // Clone returns a copy of this line with an independent backing array.
 func (l Line) Clone() Line {
-	out := make(Line, len(l))
-	copy(out, l)
+	out := Line{Segments: make([]Segment, len(l.Segments)), Indent: l.Indent}
+	copy(out.Segments, l.Segments)
 	return out
 }
 
 // NewLine returns a line from the provided segments, skipping empty segments.
 func NewLine(segments ...Segment) Line {
-	line := make(Line, 0, len(segments))
+	line := Line{Segments: make([]Segment, 0, len(segments))}
 	for _, segment := range segments {
 		if segment.Text == "" {
 			continue
 		}
-		line = append(line, segment)
+		line.Segments = append(line.Segments, segment)
 	}
 	return line
+}
+
+// WithIndent sets the indent segment that will be inserted on every
+// wrapped logical line
+func (l Line) WithIndent(indent []Segment) Line {
+	l.Indent = indent
+	return l
 }
 
 // LineBuilder incrementally builds styled lines from text writes.
@@ -70,15 +80,22 @@ func (b *LineBuilder) Write(text string, style tcell.Style) {
 	}
 }
 
+// WriteSegments is just like Write but takes multiple arguments.
+func (b *LineBuilder) WriteSegments(segments []Segment) {
+	for _, seg := range segments {
+		b.Write(seg.Text, seg.Style)
+	}
+}
+
 func (b *LineBuilder) writeSegment(text string, style tcell.Style) {
 	if text == "" {
 		return
 	}
-	if n := len(b.current); n > 0 && b.current[n-1].Style == style {
-		b.current[n-1].Text += text
+	if n := len(b.current.Segments); n > 0 && b.current.Segments[n-1].Style == style {
+		b.current.Segments[n-1].Text += text
 		return
 	}
-	b.current = append(b.current, Segment{Text: text, Style: style})
+	b.current.Segments = append(b.current.Segments, Segment{Text: text, Style: style})
 }
 
 // AppendLines appends fully built lines into the builder.
@@ -86,32 +103,43 @@ func (b *LineBuilder) AppendLines(lines []Line) {
 	if len(lines) == 0 {
 		return
 	}
-	for i, line := range lines {
-		if i > 0 {
-			b.NewLine()
-		}
-		for _, segment := range line {
-			b.writeSegment(segment.Text, segment.Style)
-		}
+	for _, segment := range lines[0].Segments {
+		b.writeSegment(segment.Text, segment.Style)
 	}
+	if len(lines) == 1 {
+		return
+	}
+	b.NewLine()
+	b.lines = append(b.lines, lines[1:]...)
+}
+
+// AppendLine appends a fully built line into the builder.
+// Needs to be called after a .NewLine() or called on an empty builder.
+func (b *LineBuilder) AppendLine(line Line) {
+	b.lines = append(b.lines, line)
 }
 
 // NewLine flushes the current line into the builder output.
 func (b *LineBuilder) NewLine() {
-	line := make(Line, len(b.current))
-	copy(line, b.current)
+	line := Line{Segments: make([]Segment, len(b.current.Segments)), Indent: b.current.Indent}
+	copy(line.Segments, b.current.Segments)
 	b.lines = append(b.lines, line)
-	b.current = nil
+	b.current.Segments = nil
+}
+
+// SetIndent sets default new indentation segment
+func (b *LineBuilder) SetIndent(indent []Segment) {
+	b.current.Indent = indent
 }
 
 // HasCurrentLine returns true when unflushed segments exist.
 func (b *LineBuilder) HasCurrentLine() bool {
-	return len(b.current) > 0
+	return len(b.current.Segments) > 0
 }
 
 // Finish returns all built lines.
 func (b *LineBuilder) Finish() []Line {
-	if len(b.current) > 0 || len(b.lines) == 0 {
+	if len(b.current.Segments) > 0 || len(b.lines) == 0 {
 		b.NewLine()
 	}
 	return b.lines

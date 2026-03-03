@@ -70,6 +70,20 @@ func (b *LineBuilder) Write(text string, style tcell.Style) {
 	}
 }
 
+// WriteAll is just like [Write] but takes a list of strings/segments.
+// All strings will have the same style as the first argument.
+// Unknown types will be discarded.
+func (b *LineBuilder) WriteAll(style tcell.Style, list ...any) {
+	for _, item := range list {
+		switch item := item.(type) {
+		case Segment:
+			b.Write(item.Text, item.Style)
+		case string:
+			b.Write(item, style)
+		}
+	}
+}
+
 func (b *LineBuilder) writeSegment(text string, style tcell.Style) {
 	if text == "" {
 		return

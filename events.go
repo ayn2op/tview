@@ -24,3 +24,11 @@ func NewPasteEvent(content string) *PasteEvent {
 	event.SetEventNow()
 	return event
 }
+
+type InitEvent struct{ tcell.EventTime }
+
+func NewInitEvent() *InitEvent {
+	event := &InitEvent{}
+	event.SetEventNow()
+	return event
+}

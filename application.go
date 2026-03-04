@@ -149,12 +149,19 @@ func (a *Application) Run() error {
 		}
 	}()
 
-	// Draw the screen for the first time.
-	a.draw()
-
 	a.Lock()
 	a.events = a.screen.EventQ()
 	a.Unlock()
+
+	a.RLock()
+	root := a.root
+	a.RUnlock()
+
+	if root != nil {
+		cmd := root.HandleEvent(NewInitEvent())
+		_ = a.executeCommand(cmd)
+		a.draw()
+	}
 
 	// Start event loop.
 	var (

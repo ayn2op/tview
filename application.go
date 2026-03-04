@@ -120,7 +120,6 @@ func (a *Application) SetScreen(screen tcell.Screen) *Application {
 // example when needing to print a call stack during a panic.
 func (a *Application) Run() error {
 	var (
-		appErr      error
 		lastRedraw  time.Time   // The time the screen was last redrawn.
 		redrawTimer *time.Timer // A timer to schedule the next redraw.
 	)
@@ -158,8 +157,9 @@ func (a *Application) Run() error {
 	a.RUnlock()
 
 	if root != nil {
-		cmd := root.HandleEvent(NewInitEvent())
-		_ = a.executeCommand(cmd)
+		if cmd := root.HandleEvent(NewInitEvent()); cmd != nil {
+			_ = a.executeCommand(cmd)
+		}
 		a.draw()
 	}
 
@@ -198,9 +198,10 @@ EventLoop:
 
 				// Pass other key events to the root primitive.
 				if root != nil && root.HasFocus() {
-					cmd := root.HandleEvent(event)
-					if a.executeCommand(cmd) {
-						a.draw()
+					if cmd := root.HandleEvent(event); cmd != nil {
+						if a.executeCommand(cmd) {
+							a.draw()
+						}
 					}
 				}
 			case *tcell.EventPaste:
@@ -245,9 +246,17 @@ EventLoop:
 				if isMouseDownAction {
 					a.mouseDownX, a.mouseDownY = event.Position()
 				}
-			case *tcell.EventError:
-				appErr = event
-				a.Stop()
+			default:
+				a.RLock()
+				root := a.root
+				a.RUnlock()
+				if root != nil {
+					if cmd := root.HandleEvent(event); cmd != nil {
+						if a.executeCommand(cmd) {
+							a.draw()
+						}
+					}
+				}
 			}
 
 		// If we have updates, now is the time to execute them.
@@ -258,8 +267,7 @@ EventLoop:
 			}
 		}
 	}
-
-	return appErr
+	return nil
 }
 
 // fireMouseActions analyzes the provided mouse event, derives mouse actions
@@ -565,65 +573,68 @@ func (a *Application) QueueEvent(event tcell.Event) *Application {
 	return a
 }
 
-func (a *Application) executeCommand(cmd Command) bool {
-	if cmd == nil {
-		return false
-	}
-
+func (a *Application) executeCommand(command Command) bool {
 	a.RLock()
 	screen := a.screen
 	a.RUnlock()
 
-	switch c := cmd.(type) {
+	switch command := command.(type) {
 	case BatchCommand:
 		handled := false
-		for _, item := range c {
+		for _, item := range command {
 			if a.executeCommand(item) {
 				handled = true
 			}
 		}
 		return handled
+
 	case RedrawCommand:
 		return true
+
 	case QuitCommand:
 		a.Stop()
-		return false
+
 	case SetFocusCommand:
-		if c.Target == nil {
+		if command.Target == nil {
 			return false
 		}
 		a.RLock()
-		changed := a.focus != c.Target
+		changed := a.focus != command.Target
 		a.RUnlock()
-		a.SetFocus(c.Target)
+		a.SetFocus(command.Target)
 		return changed
+
 	case SetMouseCaptureCommand:
 		a.Lock()
-		a.mouseCapturingPrimitive = c.Target
+		a.mouseCapturingPrimitive = command.Target
 		a.Unlock()
-		return false
+
+	case SetTitleCommand:
+		if screen != nil {
+			screen.SetTitle(string(command))
+		}
+
 	case SetClipboardCommand:
 		if screen != nil && screen.HasClipboard() {
-			screen.SetClipboard([]byte(string(c)))
+			screen.SetClipboard([]byte(string(command)))
 			return true
 		}
-	case SetTitleCommand:
-		if screen == nil {
-			return false
-		}
-		screen.SetTitle(string(c))
-		return false
 	case GetClipboardCommand:
-		if screen == nil || !screen.HasClipboard() {
-			return false
+		if screen != nil && screen.HasClipboard() {
+			screen.GetClipboard()
+			return true
 		}
-		// The clipboard contents will arrive as terminal paste input events.
-		screen.GetClipboard()
-		return true
+
 	case NotifyCommand:
 		if screen != nil {
-			screen.ShowNotification(c.Title, c.Body)
+			screen.ShowNotification(command.Title, command.Body)
 		}
+	case EventCommand:
+		go func() {
+			if event := command(); event != nil {
+				a.QueueEvent(event)
+			}
+		}()
 		return false
 	}
 

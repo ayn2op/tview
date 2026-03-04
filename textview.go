@@ -20,9 +20,9 @@ type textViewCell struct {
 }
 
 type textViewLogicalLine struct {
-	segments Line
-	cells    []textViewCell
-	width    int
+	line  Line
+	cells []textViewCell
+	width int
 }
 
 type textViewLine struct {
@@ -293,14 +293,14 @@ func (t *TextView) SetLines(lines []Line) *TextView {
 
 	t.lines = make([]textViewLogicalLine, 0, len(lines))
 	for _, line := range lines {
-		copied := make(Line, 0, len(line))
-		for _, seg := range line {
+		copied := Line{Segments: make([]Segment, 0, len(line.Segments)), Indent: line.Indent}
+		for _, seg := range line.Segments {
 			if seg.Text == "" {
 				continue
 			}
-			copied = append(copied, seg)
+			copied.Segments = append(copied.Segments, seg)
 		}
-		t.lines = append(t.lines, textViewLogicalLine{segments: copied})
+		t.lines = append(t.lines, textViewLogicalLine{line: copied})
 	}
 	t.rebuildCells()
 	t.resetLayout()
@@ -316,9 +316,9 @@ func (t *TextView) GetLines() []Line {
 	defer t.Unlock()
 
 	out := make([]Line, 0, len(t.lines))
-	for _, line := range t.lines {
-		copied := make(Line, len(line.segments))
-		copy(copied, line.segments)
+	for _, logical := range t.lines {
+		copied := Line{Segments: make([]Segment, len(logical.line.Segments)), Indent: logical.line.Indent}
+		copy(copied.Segments, logical.line.Segments)
 		out = append(out, copied)
 	}
 	return out
@@ -344,7 +344,7 @@ func (t *TextView) AppendLine(line Line) *TextView {
 	if len(t.lines) == 0 {
 		t.lines = append(t.lines, textViewLogicalLine{})
 	}
-	for _, seg := range line {
+	for _, seg := range line.Segments {
 		t.appendText(seg.Text, seg.Style)
 	}
 	t.lines = append(t.lines, textViewLogicalLine{})
@@ -362,8 +362,8 @@ func (t *TextView) GetText() string {
 		return ""
 	}
 	result := ""
-	for i, line := range t.lines {
-		for _, seg := range line.segments {
+	for i, logical := range t.lines {
+		for _, seg := range logical.line.Segments {
 			result += seg.Text
 		}
 		if i < len(t.lines)-1 {
@@ -600,20 +600,20 @@ func (t *TextView) appendSegment(lineIndex int, seg Segment) {
 	if seg.Text == "" {
 		return
 	}
-	line := &t.lines[lineIndex]
-	if n := len(line.segments); n > 0 && line.segments[n-1].Style == seg.Style {
-		line.segments[n-1].Text += seg.Text
+	logical := &t.lines[lineIndex]
+	if n := len(logical.line.Segments); n > 0 && logical.line.Segments[n-1].Style == seg.Style {
+		logical.line.Segments[n-1].Text += seg.Text
 		return
 	}
-	line.segments = append(line.segments, seg)
+	logical.line.Segments = append(logical.line.Segments, seg)
 }
 
 func (t *TextView) rebuildCells() {
 	for i := range t.lines {
-		line := &t.lines[i]
+		logical := &t.lines[i]
 		cells := make([]textViewCell, 0)
 		width := 0
-		for _, seg := range line.segments {
+		for _, seg := range logical.line.Segments {
 			state := -1
 			str := seg.Text
 			for len(str) > 0 {
@@ -641,8 +641,8 @@ func (t *TextView) rebuildCells() {
 				width += cellWidth
 			}
 		}
-		line.cells = cells
-		line.width = width
+		logical.cells = cells
+		logical.width = width
 	}
 }
 
@@ -663,17 +663,17 @@ func (t *TextView) buildWrapped(width int) {
 	t.wrapped = nil
 	t.longestLine = 0
 
-	for lineIndex, line := range t.lines {
-		cells := line.cells
+	for lineIndex, logical := range t.lines {
+		cells := logical.cells
 		if len(cells) == 0 {
 			t.wrapped = append(t.wrapped, textViewLine{logical: lineIndex, start: 0, end: 0, width: 0})
 			continue
 		}
 
 		if !t.wrap || width == math.MaxInt {
-			t.wrapped = append(t.wrapped, textViewLine{logical: lineIndex, start: 0, end: len(cells), width: line.width})
-			if line.width > t.longestLine {
-				t.longestLine = line.width
+			t.wrapped = append(t.wrapped, textViewLine{logical: lineIndex, start: 0, end: len(cells), width: logical.width})
+			if logical.width > t.longestLine {
+				t.longestLine = logical.width
 			}
 			continue
 		}
@@ -685,6 +685,12 @@ func (t *TextView) buildWrapped(width int) {
 			lastOption := -1
 			lastOptionWidth := 0
 			mustBreak := false
+
+			if start != 0 {
+				for _, seg := range logical.line.Indent {
+					lineWidth += uniseg.StringWidth(seg.Text)
+				}
+			}
 
 			for pos < len(cells) {
 				cw := t.cellWidth(cells[pos], lineWidth)
@@ -814,11 +820,18 @@ func (t *TextView) Draw(screen tcell.Screen) {
 
 		info := t.wrapped[line]
 		cells := t.lines[info.logical].cells[info.start:info.end]
-
 		var skipWidth, xPos int
 		switch t.alignment {
 		case AlignmentLeft:
 			skipWidth = t.columnOffset
+			if info.start != 0 {
+				indent := t.lines[info.logical].line.Indent
+				for _, seg := range indent {
+					screen.PutStrStyled(x, y+line-t.lineOffset, seg.Text, seg.Style)
+					xPos += uniseg.StringWidth(seg.Text)
+				}
+			}
+
 		case AlignmentCenter:
 			skipWidth = t.columnOffset + (info.width-width)/2
 			if skipWidth < 0 {

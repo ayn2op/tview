@@ -2,6 +2,7 @@ package tview
 
 import (
 	"math"
+	"strings"
 	"sync"
 
 	"github.com/gdamore/tcell/v3"
@@ -361,16 +362,16 @@ func (t *TextView) GetText() string {
 	if len(t.lines) == 0 {
 		return ""
 	}
-	result := ""
+	var result strings.Builder
 	for i, line := range t.lines {
 		for _, seg := range line.segments {
-			result += seg.Text
+			result.WriteString(seg.Text)
 		}
 		if i < len(t.lines)-1 {
-			result += "\n"
+			result.WriteString("\n")
 		}
 	}
-	return result
+	return result.String()
 }
 
 // GetOriginalLineCount returns the number of logical lines in the current text.

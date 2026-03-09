@@ -526,7 +526,7 @@ func (t *TextArea) GetSelection() (text string, start int, end int) {
 	if selection.Len() != 0 {
 		text = selection.String()
 	}
-	return
+	return text, start, end
 }
 
 // GetCursor returns the current cursor position where the first character of
@@ -1617,7 +1617,7 @@ func (t *TextArea) setTransform(transform func(cluster, rest string, boundaries 
 // irrelevant.
 func (t *TextArea) step(text string, pos, endPos [3]int) (cluster, rest string, boundaries, width int, newPos, newEndPos [3]int) {
 	if pos[0] == 1 {
-		return // We're already past the end.
+		return cluster, rest, boundaries, width, newPos, newEndPos // We're already past the end.
 	}
 
 	// We want to make sure we have a text at least the size of a grapheme

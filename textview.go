@@ -572,7 +572,7 @@ func (t *TextView) appendText(text string, style tcell.Style) {
 	lineIndex := len(t.lines) - 1
 	for len(text) > 0 {
 		nl := -1
-		for i := 0; i < len(text); i++ {
+		for i := range len(text) {
 			if text[i] == '\n' {
 				nl = i
 				break

@@ -352,7 +352,7 @@ func (s *ScrollBar) Draw(screen tcell.Screen) {
 		idx++
 	}
 
-	for cell := 0; cell < m.trackCells; cell++ {
+	for cell := range m.trackCells {
 		start, fillLen := cellFill(m, cell)
 		glyph, style := s.glyphForVertical(start, fillLen)
 		s.put(screen, x, y, idx, glyph, style)

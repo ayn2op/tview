@@ -239,16 +239,16 @@ func (h *Help) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]se
 	truncated := included < len(columns)
 
 	maxRows := 0
-	for i := 0; i < included; i++ {
+	for i := range included {
 		if len(columns[i].entries) > maxRows {
 			maxRows = len(columns[i].entries)
 		}
 	}
 
 	lines := make([][]segment, 0, maxRows)
-	for row := 0; row < maxRows; row++ {
+	for row := range maxRows {
 		line := make([]segment, 0, included*4)
-		for col := 0; col < included; col++ {
+		for col := range included {
 			if col > 0 {
 				line = append(line, segment{text: sepText, style: h.Styles.FullSeparatorStyle})
 			}

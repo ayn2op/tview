@@ -590,7 +590,7 @@ func (l *List) scrollBarMetrics(width int, viewport int, children []listDrawnIte
 	}
 
 	first := children[0]
-	for i := 0; i < first.index; i++ {
+	for i := range first.index {
 		item := l.Builder(i, l.cursor)
 		if item == nil {
 			break
@@ -750,7 +750,7 @@ func (l *List) scrollByItems(delta int, count int, width int, height int) {
 	}
 	if delta > 0 {
 		// Step the top index downward without going past the end.
-		for i := 0; i < count; i++ {
+		for range count {
 			if l.Builder(l.scroll.top+1, l.cursor) == nil {
 				break
 			}
@@ -758,7 +758,7 @@ func (l *List) scrollByItems(delta int, count int, width int, height int) {
 		}
 	} else {
 		// Step the top index upward without going below zero.
-		for i := 0; i < count; i++ {
+		for range count {
 			if l.scroll.top <= 0 {
 				break
 			}

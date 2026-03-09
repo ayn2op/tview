@@ -192,7 +192,7 @@ func (b *Box) SetBorders(flag Borders) *Box {
 	return b
 }
 
-// SetBorderSet sets the box' borderset
+// SetBorderSet sets the border set.
 func (b *Box) SetBorderSet(borderSet BorderSet) *Box {
 	if b.borderSet != borderSet {
 		b.borderSet = borderSet
@@ -200,7 +200,7 @@ func (b *Box) SetBorderSet(borderSet BorderSet) *Box {
 	return b
 }
 
-// GetBorderSet returns the box' borderSet
+// GetBorderSet returns the border set.
 func (b *Box) GetBorderSet() BorderSet {
 	return b.borderSet
 }
@@ -404,7 +404,7 @@ func (b *Box) SetFocusFunc(callback func()) *Box {
 // loses focus. Container primitives such as [Flex] or [Grid] will also be
 // notified if one of their descendents lose focus. Note that this may result in
 // a blur notification, immediately followed by a focus notification, when the
-// focus is set to a different different descendent of the container primitive.
+// focus is set to a different descendent of the container primitive.
 //
 // At this point, the order in which the blur callbacks are invoked during one
 // draw cycle, is not defined. However, the blur callbacks are always invoked

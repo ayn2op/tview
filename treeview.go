@@ -124,7 +124,6 @@ func (n *TreeNode) SetChildren(childNodes []*TreeNode) *TreeNode {
 	}
 	if changed {
 		n.children = childNodes
-
 	}
 	return n
 }
@@ -150,7 +149,6 @@ func (n *TreeNode) GetChildren() []*TreeNode {
 func (n *TreeNode) ClearChildren() *TreeNode {
 	if len(n.children) > 0 {
 		n.children = nil
-
 	}
 	return n
 }
@@ -180,7 +178,6 @@ func (n *TreeNode) RemoveChild(node *TreeNode) *TreeNode {
 func (n *TreeNode) SetSelectable(selectable bool) *TreeNode {
 	if n.selectable != selectable {
 		n.selectable = selectable
-
 	}
 	return n
 }
@@ -196,7 +193,6 @@ func (n *TreeNode) SetSelectedFunc(handler func()) *TreeNode {
 func (n *TreeNode) SetExpanded(expanded bool) *TreeNode {
 	if n.expanded != expanded {
 		n.expanded = expanded
-
 	}
 	return n
 }
@@ -206,7 +202,6 @@ func (n *TreeNode) SetExpanded(expanded bool) *TreeNode {
 func (n *TreeNode) SetExpandable(expandable bool) *TreeNode {
 	if n.expandable != expandable {
 		n.expandable = expandable
-
 	}
 	return n
 }
@@ -221,7 +216,6 @@ func (n *TreeNode) IsExpandable() bool {
 func (n *TreeNode) Expand() *TreeNode {
 	if !n.expanded {
 		n.expanded = true
-
 	}
 	return n
 }
@@ -230,7 +224,6 @@ func (n *TreeNode) Expand() *TreeNode {
 func (n *TreeNode) Collapse() *TreeNode {
 	if n.expanded {
 		n.expanded = false
-
 	}
 	return n
 }
@@ -266,7 +259,6 @@ func (n *TreeNode) IsExpanded() bool {
 func (n *TreeNode) SetSelectedTextStyle(style tcell.Style) *TreeNode {
 	if n.selectedTextStyle != style {
 		n.selectedTextStyle = style
-
 	}
 	return n
 }
@@ -283,7 +275,6 @@ func (n *TreeNode) GetSelectedTextStyle() tcell.Style {
 func (n *TreeNode) SetIndent(indent int) *TreeNode {
 	if n.indent != indent {
 		n.indent = indent
-
 	}
 	return n
 }

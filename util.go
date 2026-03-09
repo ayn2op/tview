@@ -131,7 +131,7 @@ func printWithStyle(screen tcell.Screen, text string, x, y, skipWidth, maxWidth 
 		printedWidth += width
 	}
 
-	return
+	return start, end, printedWidth
 }
 
 // PrintSimple prints white text to the screen at the given position.

@@ -694,9 +694,8 @@ func (g *Grid) HandleEvent(event tcell.Event) Command {
 			if item.Item == nil {
 				continue
 			}
-			childCmds := item.Item.HandleEvent(event)
-			if childCmds != nil {
-				return childCmds
+			if cmd := item.Item.HandleEvent(event); cmd != nil {
+				return cmd
 			}
 		}
 	case *KeyEvent:
@@ -744,11 +743,12 @@ func (g *Grid) HandleEvent(event tcell.Event) Command {
 		if g.rowOffset != previousRowOffset || g.columnOffset != previousColumnOffset {
 			return RedrawCommand{}
 		}
-	case *PasteEvent:
-		for _, item := range g.items {
-			if item != nil && item.Item.HasFocus() {
-				return item.Item.HandleEvent(event)
-			}
+	}
+
+	// Forward events to the focused child.
+	for _, item := range g.items {
+		if item != nil && item.Item.HasFocus() {
+			return item.Item.HandleEvent(event)
 		}
 	}
 	return nil

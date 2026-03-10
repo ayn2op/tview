@@ -424,6 +424,10 @@ func (l *Layers) HandleEvent(event tcell.Event) tview.Command {
 				return layer.item.HandleEvent(event)
 			}
 		}
+	case *tview.InitEvent:
+		if top := l.topVisibleEnabledLayer(); top != nil {
+			return top.item.HandleEvent(event)
+		}
 	}
 	return nil
 }

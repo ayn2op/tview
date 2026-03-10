@@ -58,7 +58,7 @@ type queuedUpdate struct {
 // plays nicely with all widgets.
 //
 // The following command displays a primitive p on the screen until the
-// application is stopped (for example via QuitCommand):
+// application is stopped (for example via Quit()):
 //
 //	if err := tview.NewApplication().SetRoot(p, true).Run(); err != nil {
 //	    panic(err)
@@ -140,10 +140,11 @@ func (a *Application) Run() error {
 	}
 	a.Unlock()
 
+	defer a.Stop()
+
 	// We catch panics to clean up because they mess up the terminal.
 	defer func() {
 		if p := recover(); p != nil {
-			a.Stop()
 			panic(p)
 		}
 	}()
@@ -178,6 +179,9 @@ EventLoop:
 			}
 
 			switch event := event.(type) {
+			case *quitEvent:
+				break EventLoop
+
 			case *tcell.EventKey:
 				// If we are pasting, collect runes, nothing else.
 				if pasting {
@@ -590,9 +594,6 @@ func (a *Application) executeCommand(command Command) bool {
 
 	case RedrawCommand:
 		return true
-
-	case QuitCommand:
-		a.Stop()
 
 	case SetFocusCommand:
 		if command.Target == nil {

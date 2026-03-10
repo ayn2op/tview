@@ -2,6 +2,28 @@ package tview
 
 import "github.com/gdamore/tcell/v3"
 
+type InitEvent struct{ tcell.EventTime }
+
+func NewInitEvent() *InitEvent {
+	event := &InitEvent{}
+	event.SetEventNow()
+	return event
+}
+
+type quitEvent struct{ tcell.EventTime }
+
+func newQuitEvent() *quitEvent {
+	event := &quitEvent{}
+	event.SetEventNow()
+	return event
+}
+
+func Quit() Command {
+	return EventCommand(func() tcell.Event {
+		return newQuitEvent()
+	})
+}
+
 type KeyEvent = tcell.EventKey
 
 type MouseEvent struct {
@@ -21,14 +43,6 @@ type PasteEvent struct {
 
 func newPasteEvent(content string) *PasteEvent {
 	event := &PasteEvent{Content: content}
-	event.SetEventNow()
-	return event
-}
-
-type InitEvent struct{ tcell.EventTime }
-
-func NewInitEvent() *InitEvent {
-	event := &InitEvent{}
 	event.SetEventNow()
 	return event
 }

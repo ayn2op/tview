@@ -182,6 +182,15 @@ EventLoop:
 			case *quitEvent:
 				break EventLoop
 
+			case *setTitleEvent:
+				a.screen.SetTitle(event.title)
+
+			case *setClipboardEvent:
+				a.screen.SetClipboard(event.data)
+
+			case *getClipboardEvent:
+				a.screen.GetClipboard()
+
 			case *tcell.EventKey:
 				// If we are pasting, collect runes, nothing else.
 				if pasting {
@@ -609,22 +618,6 @@ func (a *Application) executeCommand(command Command) bool {
 		a.Lock()
 		a.mouseCapturingPrimitive = command.Target
 		a.Unlock()
-
-	case SetTitleCommand:
-		if screen != nil {
-			screen.SetTitle(string(command))
-		}
-
-	case SetClipboardCommand:
-		if screen != nil && screen.HasClipboard() {
-			screen.SetClipboard([]byte(string(command)))
-			return true
-		}
-	case GetClipboardCommand:
-		if screen != nil && screen.HasClipboard() {
-			screen.GetClipboard()
-			return true
-		}
 
 	case NotifyCommand:
 		if screen != nil {

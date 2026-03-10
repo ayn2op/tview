@@ -21,10 +21,4 @@ type SetMouseCaptureCommand struct {
 
 type RedrawCommand struct{}
 
-type SetTitleCommand string
-
-type SetClipboardCommand string
-
-type GetClipboardCommand struct{}
-
 type NotifyCommand struct{ Title, Body string }

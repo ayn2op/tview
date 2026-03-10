@@ -12,15 +12,11 @@ func NewInitEvent() *InitEvent {
 
 type quitEvent struct{ tcell.EventTime }
 
-func newQuitEvent() *quitEvent {
-	event := &quitEvent{}
-	event.SetEventNow()
-	return event
-}
-
 func Quit() Command {
 	return EventCommand(func() tcell.Event {
-		return newQuitEvent()
+		event := &quitEvent{}
+		event.SetEventNow()
+		return event
 	})
 }
 
@@ -45,4 +41,40 @@ func newPasteEvent(content string) *PasteEvent {
 	event := &PasteEvent{Content: content}
 	event.SetEventNow()
 	return event
+}
+
+type setTitleEvent struct {
+	tcell.EventTime
+	title string
+}
+
+func SetTitle(title string) Command {
+	return EventCommand(func() tcell.Event {
+		event := &setTitleEvent{title: title}
+		event.SetEventNow()
+		return event
+	})
+}
+
+type getClipboardEvent struct{ tcell.EventTime }
+
+func GetClipboard() Command {
+	return EventCommand(func() tcell.Event {
+		event := &getClipboardEvent{}
+		event.SetEventNow()
+		return event
+	})
+}
+
+type setClipboardEvent struct {
+	tcell.EventTime
+	data []byte
+}
+
+func SetClipboard(data []byte) Command {
+	return EventCommand(func() tcell.Event {
+		event := &setClipboardEvent{data: data}
+		event.SetEventNow()
+		return event
+	})
 }

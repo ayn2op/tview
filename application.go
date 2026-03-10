@@ -215,7 +215,7 @@ EventLoop:
 					a.RUnlock()
 					if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
 						// Pass paste event to the root primitive.
-						cmd := root.HandleEvent(NewPasteEvent(pasteBuffer.String()))
+						cmd := root.HandleEvent(newPasteEvent(pasteBuffer.String()))
 						if a.executeCommand(cmd) {
 							a.draw()
 						}
@@ -294,7 +294,7 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMous
 			primitive = a.root
 		}
 		if primitive != nil {
-			cmd := primitive.HandleEvent(NewMouseEvent(*event, action))
+			cmd := primitive.HandleEvent(newMouseEvent(*event, action))
 			if a.executeCommand(cmd) {
 				handled = true
 			}

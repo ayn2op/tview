@@ -9,7 +9,7 @@ type MouseEvent struct {
 	Action MouseAction
 }
 
-func NewMouseEvent(mouseEvent tcell.EventMouse, action MouseAction) *MouseEvent {
+func newMouseEvent(mouseEvent tcell.EventMouse, action MouseAction) *MouseEvent {
 	event := &MouseEvent{mouseEvent, action}
 	return event
 }
@@ -19,7 +19,7 @@ type PasteEvent struct {
 	Content string
 }
 
-func NewPasteEvent(content string) *PasteEvent {
+func newPasteEvent(content string) *PasteEvent {
 	event := &PasteEvent{Content: content}
 	event.SetEventNow()
 	return event

@@ -4,34 +4,43 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
+type ButtonSelectedEvent struct {
+	tcell.EventTime
+	Label string
+}
+
+func newButtonSelectedEvent(label string) *ButtonSelectedEvent {
+	event := &ButtonSelectedEvent{Label: label}
+	event.SetEventNow()
+	return event
+}
+
+type ButtonExitEvent struct {
+	tcell.EventTime
+	tcell.Key
+}
+
+func newButtonExitEvent(key tcell.Key) *ButtonExitEvent {
+	event := &ButtonExitEvent{Key: key}
+	event.SetEventNow()
+	return event
+}
+
 // Button is labeled box that triggers an action when selected.
 //
 // See https://github.com/ayn2op/tview/wiki/Button for an example.
 type Button struct {
 	*Box
-
 	// If set to true, the button cannot be activated.
 	disabled bool
-
 	// The text to be displayed inside the button.
 	text string
-
 	// The button's style (when deactivated).
 	style tcell.Style
-
 	// The button's style (when activated).
 	activatedStyle tcell.Style
-
 	// The button's style (when disabled).
 	disabledStyle tcell.Style
-
-	// An optional function which is called when the button was selected.
-	selected func()
-
-	// An optional function which is called when the user leaves the button. A
-	// key is provided indicating which key was pressed to leave (tab or
-	// backtab).
-	exit func(tcell.Key)
 }
 
 // NewButton returns a new input field.
@@ -130,24 +139,6 @@ func (b *Button) GetDisabled() bool {
 	return b.disabled
 }
 
-// SetSelectedFunc sets a handler which is called when the button was selected.
-func (b *Button) SetSelectedFunc(handler func()) *Button {
-	b.selected = handler
-	return b
-}
-
-// SetExitFunc sets a handler which is called when the user leaves the button.
-// The callback function is provided with the key that was pressed, which is one
-// of the following:
-//
-//   - KeyEscape: Leaving the button with no specific direction.
-//   - KeyTab: Move to the next field.
-//   - KeyBacktab: Move to the previous field.
-func (b *Button) SetExitFunc(handler func(key tcell.Key)) *Button {
-	b.exit = handler
-	return b
-}
-
 // Draw draws this primitive onto the screen.
 func (b *Button) Draw(screen tcell.Screen) {
 	// Draw the box.
@@ -181,13 +172,15 @@ func (b *Button) HandleEvent(event tcell.Event) Command {
 		// Process key event.
 		switch key := event.Key(); key {
 		case tcell.KeyEnter: // Selected.
-			if b.selected != nil {
-				b.selected()
-			}
+			label := b.GetLabel()
+			return EventCommand(func() tcell.Event {
+				return newButtonSelectedEvent(label)
+			})
 		case tcell.KeyBacktab, tcell.KeyTab, tcell.KeyEscape: // Leave. No action.
-			if b.exit != nil {
-				b.exit(key)
-			}
+			exitKey := key
+			return EventCommand(func() tcell.Event {
+				return newButtonExitEvent(exitKey)
+			})
 		}
 		return RedrawCommand{}
 	case *MouseEvent:
@@ -200,10 +193,10 @@ func (b *Button) HandleEvent(event tcell.Event) Command {
 		case MouseLeftDown:
 			return SetFocusCommand{Target: b}
 		case MouseLeftClick:
-			if b.selected != nil {
-				b.selected()
-			}
-			return RedrawCommand{}
+			label := b.GetLabel()
+			return EventCommand(func() tcell.Event {
+				return newButtonSelectedEvent(label)
+			})
 		}
 	}
 	return nil

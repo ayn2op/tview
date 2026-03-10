@@ -107,8 +107,31 @@ type Form struct {
 	// such key is known yet.
 	lastFinishedKey tcell.Key
 
-	// An optional function which is called when the user hits Escape.
-	cancel func()
+	// Set when Escape was processed by finished(); consumed in HandleEvent.
+	cancelRequested bool
+}
+
+type FormSubmitEvent struct {
+	tcell.EventTime
+	ButtonIndex int
+	ButtonLabel string
+}
+
+func newFormSubmitEvent(buttonIndex int, buttonLabel string) *FormSubmitEvent {
+	event := &FormSubmitEvent{
+		ButtonIndex: buttonIndex,
+		ButtonLabel: buttonLabel,
+	}
+	event.SetEventNow()
+	return event
+}
+
+type FormCancelEvent struct{ tcell.EventTime }
+
+func newFormCancelEvent() *FormCancelEvent {
+	event := &FormCancelEvent{}
+	event.SetEventNow()
+	return event
 }
 
 // NewForm returns a new form.
@@ -312,12 +335,9 @@ func (f *Form) AddCheckbox(label string, checked bool, changed func(checked bool
 	return f
 }
 
-// AddButton adds a new button to the form. The "selected" function is called
-// when the user selects this button. It may be nil.
-func (f *Form) AddButton(label string, selected func()) *Form {
-	button := NewButton(label).
-		SetSelectedFunc(selected).
-		SetExitFunc(f.finished)
+// AddButton adds a new button to the form.
+func (f *Form) AddButton(label string) *Form {
+	button := NewButton(label)
 	f.buttons = append(f.buttons, button)
 	return f
 }
@@ -443,13 +463,6 @@ func (f *Form) GetFocusedItemIndex() (formItem, button int) {
 		return index, -1
 	}
 	return -1, index - len(f.items)
-}
-
-// SetCancelFunc sets a handler which is called when the user hits the Escape
-// key.
-func (f *Form) SetCancelFunc(callback func()) *Form {
-	f.cancel = callback
-	return f
 }
 
 // Draw draws this primitive onto the screen.
@@ -723,15 +736,25 @@ func (f *Form) finished(key tcell.Key) {
 			}
 		}
 	case tcell.KeyEscape:
-		if f.cancel != nil {
-			f.cancel()
-		}
+		f.cancelRequested = true
 	default:
 		if key < 0 && f.lastFinishedKey >= 0 {
 			// Repeat the last action.
 			f.finished(f.lastFinishedKey)
 		}
 	}
+}
+
+func (f *Form) consumeCancelEvent(cmd Command) Command {
+	if !f.cancelRequested {
+		return cmd
+	}
+	f.cancelRequested = false
+	cancelCmd := EventCommand(func() tcell.Event { return newFormCancelEvent() })
+	if cmd == nil {
+		return cancelCmd
+	}
+	return BatchCommand{cmd, cancelCmd}
 }
 
 // focusIndex returns the index of the currently focused item, counting form
@@ -762,6 +785,9 @@ func (f *Form) HasFocus() bool {
 // HandleEvent handles input events for this primitive.
 func (f *Form) HandleEvent(event tcell.Event) Command {
 	switch event := event.(type) {
+	case *ButtonExitEvent:
+		f.finished(event.Key)
+		return f.consumeCancelEvent(RedrawCommand{})
 	case *MouseEvent:
 		// Determine items to pass mouse events to.
 		for _, item := range f.items {
@@ -770,16 +796,33 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 			}
 			childCmds := item.HandleEvent(event)
 			if childCmds != nil {
-				return childCmds
+				return f.consumeCancelEvent(childCmds)
 			}
 		}
-		for _, button := range f.buttons {
+		for index, button := range f.buttons {
 			if button.GetDisabled() {
 				continue
 			}
-			childCmds := button.HandleEvent(event)
-			if childCmds != nil {
-				return childCmds
+			if !button.InRect(event.Position()) {
+				continue
+			}
+			switch event.Action {
+			case MouseLeftDown:
+				return SetFocusCommand{Target: button}
+			case MouseLeftClick:
+				buttonIndex := index
+				buttonLabel := button.GetLabel()
+				return BatchCommand{
+					EventCommand(func() tcell.Event {
+						return newFormSubmitEvent(buttonIndex, buttonLabel)
+					}),
+					RedrawCommand{},
+				}
+			default:
+				childCmds := button.HandleEvent(event)
+				if childCmds != nil {
+					return f.consumeCancelEvent(childCmds)
+				}
 			}
 		}
 
@@ -790,15 +833,26 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 	case *KeyEvent, *PasteEvent:
 		for _, item := range f.items {
 			if item.HasFocus() {
-				return item.HandleEvent(event)
+				return f.consumeCancelEvent(item.HandleEvent(event))
 			}
 		}
 
-		for _, button := range f.buttons {
-			if button.HasFocus() {
-				return button.HandleEvent(event)
+		for index, button := range f.buttons {
+			if !button.HasFocus() {
+				continue
 			}
+			if keyEvent, ok := event.(*KeyEvent); ok && keyEvent.Key() == tcell.KeyEnter {
+				buttonIndex := index
+				buttonLabel := button.GetLabel()
+				return BatchCommand{
+					EventCommand(func() tcell.Event {
+						return newFormSubmitEvent(buttonIndex, buttonLabel)
+					}),
+					RedrawCommand{},
+				}
+			}
+			return f.consumeCancelEvent(button.HandleEvent(event))
 		}
 	}
-	return nil
+	return f.consumeCancelEvent(nil)
 }

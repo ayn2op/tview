@@ -111,7 +111,7 @@ func (a *Application) SetScreen(screen tcell.Screen) *Application {
 }
 
 // Run starts the application and thus the event loop. This function returns
-// when [Application.Stop] was called.
+// when a quit event is received (for example via [Quit]).
 //
 // Note that while an application is running, it fully claims stdin, stdout, and
 // stderr. If you use these standard streams, they may not work as expected.
@@ -140,7 +140,7 @@ func (a *Application) Run() error {
 	}
 	a.Unlock()
 
-	defer a.Stop()
+	defer a.stop()
 
 	// We catch panics to clean up because they mess up the terminal.
 	defer func() {
@@ -367,8 +367,8 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMous
 	return handled, isMouseDownAction
 }
 
-// Stop stops the application, causing Run() to return.
-func (a *Application) Stop() {
+// stop finalizes the active screen and leaves terminal UI mode.
+func (a *Application) stop() {
 	a.Lock()
 	defer a.Unlock()
 	screen := a.screen
@@ -406,7 +406,7 @@ func (a *Application) Suspend(f func()) bool {
 	a.RLock()
 	defer a.RUnlock()
 	if a.screen != screen {
-		// Calling Stop() while in suspend mode currently still leads to a
+		// Calling stop() while in suspend mode currently still leads to a
 		// panic, see https://github.com/gdamore/tcell/issues/440.
 		screen.Fini()
 		if a.screen == nil {

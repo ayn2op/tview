@@ -232,7 +232,7 @@ EventLoop:
 						redrawTimer.Stop()
 					}
 					redrawTimer = time.AfterFunc(redrawPause, func() {
-						a.events <- event
+						a.QueueEvent(event)
 					})
 				}
 				lastRedraw = time.Now()

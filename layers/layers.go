@@ -78,6 +78,18 @@ func New() *Layers {
 	return l
 }
 
+func (l *Layers) notifyChanged() {
+	if l.changed != nil {
+		l.changed()
+	}
+}
+
+func (l *Layers) refocusIfNeeded(hasFocus bool) {
+	if hasFocus {
+		l.Focus(l.setFocus)
+	}
+}
+
 // SetChangedFunc sets a handler which is called whenever the visibility or the
 // order of any visible layers changes. This can be used to redraw the layers.
 func (l *Layers) SetChangedFunc(handler func()) *Layers {
@@ -143,12 +155,8 @@ func (l *Layers) AddLayer(item tview.Primitive, opts ...Option) *Layers {
 		}
 	}
 	l.layers = append(l.layers, newLayer)
-	if l.changed != nil {
-		l.changed()
-	}
-	if hasFocus {
-		l.Focus(l.setFocus)
-	}
+	l.notifyChanged()
+	l.refocusIfNeeded(hasFocus)
 	return l
 }
 
@@ -158,15 +166,13 @@ func (l *Layers) RemoveLayer(name string) *Layers {
 	for index, layer := range l.layers {
 		if layer.name == name {
 			l.layers = append(l.layers[:index], l.layers[index+1:]...)
-			if layer.visible && l.changed != nil {
-				l.changed()
+			if layer.visible {
+				l.notifyChanged()
 			}
 			break
 		}
 	}
-	if hasFocus {
-		l.Focus(l.setFocus)
-	}
+	l.refocusIfNeeded(hasFocus)
 	return l
 }
 
@@ -186,15 +192,11 @@ func (l *Layers) ShowLayer(name string) *Layers {
 	for _, layer := range l.layers {
 		if layer.name == name && !layer.visible {
 			layer.visible = true
-			if l.changed != nil {
-				l.changed()
-			}
+			l.notifyChanged()
 			break
 		}
 	}
-	if l.HasFocus() {
-		l.Focus(l.setFocus)
-	}
+	l.refocusIfNeeded(l.HasFocus())
 	return l
 }
 
@@ -203,15 +205,11 @@ func (l *Layers) HideLayer(name string) *Layers {
 	for _, layer := range l.layers {
 		if layer.name == name && layer.visible {
 			layer.visible = false
-			if l.changed != nil {
-				l.changed()
-			}
+			l.notifyChanged()
 			break
 		}
 	}
-	if l.HasFocus() {
-		l.Focus(l.setFocus)
-	}
+	l.refocusIfNeeded(l.HasFocus())
 	return l
 }
 
@@ -223,15 +221,13 @@ func (l *Layers) SendToFront(name string) *Layers {
 			if index < len(l.layers)-1 {
 				l.layers = append(append(l.layers[:index], l.layers[index+1:]...), layer)
 			}
-			if layer.visible && l.changed != nil {
-				l.changed()
+			if layer.visible {
+				l.notifyChanged()
 			}
 			break
 		}
 	}
-	if l.HasFocus() {
-		l.Focus(l.setFocus)
-	}
+	l.refocusIfNeeded(l.HasFocus())
 	return l
 }
 
@@ -244,15 +240,13 @@ func (l *Layers) SendToBack(name string) *Layers {
 			if index > 0 {
 				l.layers = append(append([]*layer{ly}, l.layers[:index]...), l.layers[index+1:]...)
 			}
-			if ly.visible && l.changed != nil {
-				l.changed()
+			if ly.visible {
+				l.notifyChanged()
 			}
 			break
 		}
 	}
-	if l.HasFocus() {
-		l.Focus(l.setFocus)
-	}
+	l.refocusIfNeeded(l.HasFocus())
 	return l
 }
 
@@ -288,15 +282,13 @@ func (l *Layers) SetLayerEnabled(name string, enabled bool) *Layers {
 				layer.item.Blur()
 			}
 			layer.enabled = enabled
-			if layer.visible && l.changed != nil {
-				l.changed()
+			if layer.visible {
+				l.notifyChanged()
 			}
 			break
 		}
 	}
-	if hasFocus {
-		l.Focus(l.setFocus)
-	}
+	l.refocusIfNeeded(hasFocus)
 	return l
 }
 
@@ -315,8 +307,8 @@ func (l *Layers) ClearLayerOverlay(name string) *Layers {
 	for _, layer := range l.layers {
 		if layer.name == name && layer.overlay {
 			layer.overlay = false
-			if layer.visible && l.changed != nil {
-				l.changed()
+			if layer.visible {
+				l.notifyChanged()
 			}
 			break
 		}
@@ -329,9 +321,7 @@ func (l *Layers) ClearLayerOverlay(name string) *Layers {
 func (l *Layers) SetBackgroundLayerStyle(style tcell.Style) *Layers {
 	if l.backgroundLayerStyle != style {
 		l.backgroundLayerStyle = style
-		if l.changed != nil {
-			l.changed()
-		}
+		l.notifyChanged()
 	}
 	return l
 }
@@ -388,46 +378,12 @@ func (l *Layers) Draw(screen tcell.Screen) {
 
 // HandleEvent handles input events for this primitive.
 func (l *Layers) HandleEvent(event tcell.Event) tview.Command {
-	switch event := event.(type) {
-	case *tview.MouseEvent:
-		if !l.InRect(event.Position()) {
-			return nil
-		}
-
-		overlayIndex := l.topVisibleEnabledOverlayIndex()
-
-		// Pass mouse events along to the front-most visible layer that takes it,
-		// but never to layers behind an active overlay layer.
-		for index := len(l.layers) - 1; index >= 0; index-- {
-			layer := l.layers[index]
-			if !layer.visible || !layer.enabled {
-				continue
-			}
-			if overlayIndex >= 0 && index < overlayIndex {
-				break
-			}
-			childCmds := layer.item.HandleEvent(event)
-			if childCmds != nil {
-				return childCmds
-			}
-		}
-
-		// If an overlay layer is active, block input to layers behind it even if
-		// the top layer didn't consume the event.
-		if overlayIndex >= 0 {
-			return nil
-		}
+	if mouseEvent, ok := event.(*tview.MouseEvent); ok && !l.InRect(mouseEvent.Position()) {
 		return nil
-	case *tview.KeyEvent, *tview.PasteEvent:
-		for _, layer := range l.layers {
-			if layer.enabled && layer.item.HasFocus() {
-				return layer.item.HandleEvent(event)
-			}
-		}
-	case *tview.InitEvent:
-		if top := l.topVisibleEnabledLayer(); top != nil {
-			return top.item.HandleEvent(event)
-		}
+	}
+
+	if top := l.topVisibleEnabledLayer(); top != nil {
+		return top.item.HandleEvent(event)
 	}
 	return nil
 }

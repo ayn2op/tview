@@ -184,12 +184,13 @@ EventLoop:
 
 			case *setTitleEvent:
 				a.screen.SetTitle(event.title)
-
-			case *setClipboardEvent:
-				a.screen.SetClipboard(event.data)
+			case *notifyEvent:
+				a.screen.ShowNotification(event.title, event.body)
 
 			case *getClipboardEvent:
 				a.screen.GetClipboard()
+			case *setClipboardEvent:
+				a.screen.SetClipboard(event.data)
 
 			case *tcell.EventKey:
 				// If we are pasting, collect runes, nothing else.
@@ -619,10 +620,6 @@ func (a *Application) executeCommand(command Command) bool {
 		a.mouseCapturingPrimitive = command.Target
 		a.Unlock()
 
-	case NotifyCommand:
-		if screen != nil {
-			screen.ShowNotification(command.Title, command.Body)
-		}
 	case EventCommand:
 		go func() {
 			if event := command(); event != nil {

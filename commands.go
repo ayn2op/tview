@@ -20,5 +20,3 @@ type SetMouseCaptureCommand struct {
 }
 
 type RedrawCommand struct{}
-
-type NotifyCommand struct{ Title, Body string }

@@ -78,3 +78,16 @@ func SetClipboard(data []byte) Command {
 		return event
 	})
 }
+
+type notifyEvent struct {
+	tcell.EventTime
+	title, body string
+}
+
+func Notify(title, body string) Command {
+	return EventCommand(func() tcell.Event {
+		event := &notifyEvent{title: title, body: body}
+		event.SetEventNow()
+		return event
+	})
+}

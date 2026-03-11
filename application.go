@@ -588,10 +588,6 @@ func (a *Application) QueueEvent(event tcell.Event) *Application {
 }
 
 func (a *Application) executeCommand(command Command) bool {
-	a.RLock()
-	screen := a.screen
-	a.RUnlock()
-
 	switch command := command.(type) {
 	case BatchCommand:
 		handled := false

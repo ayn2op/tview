@@ -344,7 +344,7 @@ func (c *Checkbox) HandleEvent(event tcell.Event) Command {
 		if y == rectY {
 			switch event.Action {
 			case MouseLeftDown:
-				return SetFocusCommand{Target: c}
+				return SetFocus(c)
 			case MouseLeftClick:
 				c.SetChecked(!c.checked)
 				return RedrawCommand{}

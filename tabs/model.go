@@ -1,8 +1,8 @@
 package tabs
 
 import (
-	"github.com/ayn2op/tview/help"
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/help"
 	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 )
@@ -139,7 +139,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 func (m *Model) activateTab() tview.Command {
 	return tview.BatchCommand{
 		m.tabs[m.active].HandleEvent(tview.NewInitEvent()),
-		tview.SetFocusCommand{Target: m},
+		tview.SetFocus(m),
 	}
 }
 

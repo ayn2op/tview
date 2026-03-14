@@ -1084,7 +1084,7 @@ func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
 		t.lastMouseY = -1
 		cmd = append(cmd, RedrawCommand{})
 	case MouseLeftClick:
-		cmd = append(cmd, SetFocusCommand{Target: t})
+		cmd = append(cmd, SetFocus(t))
 		_, rectY, _, _ := t.GetInnerRect()
 		y += t.offsetY - rectY
 		if t.lastMouseY != -1 {

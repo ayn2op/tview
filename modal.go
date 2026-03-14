@@ -178,7 +178,7 @@ func (m *Modal) HandleEvent(event tcell.Event) Command {
 		// Pass mouse events on to the form.
 		cmd := m.form.HandleEvent(event)
 		if cmd == nil && event.Action == MouseLeftDown && m.InRect(event.Position()) {
-			cmd = SetFocusCommand{Target: m}
+			cmd = SetFocus(m)
 		}
 		return cmd
 	case *KeyEvent:

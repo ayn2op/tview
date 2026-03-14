@@ -149,7 +149,7 @@ func (b *Box) HandleEvent(event tcell.Event) Command {
 	switch event := event.(type) {
 	case *MouseEvent:
 		if event.Action == MouseLeftDown && b.InRect(event.Position()) {
-			return SetFocusCommand{Target: b}
+			return SetFocus(b)
 		}
 	}
 	return nil

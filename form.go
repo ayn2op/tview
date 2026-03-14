@@ -808,7 +808,7 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 			}
 			switch event.Action {
 			case MouseLeftDown:
-				return SetFocusCommand{Target: button}
+				return SetFocus(button)
 			case MouseLeftClick:
 				buttonIndex := index
 				buttonLabel := button.GetLabel()
@@ -828,7 +828,7 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 
 		// A mouse down anywhere else will focus this form.
 		if event.Action == MouseLeftDown && f.InRect(event.Position()) {
-			return SetFocusCommand{Target: f}
+			return SetFocus(f)
 		}
 	case *KeyEvent, *PasteEvent:
 		for _, item := range f.items {

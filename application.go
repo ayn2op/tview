@@ -182,6 +182,10 @@ EventLoop:
 			case *quitEvent:
 				break EventLoop
 
+			case *setFocusEvent:
+				a.SetFocus(event.target)
+			case *setMouseCaptureEvent:
+				a.mouseCapturingPrimitive = event.target
 			case *setTitleEvent:
 				a.screen.SetTitle(event.title)
 			case *notifyEvent:
@@ -600,21 +604,6 @@ func (a *Application) executeCommand(command Command) bool {
 
 	case RedrawCommand:
 		return true
-
-	case SetFocusCommand:
-		if command.Target == nil {
-			return false
-		}
-		a.RLock()
-		changed := a.focus != command.Target
-		a.RUnlock()
-		a.SetFocus(command.Target)
-		return changed
-
-	case SetMouseCaptureCommand:
-		a.Lock()
-		a.mouseCapturingPrimitive = command.Target
-		a.Unlock()
 
 	case EventCommand:
 		go func() {

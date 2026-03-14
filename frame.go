@@ -207,7 +207,7 @@ func (f *Frame) HandleEvent(event tcell.Event) Command {
 
 		// Clicking on the frame parts.
 		if event.Action == MouseLeftDown {
-			return SetFocusCommand{Target: f}
+			return SetFocus(f)
 		}
 	case *KeyEvent, *PasteEvent:
 		if f.primitive == nil {

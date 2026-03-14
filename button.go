@@ -191,7 +191,7 @@ func (b *Button) HandleEvent(event tcell.Event) Command {
 		// Process mouse event.
 		switch event.Action {
 		case MouseLeftDown:
-			return SetFocusCommand{Target: b}
+			return SetFocus(b)
 		case MouseLeftClick:
 			label := b.GetLabel()
 			return EventCommand(func() tcell.Event {

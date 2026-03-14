@@ -311,7 +311,7 @@ func (i *InputField) HandleEvent(event tcell.Event) Command {
 
 		// Focus in any case.
 		if event.Action == MouseLeftDown && cmd == nil {
-			cmd = SetFocusCommand{Target: i}
+			cmd = SetFocus(i)
 		}
 		return cmd
 	case *PasteEvent:

@@ -956,7 +956,7 @@ func (t *TextView) HandleEvent(event tcell.Event) Command {
 		_, _, width, _ := t.GetInnerRect()
 		switch event.Action {
 		case MouseLeftDown:
-			cmd = append(cmd, SetFocusCommand{Target: t}, RedrawCommand{})
+			cmd = append(cmd, SetFocus(t), RedrawCommand{})
 		case MouseLeftClick:
 			cmd = append(cmd, RedrawCommand{})
 		case MouseScrollUp:

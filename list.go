@@ -884,14 +884,14 @@ func (l *List) HandleEvent(event tcell.Event) Command {
 			switch event.Action {
 			case MouseMove:
 				l.dragScrollBarTo(row, innerHeight, contentWidth)
-				return BatchCommand{SetMouseCaptureCommand{Target: l}, RedrawCommand{}}
+				return BatchCommand{SetMouseCapture(nil), RedrawCommand{}}
 			case MouseLeftUp:
 				l.scrollBarInteraction.dragDelta = listScrollBarNoDrag
-				return BatchCommand{SetMouseCaptureCommand{Target: nil}, RedrawCommand{}}
+				return BatchCommand{SetMouseCapture(nil), RedrawCommand{}}
 			case MouseLeftClick:
 				if l.scrollBarInteraction.dragMoved {
 					l.scrollBarInteraction.dragMoved = false
-					return BatchCommand{SetMouseCaptureCommand{Target: nil}, RedrawCommand{}}
+					return BatchCommand{SetMouseCapture(nil), RedrawCommand{}}
 				}
 			}
 		}
@@ -907,9 +907,9 @@ func (l *List) HandleEvent(event tcell.Event) Command {
 			row := y - innerY
 			switch event.Action {
 			case MouseLeftDown:
-				cmd = BatchCommand{SetFocusCommand{Target: l}}
+				cmd = SetFocus(l)
 				if l.startScrollBarDrag(row, innerHeight, contentWidth) {
-					return BatchCommand{cmd, SetMouseCaptureCommand{Target: l}, RedrawCommand{}}
+					return BatchCommand{cmd, SetMouseCapture(l), RedrawCommand{}}
 				}
 				return RedrawCommand{}
 			case MouseLeftClick:

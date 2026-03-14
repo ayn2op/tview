@@ -11,12 +11,4 @@ type BatchCommand []Command
 
 type EventCommand func() tcell.Event
 
-type SetFocusCommand struct {
-	Target Primitive
-}
-
-type SetMouseCaptureCommand struct {
-	Target Primitive
-}
-
 type RedrawCommand struct{}

@@ -43,6 +43,32 @@ func newPasteEvent(content string) *PasteEvent {
 	return event
 }
 
+type setFocusEvent struct {
+	tcell.EventTime
+	target Primitive
+}
+
+func SetFocus(target Primitive) Command {
+	return EventCommand(func() tcell.Event {
+		event := &setFocusEvent{target: target}
+		event.SetEventNow()
+		return event
+	})
+}
+
+type setMouseCaptureEvent struct {
+	tcell.EventTime
+	target Primitive
+}
+
+func SetMouseCapture(target Primitive) Command {
+	return EventCommand(func() tcell.Event {
+		event := &setMouseCaptureEvent{target: target}
+		event.SetEventNow()
+		return event
+	})
+}
+
 type setTitleEvent struct {
 	tcell.EventTime
 	title string

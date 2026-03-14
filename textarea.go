@@ -2338,7 +2338,7 @@ func (t *TextArea) handleMouseEvent(event *MouseEvent) Command {
 			if event.Action == MouseLeftUp {
 				t.dragging = false
 			}
-			return SetMouseCaptureCommand{Target: nil}
+			return SetMouseCapture(nil)
 		}
 		return nil
 	}
@@ -2373,17 +2373,17 @@ func (t *TextArea) handleMouseEvent(event *MouseEvent) Command {
 		if event.Modifiers()&tcell.ModShift == 0 {
 			t.selectionStart = t.cursor
 		}
-		cmd = append(cmd, SetFocusCommand{Target: t}, SetMouseCaptureCommand{Target: t}, RedrawCommand{})
+		cmd = append(cmd, SetFocus(t), SetMouseCapture(t), RedrawCommand{})
 		t.dragging = true
 	case MouseMove:
 		if !t.dragging {
 			break
 		}
 		t.moveCursor(row, column)
-		cmd = append(cmd, SetMouseCaptureCommand{Target: t}, RedrawCommand{})
+		cmd = append(cmd, SetMouseCapture(t), RedrawCommand{})
 	case MouseLeftUp:
 		t.moveCursor(row, column)
-		cmd = append(cmd, SetMouseCaptureCommand{Target: nil}, RedrawCommand{})
+		cmd = append(cmd, SetMouseCapture(nil), RedrawCommand{})
 		t.dragging = false
 	case MouseLeftDoubleClick: // Select word.
 		// Left down/up was already triggered so we are at the correct

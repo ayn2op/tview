@@ -173,14 +173,14 @@ func (b *Button) HandleEvent(event tcell.Event) Command {
 		switch key := event.Key(); key {
 		case tcell.KeyEnter: // Selected.
 			label := b.GetLabel()
-			return Command(func() tcell.Event {
+			return func() tcell.Event {
 				return newButtonSelectedEvent(label)
-			})
+			}
 		case tcell.KeyBacktab, tcell.KeyTab, tcell.KeyEscape: // Leave. No action.
 			exitKey := key
-			return Command(func() tcell.Event {
+			return func() tcell.Event {
 				return newButtonExitEvent(exitKey)
-			})
+			}
 		}
 		return nil
 	case *MouseEvent:
@@ -194,9 +194,9 @@ func (b *Button) HandleEvent(event tcell.Event) Command {
 			return SetFocus(b)
 		case MouseLeftClick:
 			label := b.GetLabel()
-			return Command(func() tcell.Event {
+			return func() tcell.Event {
 				return newButtonSelectedEvent(label)
-			})
+			}
 		}
 	}
 	return nil

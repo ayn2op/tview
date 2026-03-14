@@ -165,13 +165,13 @@ func (m *Modal) HandleEvent(event tcell.Event) Command {
 	case *FormSubmitEvent:
 		buttonIndex := event.ButtonIndex
 		buttonLabel := event.ButtonLabel
-		return Command(func() tcell.Event {
+		return func() tcell.Event {
 			return newModalDoneEvent(buttonIndex, buttonLabel)
-		})
+		}
 	case *FormCancelEvent:
-		return Command(func() tcell.Event {
+		return func() tcell.Event {
 			return newModalDoneEvent(-1, "")
-		})
+		}
 	case *ButtonExitEvent:
 		return m.form.HandleEvent(event)
 	case *MouseEvent:

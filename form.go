@@ -750,7 +750,7 @@ func (f *Form) consumeCancelEvent(cmd Command) Command {
 		return cmd
 	}
 	f.cancelRequested = false
-	cancelCmd := Command(func() tcell.Event { return newFormCancelEvent() })
+	cancelCmd := func() tcell.Event { return newFormCancelEvent() }
 	if cmd == nil {
 		return cancelCmd
 	}
@@ -813,9 +813,9 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 				buttonIndex := index
 				buttonLabel := button.GetLabel()
 				return Batch(
-					Command(func() tcell.Event {
+					func() tcell.Event {
 						return newFormSubmitEvent(buttonIndex, buttonLabel)
-					}),
+					},
 					nil,
 				)
 			default:
@@ -845,9 +845,9 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 				buttonIndex := index
 				buttonLabel := button.GetLabel()
 				return Batch(
-					Command(func() tcell.Event {
+					func() tcell.Event {
 						return newFormSubmitEvent(buttonIndex, buttonLabel)
-					}),
+					},
 					nil,
 				)
 			}

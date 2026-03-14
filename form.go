@@ -750,11 +750,11 @@ func (f *Form) consumeCancelEvent(cmd Command) Command {
 		return cmd
 	}
 	f.cancelRequested = false
-	cancelCmd := EventCommand(func() tcell.Event { return newFormCancelEvent() })
+	cancelCmd := Command(func() tcell.Event { return newFormCancelEvent() })
 	if cmd == nil {
 		return cancelCmd
 	}
-	return BatchCommand{cmd, cancelCmd}
+	return Batch(cmd, cancelCmd)
 }
 
 // focusIndex returns the index of the currently focused item, counting form
@@ -787,7 +787,7 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 	switch event := event.(type) {
 	case *ButtonExitEvent:
 		f.finished(event.Key)
-		return f.consumeCancelEvent(RedrawCommand{})
+		return f.consumeCancelEvent(nil)
 	case *MouseEvent:
 		// Determine items to pass mouse events to.
 		for _, item := range f.items {
@@ -812,12 +812,12 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 			case MouseLeftClick:
 				buttonIndex := index
 				buttonLabel := button.GetLabel()
-				return BatchCommand{
-					EventCommand(func() tcell.Event {
+				return Batch(
+					Command(func() tcell.Event {
 						return newFormSubmitEvent(buttonIndex, buttonLabel)
 					}),
-					RedrawCommand{},
-				}
+					nil,
+				)
 			default:
 				childCmds := button.HandleEvent(event)
 				if childCmds != nil {
@@ -844,12 +844,12 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 			if keyEvent, ok := event.(*KeyEvent); ok && keyEvent.Key() == tcell.KeyEnter {
 				buttonIndex := index
 				buttonLabel := button.GetLabel()
-				return BatchCommand{
-					EventCommand(func() tcell.Event {
+				return Batch(
+					Command(func() tcell.Event {
 						return newFormSubmitEvent(buttonIndex, buttonLabel)
 					}),
-					RedrawCommand{},
-				}
+					nil,
+				)
 			}
 			return f.consumeCancelEvent(button.HandleEvent(event))
 		}

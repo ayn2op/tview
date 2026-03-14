@@ -1059,11 +1059,11 @@ func (t *TreeView) handleKeyEvent(event *KeyEvent) Command {
 	}
 
 	t.process(true)
-	return RedrawCommand{}
+	return nil
 }
 
 func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
-	var cmd BatchCommand
+	var cmds []Command
 	x, y := event.Position()
 	if !t.InRect(x, y) {
 		return nil
@@ -1072,19 +1072,16 @@ func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
 	switch event.Action {
 	case MouseLeftDown:
 		t.lastMouseY = y
-		cmd = append(cmd, RedrawCommand{})
 	case MouseMove:
 		if event.Buttons()&tcell.Button1 != 0 && t.lastMouseY != -1 {
 			t.movement = treeScroll
 			t.step = t.lastMouseY - y
 			t.lastMouseY = y
 		}
-		cmd = append(cmd, RedrawCommand{})
 	case MouseLeftUp:
 		t.lastMouseY = -1
-		cmd = append(cmd, RedrawCommand{})
 	case MouseLeftClick:
-		cmd = append(cmd, SetFocus(t))
+		cmds = append(cmds, SetFocus(t))
 		_, rectY, _, _ := t.GetInnerRect()
 		y += t.offsetY - rectY
 		if t.lastMouseY != -1 {
@@ -1108,20 +1105,17 @@ func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
 				}
 			}
 		}
-		cmd = append(cmd, RedrawCommand{})
 	case MouseScrollUp:
 		t.movement = treeScroll
 		t.step = -1
-		cmd = append(cmd, RedrawCommand{})
 	case MouseScrollDown:
 		t.movement = treeScroll
 		t.step = 1
-		cmd = append(cmd, RedrawCommand{})
 	}
-	if len(cmd) == 0 {
+	if len(cmds) == 0 {
 		return nil
 	}
-	return cmd
+	return Batch(cmds...)
 }
 
 // HandleEvent handles input events for this primitive.

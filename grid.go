@@ -741,7 +741,7 @@ func (g *Grid) HandleEvent(event tcell.Event) Command {
 			g.columnOffset++
 		}
 		if g.rowOffset != previousRowOffset || g.columnOffset != previousColumnOffset {
-			return RedrawCommand{}
+			return nil
 		}
 	}
 

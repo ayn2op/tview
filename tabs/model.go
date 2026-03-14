@@ -137,10 +137,10 @@ func (m *Model) Draw(screen tcell.Screen) {
 }
 
 func (m *Model) activateTab() tview.Command {
-	return tview.BatchCommand{
+	return tview.Batch(
 		m.tabs[m.active].HandleEvent(tview.NewInitEvent()),
 		tview.SetFocus(m),
-	}
+	)
 }
 
 func (m *Model) ShortHelp() []keybind.Keybind {

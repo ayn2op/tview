@@ -294,7 +294,7 @@ func (i *InputField) HandleEvent(event tcell.Event) Command {
 		switch key := event.Key(); key {
 		case tcell.KeyEnter, tcell.KeyEscape, tcell.KeyTab, tcell.KeyBacktab:
 			finish(key)
-			return RedrawCommand{}
+			return nil
 		default:
 			// Forward other key events to the text area.
 			return i.textArea.HandleEvent(event)

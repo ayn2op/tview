@@ -332,7 +332,7 @@ func (c *Checkbox) HandleEvent(event tcell.Event) Command {
 				c.finished(key)
 			}
 		}
-		return RedrawCommand{}
+		return nil
 	case *MouseEvent:
 		x, y := event.Position()
 		_, rectY, _, _ := c.GetInnerRect()
@@ -347,7 +347,7 @@ func (c *Checkbox) HandleEvent(event tcell.Event) Command {
 				return SetFocus(c)
 			case MouseLeftClick:
 				c.SetChecked(!c.checked)
-				return RedrawCommand{}
+				return nil
 			}
 		}
 	}

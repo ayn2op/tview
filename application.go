@@ -158,8 +158,12 @@ func (a *Application) Run() error {
 	a.RUnlock()
 
 	if root != nil {
-		if cmd := root.HandleEvent(NewInitEvent()); cmd != nil {
-			_ = a.executeCommand(cmd)
+		if command := root.HandleEvent(NewInitEvent()); command != nil {
+			go func() {
+				if event := command(); event != nil {
+					a.QueueEvent(event)
+				}
+			}()
 		}
 		a.draw()
 	}
@@ -181,6 +185,16 @@ EventLoop:
 			switch event := event.(type) {
 			case *quitEvent:
 				break EventLoop
+			case *batchEvent:
+				for _, command := range event.commands {
+					if command != nil {
+						go func() {
+							if event := command(); event != nil {
+								a.QueueEvent(event)
+							}
+						}()
+					}
+				}
 
 			case *setFocusEvent:
 				a.SetFocus(event.target)
@@ -216,10 +230,12 @@ EventLoop:
 
 				// Pass other key events to the root primitive.
 				if root != nil && root.HasFocus() {
-					if cmd := root.HandleEvent(event); cmd != nil {
-						if a.executeCommand(cmd) {
-							a.draw()
-						}
+					if command := root.HandleEvent(event); command != nil {
+						go func() {
+							if event := command(); event != nil {
+								a.QueueEvent(event)
+							}
+						}()
 					}
 				}
 			case *tcell.EventPaste:
@@ -233,9 +249,12 @@ EventLoop:
 					a.RUnlock()
 					if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
 						// Pass paste event to the root primitive.
-						cmd := root.HandleEvent(newPasteEvent(pasteBuffer.String()))
-						if a.executeCommand(cmd) {
-							a.draw()
+						if command := root.HandleEvent(newPasteEvent(pasteBuffer.String())); command != nil {
+							go func() {
+								if event := command(); event != nil {
+									a.QueueEvent(event)
+								}
+							}()
 						}
 					}
 				}
@@ -254,12 +273,8 @@ EventLoop:
 					})
 				}
 				lastRedraw = time.Now()
-				a.draw()
 			case *tcell.EventMouse:
-				handled, isMouseDownAction := a.fireMouseActions(event)
-				if handled {
-					a.draw()
-				}
+				isMouseDownAction := a.fireMouseActions(event)
 				a.lastMouseButtons = event.Buttons()
 				if isMouseDownAction {
 					a.mouseDownX, a.mouseDownY = event.Position()
@@ -269,13 +284,17 @@ EventLoop:
 				root := a.root
 				a.RUnlock()
 				if root != nil {
-					if cmd := root.HandleEvent(event); cmd != nil {
-						if a.executeCommand(cmd) {
-							a.draw()
-						}
+					if command := root.HandleEvent(event); command != nil {
+						go func() {
+							if event := command(); event != nil {
+								a.QueueEvent(event)
+							}
+						}()
 					}
 				}
 			}
+
+			a.draw()
 
 		// If we have updates, now is the time to execute them.
 		case update := <-a.updates:
@@ -290,7 +309,7 @@ EventLoop:
 
 // fireMouseActions analyzes the provided mouse event, derives mouse actions
 // from it and then forwards them to the corresponding primitives.
-func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMouseDownAction bool) {
+func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownAction bool) {
 	// We want to relay follow-up events to the same target primitive.
 	var targetPrimitive Primitive
 
@@ -312,9 +331,12 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMous
 			primitive = a.root
 		}
 		if primitive != nil {
-			cmd := primitive.HandleEvent(newMouseEvent(*event, action))
-			if a.executeCommand(cmd) {
-				handled = true
+			if command := primitive.HandleEvent(newMouseEvent(*event, action)); command != nil {
+				go func() {
+					if event := command(); event != nil {
+						a.QueueEvent(event)
+					}
+				}()
 			}
 		}
 	}
@@ -369,7 +391,7 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMous
 		}
 	}
 
-	return handled, isMouseDownAction
+	return isMouseDownAction
 }
 
 // stop finalizes the active screen and leaves terminal UI mode.
@@ -589,30 +611,4 @@ func (a *Application) QueueEvent(event tcell.Event) *Application {
 	}
 	events <- event
 	return a
-}
-
-func (a *Application) executeCommand(command Command) bool {
-	switch command := command.(type) {
-	case BatchCommand:
-		handled := false
-		for _, item := range command {
-			if a.executeCommand(item) {
-				handled = true
-			}
-		}
-		return handled
-
-	case RedrawCommand:
-		return true
-
-	case EventCommand:
-		go func() {
-			if event := command(); event != nil {
-				a.QueueEvent(event)
-			}
-		}()
-		return false
-	}
-
-	return false
 }

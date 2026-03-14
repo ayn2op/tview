@@ -4,11 +4,148 @@ import "github.com/gdamore/tcell/v3"
 
 // Command is a side effect requested by a primitive during input handling.
 // Commands are executed by the Application event loop.
-type Command any
+type Command func() tcell.Event
 
-// BatchCommand groups multiple commands into a single command.
-type BatchCommand []Command
+type batchEvent struct {
+	tcell.EventTime
+	commands []Command
+}
 
-type EventCommand func() tcell.Event
+// Batch combines multiple commands into a single command.
+func Batch(cmds ...Command) Command {
+	var valid []Command
+	for _, cmd := range cmds {
+		if cmd == nil {
+			continue
+		}
+		valid = append(valid, cmd)
+	}
+	switch len(valid) {
+	case 0:
+		return nil
+	case 1:
+		return valid[0]
+	default:
+		return func() tcell.Event {
+			event := &batchEvent{commands: valid}
+			event.SetEventNow()
+			return event
+		}
+	}
+}
 
-type RedrawCommand struct{}
+type InitEvent struct{ tcell.EventTime }
+
+func NewInitEvent() *InitEvent {
+	event := &InitEvent{}
+	event.SetEventNow()
+	return event
+}
+
+type KeyEvent = tcell.EventKey
+
+type MouseEvent struct {
+	tcell.EventMouse
+	Action MouseAction
+}
+
+func newMouseEvent(mouseEvent tcell.EventMouse, action MouseAction) *MouseEvent {
+	event := &MouseEvent{mouseEvent, action}
+	return event
+}
+
+type PasteEvent struct {
+	tcell.EventTime
+	Content string
+}
+
+func newPasteEvent(content string) *PasteEvent {
+	event := &PasteEvent{Content: content}
+	event.SetEventNow()
+	return event
+}
+
+type quitEvent struct{ tcell.EventTime }
+
+func Quit() Command {
+	return func() tcell.Event {
+		event := &quitEvent{}
+		event.SetEventNow()
+		return event
+	}
+}
+
+type setFocusEvent struct {
+	tcell.EventTime
+	target Primitive
+}
+
+func SetFocus(target Primitive) Command {
+	return func() tcell.Event {
+		event := &setFocusEvent{target: target}
+		event.SetEventNow()
+		return event
+	}
+}
+
+type setMouseCaptureEvent struct {
+	tcell.EventTime
+	target Primitive
+}
+
+func SetMouseCapture(target Primitive) Command {
+	return func() tcell.Event {
+		event := &setMouseCaptureEvent{target: target}
+		event.SetEventNow()
+		return event
+	}
+}
+
+type setTitleEvent struct {
+	tcell.EventTime
+	title string
+}
+
+func SetTitle(title string) Command {
+	return func() tcell.Event {
+		event := &setTitleEvent{title: title}
+		event.SetEventNow()
+		return event
+	}
+}
+
+type getClipboardEvent struct{ tcell.EventTime }
+
+func GetClipboard() Command {
+	return func() tcell.Event {
+		event := &getClipboardEvent{}
+		event.SetEventNow()
+		return event
+	}
+}
+
+type setClipboardEvent struct {
+	tcell.EventTime
+	data []byte
+}
+
+func SetClipboard(data []byte) Command {
+	return func() tcell.Event {
+		event := &setClipboardEvent{data: data}
+		event.SetEventNow()
+		return event
+	}
+}
+
+type notifyEvent struct {
+	tcell.EventTime
+	title, body string
+}
+
+func Notify(title, body string) Command {
+	return func() tcell.Event {
+		event := &notifyEvent{title: title, body: body}
+		event.SetEventNow()
+		return event
+	}
+}

@@ -32,12 +32,10 @@ type ModalDoneEvent struct {
 }
 
 func newModalDoneEvent(buttonIndex int, buttonLabel string) *ModalDoneEvent {
-	event := &ModalDoneEvent{
+	return &ModalDoneEvent{
 		ButtonIndex: buttonIndex,
 		ButtonLabel: buttonLabel,
 	}
-	event.SetEventNow()
-	return event
 }
 
 // NewModal returns a new modal message window.

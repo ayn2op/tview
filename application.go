@@ -158,7 +158,7 @@ func (a *Application) Run() error {
 	a.RUnlock()
 
 	if root != nil {
-		if command := root.HandleEvent(NewInitEvent()); command != nil {
+		if command := root.HandleEvent(&InitEvent{}); command != nil {
 			go func() {
 				if event := command(); event != nil {
 					a.QueueEvent(event)

@@ -138,7 +138,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 
 func (m *Model) activateTab() tview.Command {
 	return tview.Batch(
-		m.tabs[m.active].HandleEvent(tview.NewInitEvent()),
+		m.tabs[m.active].HandleEvent(&tview.InitEvent{}),
 		tview.SetFocus(m),
 	)
 }

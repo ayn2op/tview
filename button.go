@@ -10,9 +10,7 @@ type ButtonSelectedEvent struct {
 }
 
 func newButtonSelectedEvent(label string) *ButtonSelectedEvent {
-	event := &ButtonSelectedEvent{Label: label}
-	event.SetEventNow()
-	return event
+	return &ButtonSelectedEvent{Label: label}
 }
 
 type ButtonExitEvent struct {
@@ -21,9 +19,7 @@ type ButtonExitEvent struct {
 }
 
 func newButtonExitEvent(key tcell.Key) *ButtonExitEvent {
-	event := &ButtonExitEvent{Key: key}
-	event.SetEventNow()
-	return event
+	return &ButtonExitEvent{Key: key}
 }
 
 // Button is labeled box that triggers an action when selected.

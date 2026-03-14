@@ -118,21 +118,13 @@ type FormSubmitEvent struct {
 }
 
 func newFormSubmitEvent(buttonIndex int, buttonLabel string) *FormSubmitEvent {
-	event := &FormSubmitEvent{
+	return &FormSubmitEvent{
 		ButtonIndex: buttonIndex,
 		ButtonLabel: buttonLabel,
 	}
-	event.SetEventNow()
-	return event
 }
 
 type FormCancelEvent struct{ tcell.EventTime }
-
-func newFormCancelEvent() *FormCancelEvent {
-	event := &FormCancelEvent{}
-	event.SetEventNow()
-	return event
-}
 
 // NewForm returns a new form.
 func NewForm() *Form {
@@ -750,7 +742,7 @@ func (f *Form) consumeCancelEvent(cmd Command) Command {
 		return cmd
 	}
 	f.cancelRequested = false
-	cancelCmd := func() tcell.Event { return newFormCancelEvent() }
+	cancelCmd := func() tcell.Event { return &FormCancelEvent{} }
 	if cmd == nil {
 		return cancelCmd
 	}

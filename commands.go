@@ -27,20 +27,12 @@ func Batch(cmds ...Command) Command {
 		return valid[0]
 	default:
 		return func() tcell.Event {
-			event := &batchEvent{commands: valid}
-			event.SetEventNow()
-			return event
+			return &batchEvent{commands: valid}
 		}
 	}
 }
 
 type InitEvent struct{ tcell.EventTime }
-
-func NewInitEvent() *InitEvent {
-	event := &InitEvent{}
-	event.SetEventNow()
-	return event
-}
 
 type KeyEvent = tcell.EventKey
 
@@ -50,8 +42,7 @@ type MouseEvent struct {
 }
 
 func newMouseEvent(mouseEvent tcell.EventMouse, action MouseAction) *MouseEvent {
-	event := &MouseEvent{mouseEvent, action}
-	return event
+	return &MouseEvent{mouseEvent, action}
 }
 
 type PasteEvent struct {
@@ -60,18 +51,14 @@ type PasteEvent struct {
 }
 
 func newPasteEvent(content string) *PasteEvent {
-	event := &PasteEvent{Content: content}
-	event.SetEventNow()
-	return event
+	return &PasteEvent{Content: content}
 }
 
 type quitEvent struct{ tcell.EventTime }
 
 func Quit() Command {
 	return func() tcell.Event {
-		event := &quitEvent{}
-		event.SetEventNow()
-		return event
+		return &quitEvent{}
 	}
 }
 
@@ -82,9 +69,7 @@ type setFocusEvent struct {
 
 func SetFocus(target Primitive) Command {
 	return func() tcell.Event {
-		event := &setFocusEvent{target: target}
-		event.SetEventNow()
-		return event
+		return &setFocusEvent{target: target}
 	}
 }
 
@@ -95,9 +80,7 @@ type setMouseCaptureEvent struct {
 
 func SetMouseCapture(target Primitive) Command {
 	return func() tcell.Event {
-		event := &setMouseCaptureEvent{target: target}
-		event.SetEventNow()
-		return event
+		return &setMouseCaptureEvent{target: target}
 	}
 }
 
@@ -108,9 +91,7 @@ type setTitleEvent struct {
 
 func SetTitle(title string) Command {
 	return func() tcell.Event {
-		event := &setTitleEvent{title: title}
-		event.SetEventNow()
-		return event
+		return &setTitleEvent{title: title}
 	}
 }
 
@@ -118,9 +99,7 @@ type getClipboardEvent struct{ tcell.EventTime }
 
 func GetClipboard() Command {
 	return func() tcell.Event {
-		event := &getClipboardEvent{}
-		event.SetEventNow()
-		return event
+		return &getClipboardEvent{}
 	}
 }
 
@@ -131,9 +110,7 @@ type setClipboardEvent struct {
 
 func SetClipboard(data []byte) Command {
 	return func() tcell.Event {
-		event := &setClipboardEvent{data: data}
-		event.SetEventNow()
-		return event
+		return &setClipboardEvent{data: data}
 	}
 }
 
@@ -144,8 +121,6 @@ type notifyEvent struct {
 
 func Notify(title, body string) Command {
 	return func() tcell.Event {
-		event := &notifyEvent{title: title, body: body}
-		event.SetEventNow()
-		return event
+		return &notifyEvent{title: title, body: body}
 	}
 }

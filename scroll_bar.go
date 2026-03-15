@@ -175,6 +175,31 @@ func (s *ScrollBar) SetScrollStep(step int) *ScrollBar {
 	return s
 }
 
+// GetScrollStep returns scroll step used by wheel and arrow interactions.
+func (s *ScrollBar) GetScrollStep() int {
+	return s.scrollStep
+}
+
+// GetTrackClickBehavior returns behavior used for track clicks.
+func (s *ScrollBar) GetTrackClickBehavior() TrackClickBehavior {
+	return s.trackClickBehavior
+}
+
+// GetHasStartArrow reports whether a start arrow is rendered.
+func (s *ScrollBar) GetHasStartArrow() bool {
+	return s.arrows.hasStart()
+}
+
+// GetHasEndArrow reports whether an end arrow is rendered.
+func (s *ScrollBar) GetHasEndArrow() bool {
+	return s.arrows.hasEnd()
+}
+
+// GetTrackLengthExcludingArrowHeads returns track length excluding arrow cells.
+func (s *ScrollBar) GetTrackLengthExcludingArrowHeads(length int) int {
+	return s.trackLengthExcludingArrowHeads(length)
+}
+
 // SetAutoHide controls whether the scrollBar is hidden when there is nothing to scroll.
 func (s *ScrollBar) SetAutoHide(autoHide bool) *ScrollBar {
 	if s.autoHide != autoHide {

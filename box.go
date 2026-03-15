@@ -81,6 +81,11 @@ func (b *Box) SetBorderPadding(top, bottom, left, right int) *Box {
 	return b
 }
 
+// GetBorderPadding returns the configured border padding.
+func (b *Box) GetBorderPadding() (top, bottom, left, right int) {
+	return b.paddingTop, b.paddingBottom, b.paddingLeft, b.paddingRight
+}
+
 // GetRect returns the current position of the rectangle, x, y, width, and
 // height.
 func (b *Box) GetRect() (int, int, int, int) {

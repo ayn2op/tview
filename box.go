@@ -81,26 +81,26 @@ func (b *Box) SetBorderPadding(top, bottom, left, right int) *Box {
 	return b
 }
 
-// GetBorderPadding returns the configured border padding.
-func (b *Box) GetBorderPadding() (top, bottom, left, right int) {
+// BorderPadding returns the configured border padding.
+func (b *Box) BorderPadding() (top, bottom, left, right int) {
 	return b.paddingTop, b.paddingBottom, b.paddingLeft, b.paddingRight
 }
 
-// GetRect returns the current position of the rectangle, x, y, width, and
+// Rect returns the current position of the rectangle, x, y, width, and
 // height.
-func (b *Box) GetRect() (int, int, int, int) {
+func (b *Box) Rect() (int, int, int, int) {
 	return b.x, b.y, b.width, b.height
 }
 
-// GetInnerRect returns the position of the inner rectangle (x, y, width,
+// InnerRect returns the position of the inner rectangle (x, y, width,
 // height), without the border and without any padding. Width and height values
 // will clamp to 0 and thus never be negative.
-func (b *Box) GetInnerRect() (int, int, int, int) {
+func (b *Box) InnerRect() (int, int, int, int) {
 	if b.innerX >= 0 {
 		return b.innerX, b.innerY, b.innerWidth, b.innerHeight
 	}
 
-	x, y, width, height := b.GetRect()
+	x, y, width, height := b.Rect()
 
 	if b.title != "" || b.borders.Has(BordersTop) {
 		y++
@@ -163,14 +163,14 @@ func (b *Box) HandleEvent(event tcell.Event) Command {
 // InRect returns true if the given coordinate is within the bounds of the box's
 // rectangle.
 func (b *Box) InRect(x, y int) bool {
-	rectX, rectY, width, height := b.GetRect()
+	rectX, rectY, width, height := b.Rect()
 	return x >= rectX && x < rectX+width && y >= rectY && y < rectY+height
 }
 
 // InInnerRect returns true if the given coordinate is within the bounds of the
 // box's inner rectangle (within the border and padding).
 func (b *Box) InInnerRect(x, y int) bool {
-	rectX, rectY, width, height := b.GetInnerRect()
+	rectX, rectY, width, height := b.InnerRect()
 	return x >= rectX && x < rectX+width && y >= rectY && y < rectY+height
 }
 
@@ -191,8 +191,8 @@ func (b *Box) SetBackgroundColor(color tcell.Color) *Box {
 	return b
 }
 
-// GetBorders returns the borders.
-func (b *Box) GetBorders() Borders {
+// Borders returns the borders.
+func (b *Box) Borders() Borders {
 	return b.borders
 }
 
@@ -231,8 +231,8 @@ func (b *Box) GetBackgroundColor() tcell.Color {
 	return b.backgroundColor
 }
 
-// GetTitle returns the box's current title.
-func (b *Box) GetTitle() string {
+// Title returns the box's current title.
+func (b *Box) Title() string {
 	return b.title
 }
 
@@ -393,7 +393,7 @@ func (b *Box) DrawForSubclass(screen tcell.Screen, p Primitive) {
 
 	// Remember the inner rect.
 	b.innerX = -1
-	b.innerX, b.innerY, b.innerWidth, b.innerHeight = b.GetInnerRect()
+	b.innerX, b.innerY, b.innerWidth, b.innerHeight = b.InnerRect()
 }
 
 // SetFocusFunc sets a callback function which is invoked when this primitive

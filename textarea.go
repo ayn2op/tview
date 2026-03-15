@@ -1178,7 +1178,7 @@ func (t *TextArea) Draw(screen tcell.Screen) {
 	t.DrawForSubclass(screen, t)
 
 	// Prepare
-	x, y, width, height := t.GetInnerRect()
+	x, y, width, height := t.InnerRect()
 	if width <= 0 || height <= 0 {
 		return // We have no space for anything.
 	}
@@ -2332,7 +2332,7 @@ func (t *TextArea) handleMouseEvent(event *MouseEvent) Command {
 	}
 
 	x, y := event.Position()
-	rectX, rectY, _, _ := t.GetInnerRect()
+	rectX, rectY, _, _ := t.InnerRect()
 	if !t.InRect(x, y) {
 		if t.dragging {
 			if event.Action == MouseLeftUp {

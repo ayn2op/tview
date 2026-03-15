@@ -274,7 +274,7 @@ func (c *Checkbox) Draw(screen tcell.Screen) {
 	c.DrawForSubclass(screen, c)
 
 	// Prepare
-	x, y, width, height := c.GetInnerRect()
+	x, y, width, height := c.InnerRect()
 	rightLimit := x + width
 	if height < 1 || rightLimit <= x {
 		return
@@ -335,7 +335,7 @@ func (c *Checkbox) HandleEvent(event tcell.Event) Command {
 		return nil
 	case *MouseEvent:
 		x, y := event.Position()
-		_, rectY, _, _ := c.GetInnerRect()
+		_, rectY, _, _ := c.InnerRect()
 		if !c.InRect(x, y) {
 			return nil
 		}

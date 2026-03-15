@@ -152,7 +152,7 @@ func (m *Modal) Draw(screen tcell.Screen) {
 
 	// Draw the frame.
 	m.DrawForSubclass(screen, m)
-	x, y, width, height = m.GetInnerRect()
+	x, y, width, height = m.InnerRect()
 	m.frame.SetRect(x, y, width, height)
 	m.frame.Draw(screen)
 }

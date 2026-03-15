@@ -112,7 +112,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 		return
 	}
 
-	x, y, width, height := m.GetInnerRect()
+	x, y, width, height := m.InnerRect()
 	tmpX := x
 	var content tview.Primitive
 	for i, tab := range m.tabs {

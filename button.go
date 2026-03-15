@@ -150,7 +150,7 @@ func (b *Button) Draw(screen tcell.Screen) {
 	b.DrawForSubclass(screen, b)
 
 	// Draw label.
-	x, y, width, height := b.GetInnerRect()
+	x, y, width, height := b.InnerRect()
 	if width > 0 && height > 0 {
 		y = y + height/2
 		printWithStyle(screen, b.text, x, y, 0, width, AlignmentCenter, style, true)

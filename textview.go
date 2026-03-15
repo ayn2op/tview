@@ -743,7 +743,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 	t.Lock()
 	defer t.Unlock()
 
-	x, y, width, height := t.GetInnerRect()
+	x, y, width, height := t.InnerRect()
 	labelBg := t.labelStyle.GetBackground()
 	if t.labelWidth > 0 {
 		labelWidth := min(t.labelWidth, width)
@@ -936,10 +936,10 @@ func (t *TextView) HandleEvent(event tcell.Event) Command {
 		case tcell.KeyRight:
 			t.columnOffset++
 		case tcell.KeyPgDn, tcell.KeyCtrlF:
-			_, _, _, pageSize := t.GetInnerRect()
+			_, _, _, pageSize := t.InnerRect()
 			t.lineOffset += pageSize
 		case tcell.KeyPgUp, tcell.KeyCtrlB:
-			_, _, _, pageSize := t.GetInnerRect()
+			_, _, _, pageSize := t.InnerRect()
 			t.trackEnd = false
 			t.lineOffset -= pageSize
 		}
@@ -953,7 +953,7 @@ func (t *TextView) HandleEvent(event tcell.Event) Command {
 			return nil
 		}
 
-		_, _, width, _ := t.GetInnerRect()
+		_, _, width, _ := t.InnerRect()
 		switch event.Action {
 		case MouseLeftDown:
 			cmds = append(cmds, SetFocus(t))

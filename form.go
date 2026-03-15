@@ -462,7 +462,7 @@ func (f *Form) Draw(screen tcell.Screen) {
 	f.DrawForSubclass(screen, f)
 
 	// Determine the dimensions.
-	x, y, width, height := f.GetInnerRect()
+	x, y, width, height := f.InnerRect()
 	topLimit := y
 	bottomLimit := y + height
 	rightLimit := x + width

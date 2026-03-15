@@ -11,9 +11,9 @@ type Primitive interface {
 	// HandleEvent receives events when this primitive has focus.
 	HandleEvent(event tcell.Event) Command
 
-	// GetRect returns the current position of the primitive, x, y, width, and
+	// Rect returns the current position of the primitive, x, y, width, and
 	// height.
-	GetRect() (int, int, int, int)
+	Rect() (int, int, int, int)
 	// SetRect sets a new position of the primitive.
 	SetRect(x, y, width, height int)
 

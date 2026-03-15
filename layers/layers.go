@@ -369,7 +369,7 @@ func (l *Layers) Draw(screen tcell.Screen) {
 			layerScreen = ovScreen
 		}
 		if layer.resize {
-			x, y, width, height := l.GetInnerRect()
+			x, y, width, height := l.InnerRect()
 			layer.item.SetRect(x, y, width, height)
 		}
 		layer.item.Draw(layerScreen)

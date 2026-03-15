@@ -92,7 +92,7 @@ func (h *Help) Draw(screen tcell.Screen) {
 		return
 	}
 
-	x, y, width, height := h.GetInnerRect()
+	x, y, width, height := h.InnerRect()
 
 	var lines [][]segment
 	if h.showAll {

@@ -175,28 +175,28 @@ func (s *ScrollBar) SetScrollStep(step int) *ScrollBar {
 	return s
 }
 
-// GetScrollStep returns scroll step used by wheel and arrow interactions.
-func (s *ScrollBar) GetScrollStep() int {
+// ScrollStep returns scroll step used by wheel and arrow interactions.
+func (s *ScrollBar) ScrollStep() int {
 	return s.scrollStep
 }
 
-// GetTrackClickBehavior returns behavior used for track clicks.
-func (s *ScrollBar) GetTrackClickBehavior() TrackClickBehavior {
+// TrackClickBehavior returns behavior used for track clicks.
+func (s *ScrollBar) TrackClickBehavior() TrackClickBehavior {
 	return s.trackClickBehavior
 }
 
-// GetHasStartArrow reports whether a start arrow is rendered.
-func (s *ScrollBar) GetHasStartArrow() bool {
+// HasStartArrow reports whether a start arrow is rendered.
+func (s *ScrollBar) HasStartArrow() bool {
 	return s.arrows.hasStart()
 }
 
-// GetHasEndArrow reports whether an end arrow is rendered.
-func (s *ScrollBar) GetHasEndArrow() bool {
+// HasEndArrow reports whether an end arrow is rendered.
+func (s *ScrollBar) HasEndArrow() bool {
 	return s.arrows.hasEnd()
 }
 
-// GetTrackLengthExcludingArrowHeads returns track length excluding arrow cells.
-func (s *ScrollBar) GetTrackLengthExcludingArrowHeads(length int) int {
+// TrackLengthExcludingArrowHeads returns track length excluding arrow cells.
+func (s *ScrollBar) TrackLengthExcludingArrowHeads(length int) int {
 	return s.trackLengthExcludingArrowHeads(length)
 }
 
@@ -361,7 +361,7 @@ func (s *ScrollBar) put(screen tcell.Screen, x, y, index int, glyph string, styl
 func (s *ScrollBar) Draw(screen tcell.Screen) {
 	s.DrawForSubclass(screen, s)
 
-	x, y, _, height := s.GetInnerRect()
+	x, y, _, height := s.InnerRect()
 	if height <= 0 {
 		return
 	}

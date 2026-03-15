@@ -585,7 +585,7 @@ func (t *TreeView) Move(offset int) *TreeView {
 // having [TreeView.Draw] call it again).
 func (t *TreeView) process(drawingAfter bool) {
 	t.stableNodes = drawingAfter
-	_, _, _, height := t.GetInnerRect()
+	_, _, _, height := t.InnerRect()
 
 	// Determine visible nodes and their placement.
 	t.nodes = nil
@@ -763,7 +763,7 @@ func (t *TreeView) Draw(screen tcell.Screen) {
 
 	// Scroll the tree, t.movement is treeNone after process() when there is a
 	// cursor, except for treeScroll, treeHome, and treeEnd.
-	x, y, width, height := t.GetInnerRect()
+	x, y, width, height := t.InnerRect()
 	switch t.movement {
 	case treeMove:
 		t.movement = treeNone
@@ -976,11 +976,11 @@ func (t *TreeView) handleKeyEvent(event *KeyEvent) Command {
 	case tcell.KeyEnd:
 		t.movement = treeEnd
 	case tcell.KeyPgDn, tcell.KeyCtrlF:
-		_, _, _, height := t.GetInnerRect()
+		_, _, _, height := t.InnerRect()
 		t.movement = treeMove
 		t.step = height
 	case tcell.KeyPgUp, tcell.KeyCtrlB:
-		_, _, _, height := t.GetInnerRect()
+		_, _, _, height := t.InnerRect()
 		t.movement = treeMove
 		t.step = -height
 	case tcell.KeyRune:
@@ -1028,7 +1028,7 @@ func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
 	case MouseLeftUp:
 		t.lastMouseY = -1
 	case MouseLeftClick:
-		_, rectY, _, _ := t.GetInnerRect()
+		_, rectY, _, _ := t.InnerRect()
 		y += t.offsetY - rectY
 		if t.lastMouseY != -1 {
 			y += t.lastMouseY - y

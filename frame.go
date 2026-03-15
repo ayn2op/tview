@@ -112,7 +112,7 @@ func (f *Frame) Draw(screen tcell.Screen) {
 	f.DrawForSubclass(screen, f)
 
 	// Calculate start positions.
-	x, top, width, height := f.GetInnerRect()
+	x, top, width, height := f.InnerRect()
 	bottom := top + height - 1
 	x += f.left
 	top += f.top

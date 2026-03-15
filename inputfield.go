@@ -250,7 +250,7 @@ func (i *InputField) Draw(screen tcell.Screen) {
 	i.DrawForSubclass(screen, i)
 
 	// Prepare
-	x, y, width, height := i.GetInnerRect()
+	x, y, width, height := i.InnerRect()
 	if height < 1 || width < 1 {
 		return
 	}

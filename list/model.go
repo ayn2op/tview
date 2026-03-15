@@ -164,8 +164,8 @@ func (l *Model) SetBuilder(builder Builder) *Model {
 	return l
 }
 
-// GetBuilder returns the current item builder.
-func (l *Model) GetBuilder() Builder {
+// Builder returns the current item builder.
+func (l *Model) Builder() Builder {
 	return l.builder
 }
 
@@ -231,7 +231,7 @@ func (l *Model) ScrollToStart() *Model {
 
 // ScrollToEnd scrolls the view so the last items are visible.
 func (l *Model) ScrollToEnd() *Model {
-	_, _, width, height := l.GetInnerRect()
+	_, _, width, height := l.InnerRect()
 	if width <= 0 || height <= 0 {
 		return l
 	}
@@ -347,7 +347,7 @@ func (l *Model) Draw(screen tcell.Screen) {
 	l.DrawForSubclass(screen, l)
 	l.scrollBarInteraction.state = listScrollBarState{}
 
-	x, y, width, height := l.GetInnerRect()
+	x, y, width, height := l.InnerRect()
 	if width <= 0 || height <= 0 || l.builder == nil {
 		return
 	}
@@ -889,7 +889,7 @@ func (l *Model) HandleEvent(event tcell.Event) tview.Command {
 		case tcell.KeyUp:
 			l.PrevItem()
 		case tcell.KeyPgDn:
-			_, _, width, height := l.GetInnerRect()
+			_, _, width, height := l.InnerRect()
 			if l.snapToItems {
 				l.scrollByItems(1, l.visibleItemCount(width, height), width, height)
 			} else {
@@ -899,7 +899,7 @@ func (l *Model) HandleEvent(event tcell.Event) tview.Command {
 				l.scroll.pending += height
 			}
 		case tcell.KeyPgUp:
-			_, _, width, height := l.GetInnerRect()
+			_, _, width, height := l.InnerRect()
 			if l.snapToItems {
 				l.scrollByItems(-1, l.visibleItemCount(width, height), width, height)
 			} else {
@@ -914,7 +914,7 @@ func (l *Model) HandleEvent(event tcell.Event) tview.Command {
 		var cmd tview.Command
 		x, y := event.Position()
 		if l.scrollBarInteraction.dragDelta >= 0 {
-			_, innerY, innerWidth, innerHeight := l.GetInnerRect()
+			_, innerY, innerWidth, innerHeight := l.InnerRect()
 			contentWidth, _ := l.scrollBarLayout(0, innerWidth)
 			row := y - innerY
 			switch event.Action {
@@ -936,7 +936,7 @@ func (l *Model) HandleEvent(event tcell.Event) tview.Command {
 			return nil
 		}
 
-		innerX, innerY, innerWidth, innerHeight := l.GetInnerRect()
+		innerX, innerY, innerWidth, innerHeight := l.InnerRect()
 		contentWidth, scrollBarX := l.scrollBarLayout(innerX, innerWidth)
 		drawScrollBar := l.shouldDrawScrollBar(innerWidth, innerHeight)
 		if drawScrollBar && x == scrollBarX && y >= innerY && y < innerY+innerHeight {
@@ -975,7 +975,7 @@ func (l *Model) HandleEvent(event tcell.Event) tview.Command {
 			}
 			return nil
 		case tview.MouseScrollUp:
-			_, _, width, height := l.GetInnerRect()
+			_, _, width, height := l.InnerRect()
 			if l.snapToItems {
 				l.scrollByItems(-1, 1, width, height)
 			} else {
@@ -983,7 +983,7 @@ func (l *Model) HandleEvent(event tcell.Event) tview.Command {
 			}
 			return nil
 		case tview.MouseScrollDown:
-			_, _, width, height := l.GetInnerRect()
+			_, _, width, height := l.InnerRect()
 			if l.snapToItems {
 				l.scrollByItems(1, 1, width, height)
 			} else {
@@ -1005,7 +1005,7 @@ func (l *Model) startScrollBarDrag(row int, height int, contentWidth int) bool {
 	}
 
 	trackRow := row
-	if l.scrollBar.GetHasStartArrow() {
+	if l.scrollBar.HasStartArrow() {
 		trackRow--
 	}
 	if trackRow < 0 || trackRow >= state.metrics.trackCells {
@@ -1031,7 +1031,7 @@ func (l *Model) dragScrollBarTo(row int, height int, contentWidth int) bool {
 	}
 
 	trackRow := row
-	if l.scrollBar.GetHasStartArrow() {
+	if l.scrollBar.HasStartArrow() {
 		trackRow--
 	}
 	trackRow = min(max(trackRow, 0), state.metrics.trackCells-1)
@@ -1082,8 +1082,8 @@ func (l *Model) shouldDrawScrollBar(width int, height int) bool {
 
 func (l *Model) mouseScrollStep() int {
 	step := 3
-	if l.scrollBar != nil && l.scrollBar.GetScrollStep() > 0 {
-		step = l.scrollBar.GetScrollStep()
+	if l.scrollBar != nil && l.scrollBar.ScrollStep() > 0 {
+		step = l.scrollBar.ScrollStep()
 	}
 	return step
 }
@@ -1098,8 +1098,8 @@ func (l *Model) handleScrollBarMouse(action tview.MouseAction, row int, height i
 	}
 
 	row = max(row, 0)
-	startArrow := l.scrollBar.GetHasStartArrow()
-	endArrow := l.scrollBar.GetHasEndArrow()
+	startArrow := l.scrollBar.HasStartArrow()
+	endArrow := l.scrollBar.HasEndArrow()
 	trackRow := row
 	if startArrow {
 		if row == 0 {
@@ -1132,7 +1132,7 @@ func (l *Model) handleScrollBarMouse(action tview.MouseAction, row int, height i
 		return true
 	}
 
-	switch l.scrollBar.GetTrackClickBehavior() {
+	switch l.scrollBar.TrackClickBehavior() {
 	case tview.TrackClickBehaviorJumpToClick:
 		thumbTravel := max(state.metrics.trackLen-state.metrics.thumbLen, 0)
 		if thumbTravel == 0 {
@@ -1174,7 +1174,7 @@ func (l *Model) scrollBarLayout(innerX int, innerWidth int) (contentWidth int, s
 	contentWidth = innerWidth - 1
 	scrollBarX = innerX + contentWidth
 	// Reuse right padding for the scrollBar when available so we don't reduce content width by an extra column.
-	_, _, _, rightPadding := l.GetBorderPadding()
+	_, _, _, rightPadding := l.BorderPadding()
 	if rightPadding > 0 {
 		contentWidth = innerWidth
 		scrollBarX = innerX + innerWidth + rightPadding - 1
@@ -1198,7 +1198,7 @@ func (l *Model) computeScrollBarState(contentWidth int, viewportHeight int, chil
 	// Include pending delta so interactions stay in sync with the next drawn frame.
 	position = min(max(position+l.scroll.pending, 0), maxOffset)
 
-	trackCells := l.scrollBar.GetTrackLengthExcludingArrowHeads(viewportHeight)
+	trackCells := l.scrollBar.TrackLengthExcludingArrowHeads(viewportHeight)
 	metrics := computeScrollMetrics(trackCells, contentLength, viewportLength, position)
 	if metrics.trackCells <= 0 {
 		return state, false

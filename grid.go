@@ -325,7 +325,7 @@ func (g *Grid) HasFocus() bool {
 // Draw draws this primitive onto the screen.
 func (g *Grid) Draw(screen tcell.Screen) {
 	g.DrawForSubclass(screen, g)
-	x, y, width, height := g.GetInnerRect()
+	x, y, width, height := g.InnerRect()
 	screenWidth, screenHeight := screen.Size()
 
 	// Make a list of items which apply.

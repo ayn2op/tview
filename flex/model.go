@@ -165,7 +165,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 	}
 
 	// How much space can we distribute?
-	x, y, width, height := m.GetInnerRect()
+	x, y, width, height := m.InnerRect()
 	var proportionSum int
 	distSize := width
 	if m.direction == DirectionRow {

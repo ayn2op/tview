@@ -521,9 +521,9 @@ func (a *Application) SetFocus(p Primitive) *Application {
 	return a
 }
 
-// GetFocus returns the primitive which has the current focus. If none has it,
+// Focused returns the primitive which has the current focus. If none has it,
 // nil is returned.
-func (a *Application) GetFocus() Primitive {
+func (a *Application) Focused() Primitive {
 	a.RLock()
 	defer a.RUnlock()
 	return a.focus

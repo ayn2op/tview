@@ -1,87 +1,91 @@
-package tview
+package flex
 
 import (
-	"github.com/gdamore/tcell/v3"
 	"slices"
+
+	"github.com/ayn2op/tview"
+	"github.com/gdamore/tcell/v3"
 )
 
-// Flex directions.
+// Direction controls the direction of items.
+type Direction uint8
+
 const (
 	// One item per row.
-	FlexRow = 0
+	DirectionRow Direction = iota
 	// One item per column.
-	FlexColumn = 1
+	DirectionColumn
 	// As defined in CSS, items distributed along a row.
-	FlexRowCSS = 1
+	DirectionRowCSS = DirectionColumn
 	// As defined in CSS, items distributed within a column.
-	FlexColumnCSS = 0
+	DirectionColumnCSS = DirectionRow
 )
 
-// flexItem holds layout options for one item.
-type flexItem struct {
-	Item       Primitive // The item to be positioned. May be nil for an empty item.
-	FixedSize  int       // The item's fixed size which may not be changed, 0 if it has no fixed size.
-	Proportion int       // The item's proportion.
-	Focus      bool      // Whether or not this item attracts the layout's focus.
+// item holds layout options for one item.
+type item struct {
+	Item       tview.Primitive // The item to be positioned. May be nil for an empty item.
+	FixedSize  int             // The item's fixed size which may not be changed, 0 if it has no fixed size.
+	Proportion int             // The item's proportion.
+	Focus      bool            // Whether or not this item attracts the layout's focus.
 }
 
-// Flex is a basic implementation of the Flexbox layout. The contained
+// Model is a basic implementation of the Flexbox layout. The contained
 // primitives are arranged horizontally or vertically. The way they are
 // distributed along that dimension depends on their layout settings, which is
 // either a fixed length or a proportional length. See AddItem() for details.
 //
 // See https://github.com/ayn2op/tview/wiki/Flex for an example.
-type Flex struct {
-	*Box
+type Model struct {
+	*tview.Box
 
 	// The items to be positioned.
-	items []*flexItem
+	items []*item
 
-	// FlexRow or FlexColumn.
-	direction int
+	// Layout direction.
+	direction Direction
 
-	// If set to true, Flex will use the entire screen as its available space
+	// If set to true, Model will use the entire screen as its available space
 	// instead its box dimensions.
 	fullScreen bool
 }
 
-// NewFlex returns a new flexbox layout container with no primitives and its
-// direction set to FlexColumn. To add primitives to this layout, see AddItem().
+// NewModel returns a new flexbox layout container with no primitives and its
+// direction set to DirectionColumn. To add primitives to this layout, see AddItem().
 // To change the direction, see SetDirection().
 //
-// Note that Box, the superclass of Flex, will not clear its contents so that
-// any nil flex items will leave their background unchanged. To clear a Flex's
+// Note that Box, the superclass of Model, will not clear its contents so that
+// any nil flex items will leave their background unchanged. To clear a Model's
 // background before any items are drawn, set it to a box with the desired
 // color:
 //
-//	flex.Box = NewBox()
-func NewFlex() *Flex {
-	f := &Flex{
-		direction: FlexColumn,
+//	model.Box = tview.NewBox()
+func NewModel() *Model {
+	m := &Model{
+		direction: DirectionColumn,
 	}
-	f.Box = NewBox()
-	f.dontClear = true
-	return f
+	m.Box = tview.NewBox()
+	m.SetDontClear(true)
+	return m
 }
 
 // SetDirection sets the direction in which the contained primitives are
-// distributed. This can be either FlexColumn (default) or FlexRow. Note that
+// distributed. This can be either DirectionColumn (default) or DirectionRow. Note that
 // these are the opposite of what you would expect coming from CSS. You may also
-// use FlexColumnCSS or FlexRowCSS, to remain in line with the CSS definition.
-func (f *Flex) SetDirection(direction int) *Flex {
-	if f.direction != direction {
-		f.direction = direction
+// use DirectionColumnCSS or DirectionRowCSS, to remain in line with the CSS definition.
+func (m *Model) SetDirection(direction Direction) *Model {
+	if m.direction != direction {
+		m.direction = direction
 	}
-	return f
+	return m
 }
 
 // SetFullScreen sets the flag which, when true, causes the flex layout to use
 // the entire screen space instead of whatever size it is currently assigned to.
-func (f *Flex) SetFullScreen(fullScreen bool) *Flex {
-	if f.fullScreen != fullScreen {
-		f.fullScreen = fullScreen
+func (m *Model) SetFullScreen(fullScreen bool) *Model {
+	if m.fullScreen != fullScreen {
+		m.fullScreen = fullScreen
 	}
-	return f
+	return m
 }
 
 // AddItem adds a new item to the container. The "fixedSize" argument is a width
@@ -92,82 +96,82 @@ func (f *Flex) SetFullScreen(fullScreen bool) *Flex {
 // with a proportion of 1. The proportion must be at least 1 if fixedSize == 0
 // (ignored otherwise).
 //
-// If "focus" is set to true, the item will receive focus when the Flex
+// If "focus" is set to true, the item will receive focus when the Model
 // primitive receives focus. If multiple items have the "focus" flag set to
 // true, the first one will receive focus.
 //
 // You can provide a nil value for the primitive. This will still consume screen
 // space but nothing will be drawn.
-func (f *Flex) AddItem(item Primitive, fixedSize, proportion int, focus bool) *Flex {
-	f.items = append(f.items, &flexItem{Item: item, FixedSize: fixedSize, Proportion: proportion, Focus: focus})
-	return f
+func (m *Model) AddItem(p tview.Primitive, fixedSize, proportion int, focus bool) *Model {
+	m.items = append(m.items, &item{Item: p, FixedSize: fixedSize, Proportion: proportion, Focus: focus})
+	return m
 }
 
 // RemoveItem removes all items for the given primitive from the container,
 // keeping the order of the remaining items intact.
-func (f *Flex) RemoveItem(p Primitive) *Flex {
-	for index := len(f.items) - 1; index >= 0; index-- {
-		if f.items[index].Item == p {
-			f.items = slices.Delete(f.items, index, index+1)
+func (m *Model) RemoveItem(p tview.Primitive) *Model {
+	for index := len(m.items) - 1; index >= 0; index-- {
+		if m.items[index].Item == p {
+			m.items = slices.Delete(m.items, index, index+1)
 		}
 	}
-	return f
+	return m
 }
 
 // GetItemCount returns the number of items in this container.
-func (f *Flex) GetItemCount() int {
-	return len(f.items)
+func (m *Model) GetItemCount() int {
+	return len(m.items)
 }
 
 // GetItem returns the primitive at the given index, starting with 0 for the
 // first primitive in this container.
 //
 // This function will panic for out of range indices.
-func (f *Flex) GetItem(index int) Primitive {
-	return f.items[index].Item
+func (m *Model) GetItem(index int) tview.Primitive {
+	return m.items[index].Item
 }
 
 // Clear removes all items from the container.
-func (f *Flex) Clear() *Flex {
-	if len(f.items) > 0 {
-		f.items = nil
+func (m *Model) Clear() *Model {
+	if len(m.items) > 0 {
+		m.items = nil
 	}
-	return f
+	return m
 }
 
 // ResizeItem sets a new size for the item(s) with the given primitive. If there
-// are multiple Flex items with the same primitive, they will all receive the
+// are multiple Model items with the same primitive, they will all receive the
 // same size. For details regarding the size parameters, see AddItem().
-func (f *Flex) ResizeItem(p Primitive, fixedSize, proportion int) *Flex {
-	for _, item := range f.items {
+func (m *Model) ResizeItem(p tview.Primitive, fixedSize, proportion int) *Model {
+	for _, item := range m.items {
 		if item.Item == p && (item.FixedSize != fixedSize || item.Proportion != proportion) {
 			item.FixedSize = fixedSize
 			item.Proportion = proportion
 		}
 	}
-	return f
+	return m
 }
 
 // Draw draws this primitive onto the screen.
-func (f *Flex) Draw(screen tcell.Screen) {
-	f.DrawForSubclass(screen, f)
+func (m *Model) Draw(screen tcell.Screen) {
+	m.DrawForSubclass(screen, m)
 
 	// Calculate size and position of the items.
 
 	// Do we use the entire screen?
-	if f.fullScreen {
+	if m.fullScreen {
 		width, height := screen.Size()
-		f.SetRect(0, 0, width, height)
+		m.SetRect(0, 0, width, height)
 	}
 
 	// How much space can we distribute?
-	x, y, width, height := f.GetInnerRect()
+	x, y, width, height := m.GetInnerRect()
 	var proportionSum int
 	distSize := width
-	if f.direction == FlexRow {
+	if m.direction == DirectionRow {
 		distSize = height
 	}
-	for _, item := range f.items {
+	for _, item := range m.items {
 		if item.FixedSize > 0 {
 			distSize -= item.FixedSize
 		} else {
@@ -177,10 +181,10 @@ func (f *Flex) Draw(screen tcell.Screen) {
 
 	// Calculate positions and draw items.
 	pos := x
-	if f.direction == FlexRow {
+	if m.direction == DirectionRow {
 		pos = y
 	}
-	for _, item := range f.items {
+	for _, item := range m.items {
 		size := item.FixedSize
 		if size <= 0 {
 			if proportionSum > 0 {
@@ -192,7 +196,7 @@ func (f *Flex) Draw(screen tcell.Screen) {
 			}
 		}
 		if item.Item != nil {
-			if f.direction == FlexColumn {
+			if m.direction == DirectionColumn {
 				item.Item.SetRect(pos, y, size, height)
 			} else {
 				item.Item.SetRect(x, pos, width, size)
@@ -211,36 +215,36 @@ func (f *Flex) Draw(screen tcell.Screen) {
 }
 
 // Focus is called when this primitive receives focus.
-func (f *Flex) Focus(delegate func(p Primitive)) {
-	for _, item := range f.items {
+func (m *Model) Focus(delegate func(p tview.Primitive)) {
+	for _, item := range m.items {
 		if item.Item != nil && item.Focus {
 			delegate(item.Item)
 			return
 		}
 	}
-	f.Box.Focus(delegate)
+	m.Box.Focus(delegate)
 }
 
 // HasFocus returns whether or not this primitive has focus.
-func (f *Flex) HasFocus() bool {
-	for _, item := range f.items {
+func (m *Model) HasFocus() bool {
+	for _, item := range m.items {
 		if item.Item != nil && item.Item.HasFocus() {
 			return true
 		}
 	}
-	return f.Box.HasFocus()
+	return m.Box.HasFocus()
 }
 
 // HandleEvent handles input events for this primitive.
-func (f *Flex) HandleEvent(event tcell.Event) Command {
+func (m *Model) HandleEvent(event tcell.Event) tview.Command {
 	switch event := event.(type) {
-	case *MouseEvent:
-		if !f.InRect(event.Position()) {
+	case *tview.MouseEvent:
+		if !m.InRect(event.Position()) {
 			return nil
 		}
 
 		// Pass mouse events along to the first child item that takes it.
-		for _, item := range f.items {
+		for _, item := range m.items {
 			if item.Item == nil {
 				continue
 			}
@@ -253,7 +257,7 @@ func (f *Flex) HandleEvent(event tcell.Event) Command {
 	}
 
 	// Forward events to the focused child.
-	for _, item := range f.items {
+	for _, item := range m.items {
 		if item.Item != nil && item.Item.HasFocus() {
 			return item.Item.HandleEvent(event)
 		}

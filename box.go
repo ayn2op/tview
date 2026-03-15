@@ -169,6 +169,14 @@ func (b *Box) InInnerRect(x, y int) bool {
 	return x >= rectX && x < rectX+width && y >= rectY && y < rectY+height
 }
 
+// SetDontClear sets whether drawing should skip clearing the background.
+func (b *Box) SetDontClear(dontClear bool) *Box {
+	if b.dontClear != dontClear {
+		b.dontClear = dontClear
+	}
+	return b
+}
+
 // SetBackgroundColor sets the box's background color.
 func (b *Box) SetBackgroundColor(color tcell.Color) *Box {
 	if b.backgroundColor != color {

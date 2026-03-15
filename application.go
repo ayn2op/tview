@@ -504,24 +504,6 @@ func (a *Application) draw() *Application {
 	return a
 }
 
-// Sync forces a full re-sync of the screen buffer with the actual screen during
-// the next event cycle. This is useful for when the terminal screen is
-// corrupted so you may want to offer your users a keyboard shortcut to refresh
-// the screen.
-func (a *Application) Sync() *Application {
-	a.updates <- queuedUpdate{f: func() {
-		a.Lock()
-		screen := a.screen
-		a.forceRedraw = true
-		a.Unlock()
-		if screen == nil {
-			return
-		}
-		screen.Sync()
-	}}
-	return a
-}
-
 // SetRoot sets the root primitive for this application. This function must be called at least once or nothing will be displayed when
 // the application starts.
 //

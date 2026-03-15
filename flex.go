@@ -249,11 +249,13 @@ func (f *Flex) HandleEvent(event tcell.Event) Command {
 				return childCmds
 			}
 		}
-	case *KeyEvent, *PasteEvent:
-		for _, item := range f.items {
-			if item.Item != nil && item.Item.HasFocus() {
-				return item.Item.HandleEvent(event)
-			}
+		return nil
+	}
+
+	// Forward events to the focused child.
+	for _, item := range f.items {
+		if item.Item != nil && item.Item.HasFocus() {
+			return item.Item.HandleEvent(event)
 		}
 	}
 	return nil

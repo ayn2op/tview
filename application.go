@@ -448,30 +448,6 @@ func (a *Application) Suspend(f func()) bool {
 	return true
 }
 
-// Draw refreshes the screen (during the next update cycle). It calls the Draw()
-// function of the application's root primitive and then syncs the screen
-// buffer. It is almost never necessary to call this function. It can actually
-// deadlock your application if you call it from the main thread (e.g. in a
-// callback function of a widget). Please see
-// https://github.com/ayn2op/tview/wiki/Concurrency for details.
-func (a *Application) Draw() *Application {
-	a.QueueUpdate(func() {
-		a.draw()
-	})
-	return a
-}
-
-// ForceDraw refreshes the screen immediately. Use this function with caution as
-// it may lead to race conditions with updates to primitives in other
-// goroutines. It is always preferable to call [Application.Draw] instead.
-// Never call this function from a goroutine.
-//
-// It is safe to call this function during queued updates and direct event
-// handling.
-func (a *Application) ForceDraw() *Application {
-	return a.draw()
-}
-
 // draw actually does what Draw() promises to do.
 func (a *Application) draw() *Application {
 	a.RLock()

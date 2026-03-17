@@ -682,7 +682,7 @@ ItemLoop:
 }
 
 // HandleEvent handles input events for this primitive.
-func (g *Grid) HandleEvent(event tcell.Event) Command {
+func (g *Grid) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *MouseEvent:
 		if !g.InRect(event.Position()) {

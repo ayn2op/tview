@@ -742,7 +742,7 @@ func (f *Form) consumeCancelEvent(cmd Command) Command {
 		return cmd
 	}
 	f.cancelRequested = false
-	cancelCmd := func() tcell.Event { return &FormCancelEvent{} }
+	cancelCmd := func() Event { return &FormCancelEvent{} }
 	if cmd == nil {
 		return cancelCmd
 	}
@@ -775,7 +775,7 @@ func (f *Form) HasFocus() bool {
 }
 
 // HandleEvent handles input events for this primitive.
-func (f *Form) HandleEvent(event tcell.Event) Command {
+func (f *Form) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *ButtonExitEvent:
 		f.finished(event.Key)
@@ -805,7 +805,7 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 				buttonIndex := index
 				buttonLabel := button.GetLabel()
 				return Batch(
-					func() tcell.Event {
+					func() Event {
 						return newFormSubmitEvent(buttonIndex, buttonLabel)
 					},
 					nil,
@@ -837,7 +837,7 @@ func (f *Form) HandleEvent(event tcell.Event) Command {
 				buttonIndex := index
 				buttonLabel := button.GetLabel()
 				return Batch(
-					func() tcell.Event {
+					func() Event {
 						return newFormSubmitEvent(buttonIndex, buttonLabel)
 					},
 					nil,

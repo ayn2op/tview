@@ -9,7 +9,7 @@ type Primitive interface {
 	// (They will need to keep track of this themselves.)
 	Draw(screen tcell.Screen)
 	// HandleEvent receives events when this primitive has focus.
-	HandleEvent(event tcell.Event) Command
+	HandleEvent(event Event) Command
 
 	// Rect returns the current position of the primitive, x, y, width, and
 	// height.

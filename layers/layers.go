@@ -377,7 +377,7 @@ func (l *Layers) Draw(screen tcell.Screen) {
 }
 
 // HandleEvent handles input events for this primitive.
-func (l *Layers) HandleEvent(event tcell.Event) tview.Command {
+func (l *Layers) HandleEvent(event tview.Event) tview.Command {
 	if mouseEvent, ok := event.(*tview.MouseEvent); ok && !l.InRect(mouseEvent.Position()) {
 		return nil
 	}

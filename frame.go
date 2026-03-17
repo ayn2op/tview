@@ -190,7 +190,7 @@ func (f *Frame) HasFocus() bool {
 }
 
 // HandleEvent handles input events for this primitive.
-func (f *Frame) HandleEvent(event tcell.Event) Command {
+func (f *Frame) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *MouseEvent:
 		if !f.InRect(event.Position()) {

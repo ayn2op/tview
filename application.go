@@ -77,7 +77,7 @@ type Application struct {
 	// The root primitive to be seen on the screen.
 	root Primitive
 
-	events chan tcell.Event
+	events chan Event
 
 	// Functions queued from goroutines, used to serialize updates to primitives.
 	updates chan queuedUpdate
@@ -560,7 +560,7 @@ func (a *Application) QueueUpdateDraw(f func()) *Application {
 // QueueEvent sends an event to the Application event loop.
 //
 // It is not recommended for event to be nil.
-func (a *Application) QueueEvent(event tcell.Event) *Application {
+func (a *Application) QueueEvent(event Event) *Application {
 	a.RLock()
 	events := a.events
 	a.RUnlock()

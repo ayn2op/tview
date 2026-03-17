@@ -880,7 +880,7 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 }
 
 // HandleEvent handles input events for this primitive.
-func (l *Model) HandleEvent(event tcell.Event) tview.Command {
+func (l *Model) HandleEvent(event tview.Event) tview.Command {
 	switch event := event.(type) {
 	case *tview.KeyEvent:
 		switch event.Key() {

@@ -2,9 +2,11 @@ package tview
 
 import "github.com/gdamore/tcell/v3"
 
+type Event = tcell.Event
+
 // Command is a side effect requested by a primitive during input handling.
 // Commands are executed by the Application event loop.
-type Command func() tcell.Event
+type Command func() Event
 
 type batchEvent struct {
 	tcell.EventTime
@@ -26,7 +28,7 @@ func Batch(cmds ...Command) Command {
 	case 1:
 		return valid[0]
 	default:
-		return func() tcell.Event {
+		return func() Event {
 			return &batchEvent{commands: valid}
 		}
 	}
@@ -57,7 +59,7 @@ func newPasteEvent(content string) *PasteEvent {
 type quitEvent struct{ tcell.EventTime }
 
 func Quit() Command {
-	return func() tcell.Event {
+	return func() Event {
 		return &quitEvent{}
 	}
 }
@@ -68,7 +70,7 @@ type setFocusEvent struct {
 }
 
 func SetFocus(target Primitive) Command {
-	return func() tcell.Event {
+	return func() Event {
 		return &setFocusEvent{target: target}
 	}
 }
@@ -79,7 +81,7 @@ type setMouseCaptureEvent struct {
 }
 
 func SetMouseCapture(target Primitive) Command {
-	return func() tcell.Event {
+	return func() Event {
 		return &setMouseCaptureEvent{target: target}
 	}
 }
@@ -90,7 +92,7 @@ type setTitleEvent struct {
 }
 
 func SetTitle(title string) Command {
-	return func() tcell.Event {
+	return func() Event {
 		return &setTitleEvent{title: title}
 	}
 }
@@ -98,7 +100,7 @@ func SetTitle(title string) Command {
 type getClipboardEvent struct{ tcell.EventTime }
 
 func GetClipboard() Command {
-	return func() tcell.Event {
+	return func() Event {
 		return &getClipboardEvent{}
 	}
 }
@@ -109,7 +111,7 @@ type setClipboardEvent struct {
 }
 
 func SetClipboard(data []byte) Command {
-	return func() tcell.Event {
+	return func() Event {
 		return &setClipboardEvent{data: data}
 	}
 }
@@ -120,7 +122,7 @@ type notifyEvent struct {
 }
 
 func Notify(title, body string) Command {
-	return func() tcell.Event {
+	return func() Event {
 		return &notifyEvent{title: title, body: body}
 	}
 }

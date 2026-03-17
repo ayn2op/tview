@@ -158,16 +158,16 @@ func (m *Modal) Draw(screen tcell.Screen) {
 }
 
 // HandleEvent handles input events for this primitive.
-func (m *Modal) HandleEvent(event tcell.Event) Command {
+func (m *Modal) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *FormSubmitEvent:
 		buttonIndex := event.ButtonIndex
 		buttonLabel := event.ButtonLabel
-		return func() tcell.Event {
+		return func() Event {
 			return newModalDoneEvent(buttonIndex, buttonLabel)
 		}
 	case *FormCancelEvent:
-		return func() tcell.Event {
+		return func() Event {
 			return newModalDoneEvent(-1, "")
 		}
 	case *ButtonExitEvent:

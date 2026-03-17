@@ -879,7 +879,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 }
 
 // HandleEvent handles input events for this primitive.
-func (t *TextView) HandleEvent(event tcell.Event) Command {
+func (t *TextView) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *KeyEvent:
 		previousLineOffset, previousColumnOffset, previousTrackEnd := t.lineOffset, t.columnOffset, t.trackEnd

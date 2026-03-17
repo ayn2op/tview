@@ -955,7 +955,7 @@ func (t *TreeView) selectCurrentNode() Command {
 		return nil
 	}
 	selectedNode := node
-	return func() tcell.Event {
+	return func() Event {
 		return &TreeViewSelectedEvent{Node: selectedNode}
 	}
 }
@@ -1039,7 +1039,7 @@ func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
 			node := t.nodes[y]
 			if node.selectable {
 				t.currentNode = node
-				return Batch(SetFocus(t), func() tcell.Event {
+				return Batch(SetFocus(t), func() Event {
 					return &TreeViewSelectedEvent{Node: node}
 				})
 			}
@@ -1056,7 +1056,7 @@ func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
 }
 
 // HandleEvent handles input events for this primitive.
-func (t *TreeView) HandleEvent(event tcell.Event) Command {
+func (t *TreeView) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *KeyEvent:
 		return t.handleKeyEvent(event)

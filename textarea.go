@@ -2428,7 +2428,7 @@ func (t *TextArea) handlePasteEvent(event *PasteEvent) Command {
 }
 
 // HandleEvent handles input events for this primitive.
-func (t *TextArea) HandleEvent(event tcell.Event) Command {
+func (t *TextArea) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *KeyEvent:
 		return t.handleKeyEvent(event)

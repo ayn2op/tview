@@ -78,7 +78,7 @@ func (m *Model) Blur() {
 	m.Box.Blur()
 }
 
-func (m *Model) HandleEvent(event tcell.Event) tview.Command {
+func (m *Model) HandleEvent(event tview.Event) tview.Command {
 	if len(m.tabs) == 0 {
 		return nil
 	}

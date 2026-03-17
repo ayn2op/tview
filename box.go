@@ -150,7 +150,7 @@ func (b *Box) SetRect(x, y, width, height int) {
 }
 
 // HandleEvent handles input events for this primitive.
-func (b *Box) HandleEvent(event tcell.Event) Command {
+func (b *Box) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *MouseEvent:
 		if event.Action == MouseLeftDown && b.InRect(event.Position()) {

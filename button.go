@@ -158,7 +158,7 @@ func (b *Button) Draw(screen tcell.Screen) {
 }
 
 // HandleEvent handles input events for this primitive.
-func (b *Button) HandleEvent(event tcell.Event) Command {
+func (b *Button) HandleEvent(event Event) Command {
 	if b.disabled {
 		return nil
 	}
@@ -169,12 +169,12 @@ func (b *Button) HandleEvent(event tcell.Event) Command {
 		switch key := event.Key(); key {
 		case tcell.KeyEnter: // Selected.
 			label := b.GetLabel()
-			return func() tcell.Event {
+			return func() Event {
 				return newButtonSelectedEvent(label)
 			}
 		case tcell.KeyBacktab, tcell.KeyTab, tcell.KeyEscape: // Leave. No action.
 			exitKey := key
-			return func() tcell.Event {
+			return func() Event {
 				return newButtonExitEvent(exitKey)
 			}
 		}
@@ -190,7 +190,7 @@ func (b *Button) HandleEvent(event tcell.Event) Command {
 			return SetFocus(b)
 		case MouseLeftClick:
 			label := b.GetLabel()
-			return func() tcell.Event {
+			return func() Event {
 				return newButtonSelectedEvent(label)
 			}
 		}

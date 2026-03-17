@@ -310,7 +310,7 @@ func (c *Checkbox) Draw(screen tcell.Screen) {
 }
 
 // HandleEvent handles input events for this primitive.
-func (c *Checkbox) HandleEvent(event tcell.Event) Command {
+func (c *Checkbox) HandleEvent(event Event) Command {
 	if c.disabled {
 		return nil
 	}

@@ -236,7 +236,7 @@ func (m *Model) HasFocus() bool {
 }
 
 // HandleEvent handles input events for this primitive.
-func (m *Model) HandleEvent(event tcell.Event) tview.Command {
+func (m *Model) HandleEvent(event tview.Event) tview.Command {
 	switch event := event.(type) {
 	case *tview.MouseEvent:
 		if !m.InRect(event.Position()) {

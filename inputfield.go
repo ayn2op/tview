@@ -273,7 +273,7 @@ func (i *InputField) Draw(screen tcell.Screen) {
 }
 
 // HandleEvent handles input events for this primitive.
-func (i *InputField) HandleEvent(event tcell.Event) Command {
+func (i *InputField) HandleEvent(event Event) Command {
 	if i.textArea.GetDisabled() {
 		return nil
 	}

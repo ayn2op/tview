@@ -107,6 +107,11 @@ func (m *Model) AddItem(item Item) {
 	m.items = append(m.items, item)
 }
 
+func (m *Model) SetItems(items Items) {
+	m.items = append(m.items[:0], items...)
+	m.Update()
+}
+
 func (m *Model) Update() {
 	m.ClearInput()
 	m.onInputChanged("")

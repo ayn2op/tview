@@ -8,7 +8,7 @@ import (
 )
 
 type Tab interface {
-	tview.Primitive
+	tview.Model
 	Label() string
 }
 
@@ -37,7 +37,7 @@ func NewModel(tabs []Tab) *Model {
 	}
 }
 
-var _ tview.Primitive = (*Model)(nil)
+var _ tview.Model = (*Model)(nil)
 var _ help.KeyMap = (*Model)(nil)
 
 func (m *Model) canPrevious() bool {
@@ -56,7 +56,7 @@ func (m *Model) Next() {
 	m.active = min(m.active+1, len(m.tabs)-1)
 }
 
-func (m *Model) Focus(delegate func(p tview.Primitive)) {
+func (m *Model) Focus(delegate func(m tview.Model)) {
 	if len(m.tabs) == 0 {
 		m.Box.Focus(delegate)
 		return
@@ -114,7 +114,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 
 	x, y, width, height := m.InnerRect()
 	tmpX := x
-	var content tview.Primitive
+	var content tview.Model
 	for i, tab := range m.tabs {
 		labelStyle := m.labelStyle
 		if i == m.active {

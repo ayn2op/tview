@@ -135,7 +135,7 @@ func (b *Button) GetDisabled() bool {
 	return b.disabled
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (b *Button) Draw(screen tcell.Screen) {
 	// Draw the box.
 	style := b.style
@@ -157,7 +157,7 @@ func (b *Button) Draw(screen tcell.Screen) {
 	}
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (b *Button) HandleEvent(event Event) Command {
 	if b.disabled {
 		return nil

@@ -158,7 +158,7 @@ type textAreaUndoItem struct {
 //
 // The Ctrl-Q key was chosen for the default "copy" function to avoid clashing
 // with common Ctrl-C quit bindings in user applications. You may remap keys in
-// your primitive's HandleEvent and implement copying to the clipboard. Note
+// your model's HandleEvent and implement copying to the clipboard. Note
 // that using your terminal's /
 // operating system's key bindings for copy+paste functionality may not have the
 // expected effect as tview will not be able to handle these keys. Pasting text
@@ -798,7 +798,7 @@ func (t *TextArea) GetLabel() string {
 }
 
 // SetLabelWidth sets the screen width of the label. A value of 0 will cause the
-// primitive to use the width of the label string.
+// model to use the width of the label string.
 func (t *TextArea) SetLabelWidth(width int) *TextArea {
 	if t.labelWidth != width {
 		t.labelWidth = width
@@ -823,12 +823,12 @@ func (t *TextArea) SetSize(rows, columns int) *TextArea {
 	return t
 }
 
-// GetFieldWidth returns this primitive's field width.
+// GetFieldWidth returns this model's field width.
 func (t *TextArea) GetFieldWidth() int {
 	return t.width
 }
 
-// GetFieldHeight returns this primitive's field height.
+// GetFieldHeight returns this model's field height.
 func (t *TextArea) GetFieldHeight() int {
 	return t.height
 }
@@ -973,8 +973,8 @@ func (t *TextArea) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
 	return t
 }
 
-// Focus is called when this primitive receives focus.
-func (t *TextArea) Focus(delegate func(p Primitive)) {
+// Focus is called when this model receives focus.
+func (t *TextArea) Focus(delegate func(m Model)) {
 	// If we're part of a form and this item is disabled, there's nothing the
 	// user can do here so we're finished.
 	if t.finished != nil && t.disabled {
@@ -1173,7 +1173,7 @@ func (t *TextArea) replace(deleteStart, deleteEnd [3]int, insert string, continu
 	return deleteEnd
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (t *TextArea) Draw(screen tcell.Screen) {
 	t.DrawForSubclass(screen, t)
 
@@ -2427,7 +2427,7 @@ func (t *TextArea) handlePasteEvent(event *PasteEvent) Command {
 	return nil
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (t *TextArea) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *KeyEvent:

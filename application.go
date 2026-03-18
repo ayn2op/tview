@@ -56,13 +56,6 @@ type queuedUpdate struct {
 // It is not strictly required to use this class as none of the other classes
 // depend on it. However, it provides useful tools to set up an application and
 // plays nicely with all widgets.
-//
-// The following command displays a primitive p on the screen until the
-// application is stopped (for example via Quit()):
-//
-//	if err := tview.NewApplication().SetRoot(p, true).Run(); err != nil {
-//	    panic(err)
-//	}
 type Application struct {
 	sync.RWMutex
 
@@ -71,18 +64,18 @@ type Application struct {
 	// Fini(), to set a new screen (or nil to stop the application).
 	screen tcell.Screen
 
-	// The primitive which currently has the keyboard focus.
-	focus Primitive
+	// The model which currently has the keyboard focus.
+	focus Model
 
-	// The root primitive to be seen on the screen.
-	root Primitive
+	// The root model to be seen on the screen.
+	root Model
 
 	events chan Event
 
-	// Functions queued from goroutines, used to serialize updates to primitives.
+	// Functions queued from goroutines, used to serialize updates to models.
 	updates chan queuedUpdate
 
-	mouseCapturingPrimitive Primitive        // A primitive requested via SetMouseCaptureCommand to capture future mouse events.
+	mouseCapturingPrimitive Model            // A model requested via SetMouseCaptureCommand to capture future mouse events.
 	lastMouseX, lastMouseY  int              // The last position of the mouse.
 	mouseDownX, mouseDownY  int              // The position of the mouse when its button was last pressed.
 	lastMouseClick          time.Time        // The time when a mouse button was last clicked.
@@ -228,7 +221,7 @@ EventLoop:
 				root := a.root
 				a.RUnlock()
 
-				// Pass other key events to the root primitive.
+				// Pass other key events to the root model.
 				if root != nil && root.HasFocus() {
 					if command := root.HandleEvent(event); command != nil {
 						go func() {
@@ -248,7 +241,7 @@ EventLoop:
 					root := a.root
 					a.RUnlock()
 					if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
-						// Pass paste event to the root primitive.
+						// Pass paste event to the root model.
 						if command := root.HandleEvent(newPasteEvent(pasteBuffer.String())); command != nil {
 							go func() {
 								if event := command(); event != nil {
@@ -308,10 +301,10 @@ EventLoop:
 }
 
 // fireMouseActions analyzes the provided mouse event, derives mouse actions
-// from it and then forwards them to the corresponding primitives.
+// from it and then forwards them to the corresponding models.
 func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownAction bool) {
-	// We want to relay follow-up events to the same target primitive.
-	var targetPrimitive Primitive
+	// We want to relay follow-up events to the same target model.
+	var targetPrimitive Model
 
 	// Helper function to fire a mouse action.
 	fire := func(action MouseAction) {
@@ -320,8 +313,8 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 			isMouseDownAction = true
 		}
 
-		// Determine the target primitive.
-		var primitive Primitive
+		// Determine the target model.
+		var primitive Model
 		if a.mouseCapturingPrimitive != nil {
 			primitive = a.mouseCapturingPrimitive
 			targetPrimitive = a.mouseCapturingPrimitive
@@ -480,11 +473,11 @@ func (a *Application) draw() *Application {
 	return a
 }
 
-// SetRoot sets the root primitive for this application. This function must be called at least once or nothing will be displayed when
+// SetRoot sets the root model for this application. This function must be called at least once or nothing will be displayed when
 // the application starts.
 //
-// It also calls SetFocus() on the primitive.
-func (a *Application) SetRoot(root Primitive) *Application {
+// It also calls SetFocus() on the model.
+func (a *Application) SetRoot(root Model) *Application {
 	a.Lock()
 	a.root = root
 	if a.screen != nil {
@@ -496,40 +489,40 @@ func (a *Application) SetRoot(root Primitive) *Application {
 	return a
 }
 
-// SetFocus sets the focus to a new primitive. All key events will be directed
-// down the hierarchy (starting at the root) until a primitive handles them,
-// which per default goes towards the focused primitive.
+// SetFocus sets the focus to a new model. All key events will be directed
+// down the hierarchy (starting at the root) until a model handles them,
+// which per default goes towards the focused model.
 //
-// Blur() will be called on the previously focused primitive. Focus() will be
-// called on the new primitive.
-func (a *Application) SetFocus(p Primitive) *Application {
+// Blur() will be called on the previously focused model. Focus() will be
+// called on the new model.
+func (a *Application) SetFocus(m Model) *Application {
 	a.Lock()
 	if a.focus != nil {
 		a.focus.Blur()
 	}
-	a.focus = p
+	a.focus = m
 	if a.screen != nil {
 		a.screen.HideCursor()
 	}
 	a.Unlock()
-	if p != nil {
-		p.Focus(func(p Primitive) {
-			a.SetFocus(p)
+	if m != nil {
+		m.Focus(func(m Model) {
+			a.SetFocus(m)
 		})
 	}
 
 	return a
 }
 
-// Focused returns the primitive which has the current focus. If none has it,
+// Focused returns the model which has the current focus. If none has it,
 // nil is returned.
-func (a *Application) Focused() Primitive {
+func (a *Application) Focused() Model {
 	a.RLock()
 	defer a.RUnlock()
 	return a.focus
 }
 
-// QueueUpdate is used to synchronize access to primitives from non-main
+// QueueUpdate is used to synchronize access to models from non-main
 // goroutines. The provided function will be executed as part of the event loop
 // and thus will not cause race conditions with other such update functions or
 // the Draw() function.

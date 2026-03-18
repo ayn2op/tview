@@ -4,7 +4,7 @@ import "github.com/gdamore/tcell/v3"
 
 type Event = tcell.Event
 
-// Command is a side effect requested by a primitive during input handling.
+// Command is a side effect requested by a model during input handling.
 // Commands are executed by the Application event loop.
 type Command func() Event
 
@@ -66,10 +66,10 @@ func Quit() Command {
 
 type setFocusEvent struct {
 	tcell.EventTime
-	target Primitive
+	target Model
 }
 
-func SetFocus(target Primitive) Command {
+func SetFocus(target Model) Command {
 	return func() Event {
 		return &setFocusEvent{target: target}
 	}
@@ -77,10 +77,10 @@ func SetFocus(target Primitive) Command {
 
 type setMouseCaptureEvent struct {
 	tcell.EventTime
-	target Primitive
+	target Model
 }
 
-func SetMouseCapture(target Primitive) Command {
+func SetMouseCapture(target Model) Command {
 	return func() Event {
 		return &setMouseCaptureEvent{target: target}
 	}

@@ -1,6 +1,6 @@
 package tview
 
-// BorderSet defines various borders used when primitives are drawn.
+// BorderSet defines various borders used when models are drawn.
 type BorderSet struct {
 	Top         string
 	Bottom      string

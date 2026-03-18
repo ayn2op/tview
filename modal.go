@@ -114,17 +114,17 @@ func (m *Modal) SetFocus(index int) *Modal {
 	return m
 }
 
-// Focus is called when this primitive receives focus.
-func (m *Modal) Focus(delegate func(p Primitive)) {
+// Focus is called when this model receives focus.
+func (m *Modal) Focus(delegate func(m Model)) {
 	delegate(m.form)
 }
 
-// HasFocus returns whether or not this primitive has focus.
+// HasFocus returns whether or not this model has focus.
 func (m *Modal) HasFocus() bool {
 	return m.form.HasFocus()
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (m *Modal) Draw(screen tcell.Screen) {
 	// Calculate the width of this modal.
 	buttonsWidth := 0
@@ -157,7 +157,7 @@ func (m *Modal) Draw(screen tcell.Screen) {
 	m.frame.Draw(screen)
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (m *Modal) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *FormSubmitEvent:

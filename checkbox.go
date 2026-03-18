@@ -100,7 +100,7 @@ func (c *Checkbox) GetLabel() string {
 }
 
 // SetLabelWidth sets the screen width of the label. A value of 0 will cause the
-// primitive to use the width of the label string.
+// model to use the width of the label string.
 func (c *Checkbox) SetLabelWidth(width int) *Checkbox {
 	if c.labelWidth != width {
 		c.labelWidth = width
@@ -206,12 +206,12 @@ func (c *Checkbox) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldT
 	return c
 }
 
-// GetFieldWidth returns this primitive's field width.
+// GetFieldWidth returns this model's field width.
 func (c *Checkbox) GetFieldWidth() int {
 	return 1
 }
 
-// GetFieldHeight returns this primitive's field height.
+// GetFieldHeight returns this model's field height.
 func (c *Checkbox) GetFieldHeight() int {
 	return 1
 }
@@ -257,8 +257,8 @@ func (c *Checkbox) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
 	return c
 }
 
-// Focus is called when this primitive receives focus.
-func (c *Checkbox) Focus(delegate func(p Primitive)) {
+// Focus is called when this model receives focus.
+func (c *Checkbox) Focus(delegate func(m Model)) {
 	// If we're part of a form and this item is disabled, there's nothing the
 	// user can do here so we're finished.
 	if c.finished != nil && c.disabled {
@@ -269,7 +269,7 @@ func (c *Checkbox) Focus(delegate func(p Primitive)) {
 	c.Box.Focus(delegate)
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (c *Checkbox) Draw(screen tcell.Screen) {
 	c.DrawForSubclass(screen, c)
 
@@ -309,7 +309,7 @@ func (c *Checkbox) Draw(screen tcell.Screen) {
 	printWithStyle(screen, str, x, y, 0, width, AlignmentLeft, style, c.disabled)
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (c *Checkbox) HandleEvent(event Event) Command {
 	if c.disabled {
 		return nil

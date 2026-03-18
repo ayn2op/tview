@@ -23,14 +23,14 @@ const (
 
 // item holds layout options for one item.
 type item struct {
-	Item       tview.Primitive // The item to be positioned. May be nil for an empty item.
-	FixedSize  int             // The item's fixed size which may not be changed, 0 if it has no fixed size.
-	Proportion int             // The item's proportion.
-	Focus      bool            // Whether or not this item attracts the layout's focus.
+	Item       tview.Model // The item to be positioned. May be nil for an empty item.
+	FixedSize  int         // The item's fixed size which may not be changed, 0 if it has no fixed size.
+	Proportion int         // The item's proportion.
+	Focus      bool        // Whether or not this item attracts the layout's focus.
 }
 
 // Model is a basic implementation of the Flexbox layout. The contained
-// primitives are arranged horizontally or vertically. The way they are
+// models are arranged horizontally or vertically. The way they are
 // distributed along that dimension depends on their layout settings, which is
 // either a fixed length or a proportional length. See AddItem() for details.
 //
@@ -49,8 +49,8 @@ type Model struct {
 	fullScreen bool
 }
 
-// NewModel returns a new flexbox layout container with no primitives and its
-// direction set to DirectionColumn. To add primitives to this layout, see AddItem().
+// NewModel returns a new flexbox layout container with no models and its
+// direction set to DirectionColumn. To add models to this layout, see AddItem().
 // To change the direction, see SetDirection().
 //
 // Note that Box, the superclass of Model, will not clear its contents so that
@@ -68,7 +68,7 @@ func NewModel() *Model {
 	return m
 }
 
-// SetDirection sets the direction in which the contained primitives are
+// SetDirection sets the direction in which the contained models are
 // distributed. This can be either DirectionColumn (default) or DirectionRow. Note that
 // these are the opposite of what you would expect coming from CSS. You may also
 // use DirectionColumnCSS or DirectionRowCSS, to remain in line with the CSS definition.
@@ -97,21 +97,21 @@ func (m *Model) SetFullScreen(fullScreen bool) *Model {
 // (ignored otherwise).
 //
 // If "focus" is set to true, the item will receive focus when the Model
-// primitive receives focus. If multiple items have the "focus" flag set to
+// model receives focus. If multiple items have the "focus" flag set to
 // true, the first one will receive focus.
 //
-// You can provide a nil value for the primitive. This will still consume screen
+// You can provide a nil value for the model. This will still consume screen
 // space but nothing will be drawn.
-func (m *Model) AddItem(p tview.Primitive, fixedSize, proportion int, focus bool) *Model {
+func (m *Model) AddItem(p tview.Model, fixedSize, proportion int, focus bool) *Model {
 	m.items = append(m.items, &item{Item: p, FixedSize: fixedSize, Proportion: proportion, Focus: focus})
 	return m
 }
 
-// RemoveItem removes all items for the given primitive from the container,
+// RemoveItem removes all items for the given model from the container,
 // keeping the order of the remaining items intact.
-func (m *Model) RemoveItem(p tview.Primitive) *Model {
+func (m *Model) RemoveItem(item tview.Model) *Model {
 	for index := len(m.items) - 1; index >= 0; index-- {
-		if m.items[index].Item == p {
+		if m.items[index].Item == item {
 			m.items = slices.Delete(m.items, index, index+1)
 		}
 	}
@@ -123,11 +123,11 @@ func (m *Model) GetItemCount() int {
 	return len(m.items)
 }
 
-// GetItem returns the primitive at the given index, starting with 0 for the
-// first primitive in this container.
+// GetItem returns the model at the given index, starting with 0 for the
+// first model in this container.
 //
 // This function will panic for out of range indices.
-func (m *Model) GetItem(index int) tview.Primitive {
+func (m *Model) GetItem(index int) tview.Model {
 	return m.items[index].Item
 }
 
@@ -139,10 +139,10 @@ func (m *Model) Clear() *Model {
 	return m
 }
 
-// ResizeItem sets a new size for the item(s) with the given primitive. If there
-// are multiple Model items with the same primitive, they will all receive the
+// ResizeItem sets a new size for the item(s) with the given model. If there
+// are multiple Model items with the same model, they will all receive the
 // same size. For details regarding the size parameters, see AddItem().
-func (m *Model) ResizeItem(p tview.Primitive, fixedSize, proportion int) *Model {
+func (m *Model) ResizeItem(p tview.Model, fixedSize, proportion int) *Model {
 	for _, item := range m.items {
 		if item.Item == p && (item.FixedSize != fixedSize || item.Proportion != proportion) {
 			item.FixedSize = fixedSize
@@ -152,7 +152,7 @@ func (m *Model) ResizeItem(p tview.Primitive, fixedSize, proportion int) *Model 
 	return m
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (m *Model) Draw(screen tcell.Screen) {
 	m.DrawForSubclass(screen, m)
 
@@ -214,8 +214,8 @@ func (m *Model) Draw(screen tcell.Screen) {
 	}
 }
 
-// Focus is called when this primitive receives focus.
-func (m *Model) Focus(delegate func(p tview.Primitive)) {
+// Focus is called when this model receives focus.
+func (m *Model) Focus(delegate func(m tview.Model)) {
 	for _, item := range m.items {
 		if item.Item != nil && item.Focus {
 			delegate(item.Item)
@@ -225,7 +225,7 @@ func (m *Model) Focus(delegate func(p tview.Primitive)) {
 	m.Box.Focus(delegate)
 }
 
-// HasFocus returns whether or not this primitive has focus.
+// HasFocus returns whether or not this model has focus.
 func (m *Model) HasFocus() bool {
 	for _, item := range m.items {
 		if item.Item != nil && item.Item.HasFocus() {
@@ -235,7 +235,7 @@ func (m *Model) HasFocus() bool {
 	return m.Box.HasFocus()
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (m *Model) HandleEvent(event tview.Event) tview.Command {
 	switch event := event.(type) {
 	case *tview.MouseEvent:

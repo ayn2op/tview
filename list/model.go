@@ -6,12 +6,12 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// Item represents a primitive which can be measured for a given width.
+// Item represents a model which can be measured for a given width.
 //
 // Scroll list items are responsible for reporting their own height so the list can
 // layout and scroll variable-height items.
 type Item interface {
-	tview.Primitive
+	tview.Model
 	Height(width int) int
 }
 
@@ -19,7 +19,7 @@ type Item interface {
 // It must return nil when the index is out of range.
 type Builder func(index int, cursor int) Item
 
-// Model displays a virtual list of primitives returned by a builder function.
+// Model displays a virtual list of models returned by a builder function.
 type Model struct {
 	*tview.Box
 
@@ -148,7 +148,7 @@ func (l *Model) SetScrollBarVisibility(visibility ScrollBarVisibility) *Model {
 	return l
 }
 
-// SetScrollBar sets the tview.ScrollBar primitive used by this list.
+// SetScrollBar sets the tview.ScrollBar model used by this list.
 func (l *Model) SetScrollBar(scrollBar *tview.ScrollBar) *Model {
 	if l.scrollBar != scrollBar {
 		l.scrollBar = scrollBar
@@ -342,7 +342,7 @@ func (l *Model) setLastDraw(children []drawnItem) {
 	l.lastDraw = children
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (l *Model) Draw(screen tcell.Screen) {
 	l.DrawForSubclass(screen, l)
 	l.scrollBarInteraction.state = listScrollBarState{}
@@ -879,7 +879,7 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 	return 0, 0
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (l *Model) HandleEvent(event tview.Event) tview.Command {
 	switch event := event.(type) {
 	case *tview.KeyEvent:
@@ -1232,7 +1232,7 @@ func (l *Model) indexAtPoint(x, y int) int {
 	return -1
 }
 
-var _ tview.Primitive = &Model{}
+var _ tview.Model = &Model{}
 
 type clippedScreen struct {
 	tcell.Screen

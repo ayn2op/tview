@@ -2,13 +2,13 @@ package tview
 
 import "github.com/gdamore/tcell/v3"
 
-// Box implements the Primitive interface with an empty background and optional
+// Box implements the Model interface with an empty background and optional
 // elements such as a border and a title. Box itself does not hold any content
-// but serves as the superclass of all other primitives. Subclasses add their
+// but serves as the superclass of all other models. Subclasses add their
 // own content, typically (but not necessarily) keeping their content within the
 // box's rectangle.
 //
-// Box provides a number of utility functions available to all primitives.
+// Box provides a number of utility functions available to all models.
 //
 // See https://github.com/ayn2op/tview/wiki/Box for an example.
 type Box struct {
@@ -44,11 +44,11 @@ type Box struct {
 	footerAlignment Alignment
 
 	// Whether or not this box has focus. This is typically ignored for
-	// container primitives (e.g. Flex, Grid, Layers), as they will delegate
+	// container models (e.g. Flex, Grid, Layers), as they will delegate
 	// focus to their children.
 	hasFocus bool
 
-	// Optional callback functions invoked when the primitive receives or loses
+	// Optional callback functions invoked when the model receives or loses
 	// focus.
 	focus, blur func()
 }
@@ -134,8 +134,8 @@ func (b *Box) InnerRect() (int, int, int, int) {
 	return x, y, width, height
 }
 
-// SetRect sets a new position of the primitive. Note that this has no effect
-// if this primitive is part of a layout (e.g. Flex, Grid) or if it was added
+// SetRect sets a new position of the model. Note that this has no effect
+// if this model is part of a layout (e.g. Flex, Grid) or if it was added
 // like this:
 //
 //	application.SetRoot(p, true)
@@ -149,7 +149,7 @@ func (b *Box) SetRect(x, y, width, height int) {
 	}
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (b *Box) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *MouseEvent:
@@ -291,18 +291,18 @@ func (b *Box) SetFooterAlignment(alignment Alignment) *Box {
 	return b
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (b *Box) Draw(screen tcell.Screen) {
 	b.DrawForSubclass(screen, b)
 }
 
-// DrawForSubclass draws this box under the assumption that primitive p is a
+// DrawForSubclass draws this box under the assumption that model p is a
 // subclass of this box. This is needed e.g. to draw proper box frames which
 // depend on the subclass's focus.
 //
-// Only call this function from your own custom primitives. It is not needed in
-// applications that have no custom primitives.
-func (b *Box) DrawForSubclass(screen tcell.Screen, p Primitive) {
+// Only call this function from your own custom models. It is not needed in
+// applications that have no custom models.
+func (b *Box) DrawForSubclass(screen tcell.Screen, p Model) {
 	// Don't draw anything if there is no space.
 	if b.width <= 0 || b.height <= 0 {
 		return
@@ -396,12 +396,12 @@ func (b *Box) DrawForSubclass(screen tcell.Screen, p Primitive) {
 	b.innerX, b.innerY, b.innerWidth, b.innerHeight = b.InnerRect()
 }
 
-// SetFocusFunc sets a callback function which is invoked when this primitive
-// receives focus. Container primitives such as [Flex] or [Grid] will also be
+// SetFocusFunc sets a callback function which is invoked when this model
+// receives focus. Container models such as [Flex] or [Grid] will also be
 // notified if one of their descendents receive focus directly. Note that this
 // may result in a blur notification, immediately followed by a focus
 // notification, when the focus is set to a different descendent of the
-// container primitive.
+// container model.
 //
 // At this point, the order in which the focus callbacks are invoked during one
 // draw cycle, is not defined. However, the blur callbacks are always invoked
@@ -413,11 +413,11 @@ func (b *Box) SetFocusFunc(callback func()) *Box {
 	return b
 }
 
-// SetBlurFunc sets a callback function which is invoked when this primitive
-// loses focus. Container primitives such as [Flex] or [Grid] will also be
+// SetBlurFunc sets a callback function which is invoked when this model
+// loses focus. Container models such as [Flex] or [Grid] will also be
 // notified if one of their descendents lose focus. Note that this may result in
 // a blur notification, immediately followed by a focus notification, when the
-// focus is set to a different descendent of the container primitive.
+// focus is set to a different descendent of the container model.
 //
 // At this point, the order in which the blur callbacks are invoked during one
 // draw cycle, is not defined. However, the blur callbacks are always invoked
@@ -429,8 +429,8 @@ func (b *Box) SetBlurFunc(callback func()) *Box {
 	return b
 }
 
-// Focus is called when this primitive directly receives focus.
-func (b *Box) Focus(delegate func(p Primitive)) {
+// Focus is called when this model directly receives focus.
+func (b *Box) Focus(delegate func(m Model)) {
 	if !b.hasFocus {
 		b.hasFocus = true
 	}
@@ -439,7 +439,7 @@ func (b *Box) Focus(delegate func(p Primitive)) {
 	}
 }
 
-// Blur is called when this primitive directly loses focus.
+// Blur is called when this model directly loses focus.
 func (b *Box) Blur() {
 	if b.hasFocus {
 		b.hasFocus = false
@@ -449,7 +449,7 @@ func (b *Box) Blur() {
 	}
 }
 
-// HasFocus returns whether or not this primitive has focus.
+// HasFocus returns whether or not this model has focus.
 func (b *Box) HasFocus() bool {
 	return b.hasFocus
 }

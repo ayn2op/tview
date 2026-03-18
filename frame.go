@@ -12,15 +12,15 @@ type frameText struct {
 	Color     tcell.Color // The text color.
 }
 
-// Frame is a wrapper which adds space around another primitive. In addition,
+// Frame is a wrapper which adds space around another model. In addition,
 // the top area (header) and the bottom area (footer) may also contain text.
 //
 // See https://github.com/ayn2op/tview/wiki/Frame for an example.
 type Frame struct {
 	*Box
 
-	// The contained primitive. May be nil.
-	primitive Primitive
+	// The contained model. May be nil.
+	primitive Model
 
 	// The lines of text to be displayed.
 	text []*frameText
@@ -28,14 +28,14 @@ type Frame struct {
 	// Border spacing.
 	top, bottom, header, footer, left, right int
 
-	// Keep a reference in case we need it when we change the primitive.
-	setFocus func(p Primitive)
+	// Keep a reference in case we need it when we change the model.
+	setFocus func(m Model)
 }
 
-// NewFrame returns a new frame around the given primitive. The primitive's
-// size will be changed to fit within this frame. The primitive may be nil, in
-// which case no other primitive is embedded in the frame.
-func NewFrame(primitive Primitive) *Frame {
+// NewFrame returns a new frame around the given model. The model's
+// size will be changed to fit within this frame. The model may be nil, in
+// which case no other model is embedded in the frame.
+func NewFrame(primitive Model) *Frame {
 	box := NewBox()
 
 	f := &Frame{
@@ -52,31 +52,31 @@ func NewFrame(primitive Primitive) *Frame {
 	return f
 }
 
-// SetPrimitive replaces the contained primitive with the given one. To remove
-// a primitive, set it to nil.
-func (f *Frame) SetPrimitive(p Primitive) *Frame {
-	if f.primitive == p {
+// SetPrimitive replaces the contained model with the given one. To remove
+// a model, set it to nil.
+func (f *Frame) SetPrimitive(m Model) *Frame {
+	if f.primitive == m {
 		return f
 	}
 	var hasFocus bool
 	if f.primitive != nil {
 		hasFocus = f.primitive.HasFocus()
 	}
-	f.primitive = p
+	f.primitive = m
 	if hasFocus && f.setFocus != nil {
-		f.setFocus(p) // Restore focus.
+		f.setFocus(m) // Restore focus.
 	}
 	return f
 }
 
-// GetPrimitive returns the primitive contained in this frame.
-func (f *Frame) GetPrimitive() Primitive {
+// GetPrimitive returns the model contained in this frame.
+func (f *Frame) GetPrimitive() Model {
 	return f.primitive
 }
 
 // AddText adds text to the frame. Set "header" to true if the text is to appear
-// in the header, above the contained primitive. Set it to false for it to
-// appear in the footer, below the contained primitive. Rows in the header are printed top to bottom, rows in
+// in the header, above the contained model. Set it to false for it to
+// appear in the footer, below the contained model. Rows in the header are printed top to bottom, rows in
 // the footer are printed bottom to top. Note that long text can overlap as
 // different alignments will be placed on the same row.
 func (f *Frame) AddText(text string, header bool, alignment Alignment, color tcell.Color) *Frame {
@@ -99,7 +99,7 @@ func (f *Frame) Clear() *Frame {
 
 // SetBorders sets the width of the frame borders as well as "header" and
 // "footer", the vertical space between the header and footer text and the
-// contained primitive (does not apply if there is no text).
+// contained model (does not apply if there is no text).
 func (f *Frame) SetBorders(top, bottom, header, footer, left, right int) *Frame {
 	if f.top != top || f.bottom != bottom || f.header != header || f.footer != footer || f.left != left || f.right != right {
 		f.top, f.bottom, f.header, f.footer, f.left, f.right = top, bottom, header, footer, left, right
@@ -107,7 +107,7 @@ func (f *Frame) SetBorders(top, bottom, header, footer, left, right int) *Frame 
 	return f
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (f *Frame) Draw(screen tcell.Screen) {
 	f.DrawForSubclass(screen, f)
 
@@ -153,7 +153,7 @@ func (f *Frame) Draw(screen tcell.Screen) {
 		Print(screen, text.Text, x, y, width, text.Alignment, text.Color)
 	}
 
-	// Set the size of the contained primitive.
+	// Set the size of the contained model.
 	if f.primitive != nil {
 		if topMax > top {
 			top = topMax + f.header
@@ -162,17 +162,17 @@ func (f *Frame) Draw(screen tcell.Screen) {
 			bottom = bottomMin - f.footer
 		}
 		if top > bottom {
-			return // No space for the primitive.
+			return // No space for the model.
 		}
 		f.primitive.SetRect(x, top, width, bottom+1-top)
 
-		// Finally, draw the contained primitive.
+		// Finally, draw the contained model.
 		f.primitive.Draw(screen)
 	}
 }
 
-// Focus is called when this primitive receives focus.
-func (f *Frame) Focus(delegate func(p Primitive)) {
+// Focus is called when this model receives focus.
+func (f *Frame) Focus(delegate func(m Model)) {
 	f.setFocus = delegate
 	if f.primitive != nil {
 		delegate(f.primitive)
@@ -181,7 +181,7 @@ func (f *Frame) Focus(delegate func(p Primitive)) {
 	}
 }
 
-// HasFocus returns whether or not this primitive has focus.
+// HasFocus returns whether or not this model has focus.
 func (f *Frame) HasFocus() bool {
 	if f.primitive == nil {
 		return f.Box.HasFocus()
@@ -189,7 +189,7 @@ func (f *Frame) HasFocus() bool {
 	return f.primitive.HasFocus()
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (f *Frame) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *MouseEvent:
@@ -197,7 +197,7 @@ func (f *Frame) HandleEvent(event Event) Command {
 			return nil
 		}
 
-		// Pass mouse events on to contained primitive.
+		// Pass mouse events on to contained model.
 		if f.primitive != nil {
 			childCmds := f.primitive.HandleEvent(event)
 			if childCmds != nil {

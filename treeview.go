@@ -747,7 +747,7 @@ func (t *TreeView) process(drawingAfter bool) {
 	t.lastNode = t.currentNode
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (t *TreeView) Draw(screen tcell.Screen) {
 	t.DrawForSubclass(screen, t)
 	if t.root == nil {
@@ -1055,7 +1055,7 @@ func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
 	return nil
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (t *TreeView) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *KeyEvent:

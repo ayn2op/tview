@@ -389,4 +389,4 @@ func (s *ScrollBar) Draw(screen tcell.Screen) {
 	}
 }
 
-var _ Primitive = &ScrollBar{}
+var _ Model = &ScrollBar{}

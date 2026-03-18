@@ -7,15 +7,15 @@ import (
 
 // layer represents one layer of a Layers object.
 type layer struct {
-	name    string          // The layer's name.
-	item    tview.Primitive // The layer's primitive.
-	resize  bool            // Whether or not to resize the layer when it is drawn.
-	visible bool            // Whether or not this layer is visible.
-	enabled bool            // Whether or not this layer can receive focus/input.
-	overlay bool            // Whether this layer applies a background style to layers behind it.
+	name    string      // The layer's name.
+	item    tview.Model // The layer's model.
+	resize  bool        // Whether or not to resize the layer when it is drawn.
+	visible bool        // Whether or not this layer is visible.
+	enabled bool        // Whether or not this layer can receive focus/input.
+	overlay bool        // Whether this layer applies a background style to layers behind it.
 }
 
-// Layers is a container for other primitives laid out on top of each other.
+// Layers is a container for other models laid out on top of each other.
 // The layers are drawn from back to front and can optionally apply a
 // background style to the layers behind them (typically used for modal dialogs).
 type Layers struct {
@@ -28,7 +28,7 @@ type Layers struct {
 
 	// We keep a reference to the function which allows us to set the focus to
 	// a newly visible layer.
-	setFocus func(p tview.Primitive)
+	setFocus func(m tview.Model)
 	// An optional handler which is called whenever the visibility or the order of
 	// layers changes.
 	changed func()
@@ -132,9 +132,9 @@ func (l *Layers) Clear() *Layers {
 	return l
 }
 
-// AddLayer adds a new layer for the given primitive. Options can configure
+// AddLayer adds a new layer for the given model. Options can configure
 // name, visibility, resize, overlay, and enabled state.
-func (l *Layers) AddLayer(item tview.Primitive, opts ...Option) *Layers {
+func (l *Layers) AddLayer(item tview.Model, opts ...Option) *Layers {
 	hasFocus := l.HasFocus()
 	newLayer := &layer{
 		item:    item,
@@ -252,7 +252,7 @@ func (l *Layers) SendToBack(name string) *Layers {
 
 // GetFrontLayer returns the front-most visible layer. If there are no visible
 // layers, ("", nil) is returned.
-func (l *Layers) GetFrontLayer() (name string, item tview.Primitive) {
+func (l *Layers) GetFrontLayer() (name string, item tview.Model) {
 	for index := len(l.layers) - 1; index >= 0; index-- {
 		if l.layers[index].visible {
 			return l.layers[index].name, l.layers[index].item
@@ -263,7 +263,7 @@ func (l *Layers) GetFrontLayer() (name string, item tview.Primitive) {
 
 // GetLayer returns the layer with the given name. If no such layer exists, nil is
 // returned.
-func (l *Layers) GetLayer(name string) tview.Primitive {
+func (l *Layers) GetLayer(name string) tview.Model {
 	for _, layer := range l.layers {
 		if layer.name == name {
 			return layer.item
@@ -326,7 +326,7 @@ func (l *Layers) SetBackgroundLayerStyle(style tcell.Style) *Layers {
 	return l
 }
 
-// HasFocus returns whether or not this primitive has focus.
+// HasFocus returns whether or not this model has focus.
 func (l *Layers) HasFocus() bool {
 	for _, layer := range l.layers {
 		if layer.enabled && layer.item.HasFocus() {
@@ -336,8 +336,8 @@ func (l *Layers) HasFocus() bool {
 	return l.Box.HasFocus()
 }
 
-// Focus is called by the application when the primitive receives focus.
-func (l *Layers) Focus(delegate func(p tview.Primitive)) {
+// Focus is called by the application when the model receives focus.
+func (l *Layers) Focus(delegate func(m tview.Model)) {
 	if delegate == nil {
 		return // We cannot delegate so we cannot focus.
 	}
@@ -349,7 +349,7 @@ func (l *Layers) Focus(delegate func(p tview.Primitive)) {
 	l.Box.Focus(delegate)
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (l *Layers) Draw(screen tcell.Screen) {
 	l.DrawForSubclass(screen, l)
 
@@ -376,7 +376,7 @@ func (l *Layers) Draw(screen tcell.Screen) {
 	}
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (l *Layers) HandleEvent(event tview.Event) tview.Command {
 	if mouseEvent, ok := event.(*tview.MouseEvent); ok && !l.InRect(mouseEvent.Position()) {
 		return nil

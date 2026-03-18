@@ -20,7 +20,7 @@ var (
 // FormItem is the interface all form items must implement to be able to be
 // included in a form.
 type FormItem interface {
-	Primitive
+	Model
 
 	// GetLabel returns the item's label text.
 	GetLabel() string
@@ -101,7 +101,7 @@ type Form struct {
 
 	// A function to set the application's current focus. Does nothing
 	// initially.
-	setFocus func(Primitive)
+	setFocus func(Model)
 
 	// The last (valid) key that wsa sent to a "finished" handler or -1 if no
 	// such key is known yet.
@@ -139,7 +139,7 @@ func NewForm() *Form {
 		buttonActivatedStyle: tcell.StyleDefault.Reverse(true),
 		buttonDisabledStyle:  tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.ContrastSecondaryTextColor),
 		requestedFocus:       -1,
-		setFocus:             func(Primitive) {},
+		setFocus:             func(Model) {},
 		lastFinishedKey:      tcell.KeyTab, // To skip over inactive elements at the beginning of the form.
 	}
 
@@ -236,7 +236,7 @@ func (f *Form) SetFocus(index int) *Form {
 //
 // The optional callback function is invoked when the content of the text area
 // has changed. Note that especially for larger texts, this is an expensive
-// operation due to technical constraints of the [TextArea] primitive (every key
+// operation due to technical constraints of the [TextArea] model (every key
 // stroke leads to a new reallocation of the entire text).
 func (f *Form) AddTextArea(label, text string, fieldWidth, fieldHeight, maxLength int, changed func(text string)) *Form {
 	if fieldHeight == 0 {
@@ -457,7 +457,7 @@ func (f *Form) GetFocusedItemIndex() (formItem, button int) {
 	return -1, index - len(f.items)
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (f *Form) Draw(screen tcell.Screen) {
 	f.DrawForSubclass(screen, f)
 
@@ -657,8 +657,8 @@ func (f *Form) Draw(screen tcell.Screen) {
 	}
 }
 
-// Focus is called by the application when the primitive receives focus.
-func (f *Form) Focus(delegate func(p Primitive)) {
+// Focus is called by the application when the model receives focus.
+func (f *Form) Focus(delegate func(m Model)) {
 	f.setFocus = delegate
 
 	// If there is no current focus, pick one.
@@ -766,7 +766,7 @@ func (f *Form) focusIndex() int {
 	return -1
 }
 
-// HasFocus returns whether or not this primitive has focus.
+// HasFocus returns whether or not this model has focus.
 func (f *Form) HasFocus() bool {
 	if f.focusIndex() >= 0 {
 		return true
@@ -774,7 +774,7 @@ func (f *Form) HasFocus() bool {
 	return f.Box.HasFocus()
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (f *Form) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *ButtonExitEvent:

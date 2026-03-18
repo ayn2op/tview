@@ -37,7 +37,7 @@ func New() *Help {
 	}
 }
 
-// SetKeyMap sets the key map used by this help primitive.
+// SetKeyMap sets the key map used by this help model.
 func (h *Help) SetKeyMap(keyMap KeyMap) *Help {
 	h.keyMap = keyMap
 	return h
@@ -84,7 +84,7 @@ func (h *Help) SetStyles(styles Styles) *Help {
 	return h
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (h *Help) Draw(screen tcell.Screen) {
 	h.DrawForSubclass(screen, h)
 

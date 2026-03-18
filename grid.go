@@ -6,25 +6,25 @@ import (
 	"slices"
 )
 
-// gridItem represents one primitive and its possible position on a grid.
+// gridItem represents one model and its possible position on a grid.
 type gridItem struct {
-	Item                        Primitive // The item to be positioned. May be nil for an empty item.
-	Row, Column                 int       // The top-left grid cell where the item is placed.
-	Width, Height               int       // The number of rows and columns the item occupies.
-	MinGridWidth, MinGridHeight int       // The minimum grid width/height for which this item is visible.
-	Focus                       bool      // Whether or not this item attracts the layout's focus.
+	Item                        Model // The item to be positioned. May be nil for an empty item.
+	Row, Column                 int   // The top-left grid cell where the item is placed.
+	Width, Height               int   // The number of rows and columns the item occupies.
+	MinGridWidth, MinGridHeight int   // The minimum grid width/height for which this item is visible.
+	Focus                       bool  // Whether or not this item attracts the layout's focus.
 
 	visible    bool // Whether or not this item was visible the last time the grid was drawn.
 	x, y, w, h int  // The last position of the item relative to the top-left corner of the grid. Undefined if visible is false.
 }
 
 // Grid is an implementation of a grid-based layout. It works by defining the
-// size of the rows and columns, then placing primitives into the grid.
+// size of the rows and columns, then placing models into the grid.
 //
 // Some settings can lead to the grid exceeding its available space. SetOffset()
 // can then be used to scroll in steps of rows and columns. These offset values
 // can also be controlled with the arrow keys (or the "g","G", "j", "k", "h",
-// and "l" keys) while the grid has focus and none of its contained primitives
+// and "l" keys) while the grid has focus and none of its contained models
 // do.
 //
 // See https://github.com/rivo/tview/wiki/Grid for an example.
@@ -41,7 +41,7 @@ type Grid struct {
 	// The minimum sizes for rows and columns.
 	minWidth, minHeight int
 
-	// The size of the gaps between neighboring primitives. This is automatically
+	// The size of the gaps between neighboring models. This is automatically
 	// set to 1 if borders is true.
 	gapRows, gapColumns int
 
@@ -58,10 +58,10 @@ type Grid struct {
 	bordersColor tcell.Color
 }
 
-// NewGrid returns a new grid-based layout container with no initial primitives.
+// NewGrid returns a new grid-based layout container with no initial models.
 //
 // Note that Box, the superclass of Grid, will be transparent so that any grid
-// areas not covered by any primitives will leave their background unchanged. To
+// areas not covered by any models will leave their background unchanged. To
 // clear a Grid's background before any items are drawn, reset its Box to one
 // with the desired color:
 //
@@ -84,9 +84,9 @@ func NewGrid() *Grid {
 // value of -1 (or 0). The minimum width set with SetMinSize() is always
 // observed.
 //
-// Primitives may extend beyond the columns defined explicitly with this
+// Models may extend beyond the columns defined explicitly with this
 // function. A value of 0 is assumed for any undefined column. In fact, if you
-// never call this function, all columns occupied by primitives will have the
+// never call this function, all columns occupied by models will have the
 // same width. On the other hand, unoccupied columns defined with this function
 // will always take their place.
 //
@@ -96,7 +96,7 @@ func NewGrid() *Grid {
 //
 //	grid.SetColumns(30, 10, -1, -1, -2)
 //
-// If a primitive were then placed in the 6th and 7th column, the resulting
+// If a model were then placed in the 6th and 7th column, the resulting
 // widths would be: 30, 10, 10, 10, 20, 10, and 10 cells.
 //
 // If you then called SetMinSize() as follows:
@@ -192,7 +192,7 @@ func (g *Grid) SetMinSize(row, column int) *Grid {
 	return g
 }
 
-// SetGap sets the size of the gaps between neighboring primitives on the grid.
+// SetGap sets the size of the gaps between neighboring models on the grid.
 // If borders are drawn (see SetBorders()), these values are ignored and a gap
 // of 1 is assumed. Panics if negative values are provided.
 func (g *Grid) SetGap(row, column int) *Grid {
@@ -223,21 +223,21 @@ func (g *Grid) SetBordersColor(color tcell.Color) *Grid {
 	return g
 }
 
-// AddItem adds a primitive and its position to the grid. The top-left corner
-// of the primitive will be located in the top-left corner of the grid cell at
+// AddItem adds a model and its position to the grid. The top-left corner
+// of the model will be located in the top-left corner of the grid cell at
 // the given row and column and will span "rowSpan" rows and "colSpan" columns.
-// For example, for a primitive to occupy rows 2, 3, and 4 and columns 5 and 6:
+// For example, for a model to occupy rows 2, 3, and 4 and columns 5 and 6:
 //
 //	grid.AddItem(p, 2, 5, 3, 2, 0, 0, true)
 //
-// If rowSpan or colSpan is 0, the primitive will not be drawn.
+// If rowSpan or colSpan is 0, the model will not be drawn.
 //
-// You can add the same primitive multiple times with different grid positions.
+// You can add the same model multiple times with different grid positions.
 // The minGridWidth and minGridHeight values will then determine which of those
 // positions will be used. This is similar to CSS media queries. These minimum
 // values refer to the overall size of the grid. If multiple items for the same
-// primitive apply, the one with the highest minimum value (width or height,
-// whatever is higher) will be used, or the primitive added last if those values
+// model apply, the one with the highest minimum value (width or height,
+// whatever is higher) will be used, or the model added last if those values
 // are the same. Example:
 //
 //	grid.AddItem(p, 0, 0, 0, 0, 0, 0, true). // Hide in small grids.
@@ -250,7 +250,7 @@ func (g *Grid) SetBordersColor(color tcell.Color) *Grid {
 // If the item's focus is set to true, it will receive focus when the grid
 // receives focus. If there are multiple items with a true focus flag, the last
 // visible one that was added will receive focus.
-func (g *Grid) AddItem(p Primitive, row, column, rowSpan, colSpan, minGridHeight, minGridWidth int, focus bool) *Grid {
+func (g *Grid) AddItem(p Model, row, column, rowSpan, colSpan, minGridHeight, minGridWidth int, focus bool) *Grid {
 	g.items = append(g.items, &gridItem{
 		Item:          p,
 		Row:           row,
@@ -264,11 +264,11 @@ func (g *Grid) AddItem(p Primitive, row, column, rowSpan, colSpan, minGridHeight
 	return g
 }
 
-// RemoveItem removes all items for the given primitive from the grid, keeping
+// RemoveItem removes all items for the given model from the grid, keeping
 // the order of the remaining items intact.
-func (g *Grid) RemoveItem(p Primitive) *Grid {
+func (g *Grid) RemoveItem(m Model) *Grid {
 	for index := len(g.items) - 1; index >= 0; index-- {
-		if g.items[index].Item == p {
+		if g.items[index].Item == m {
 			g.items = slices.Delete(g.items, index, index+1)
 		}
 	}
@@ -287,7 +287,7 @@ func (g *Grid) Clear() *Grid {
 // drawing the first grid cell in the top-left corner. As the grid will never
 // completely move off the screen, these values may be adjusted the next time
 // the grid is drawn. The actual position of the grid may also be adjusted such
-// that contained primitives that have focus remain visible.
+// that contained models that have focus remain visible.
 func (g *Grid) SetOffset(rows, columns int) *Grid {
 	if g.rowOffset != rows || g.columnOffset != columns {
 		g.rowOffset, g.columnOffset = rows, columns
@@ -301,8 +301,8 @@ func (g *Grid) GetOffset() (rows, columns int) {
 	return g.rowOffset, g.columnOffset
 }
 
-// Focus is called when this primitive receives focus.
-func (g *Grid) Focus(delegate func(p Primitive)) {
+// Focus is called when this model receives focus.
+func (g *Grid) Focus(delegate func(m Model)) {
 	for _, item := range g.items {
 		if item.Focus {
 			delegate(item.Item)
@@ -312,7 +312,7 @@ func (g *Grid) Focus(delegate func(p Primitive)) {
 	g.Box.Focus(delegate)
 }
 
-// HasFocus returns whether or not this primitive has focus.
+// HasFocus returns whether or not this model has focus.
 func (g *Grid) HasFocus() bool {
 	for _, item := range g.items {
 		if item.visible && item.Item.HasFocus() {
@@ -322,7 +322,7 @@ func (g *Grid) HasFocus() bool {
 	return g.Box.HasFocus()
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (g *Grid) Draw(screen tcell.Screen) {
 	g.DrawForSubclass(screen, g)
 	x, y, width, height := g.InnerRect()
@@ -495,7 +495,7 @@ ItemLoop:
 		columnX += column + gap
 	}
 
-	// Calculate primitive positions.
+	// Calculate model positions.
 	var focus *gridItem // The item which has focus.
 	for _, item := range items {
 		px := columnPos[item.Column]
@@ -591,10 +591,10 @@ ItemLoop:
 		g.columnOffset = to
 	}
 
-	// Draw primitives and borders.
+	// Draw models and borders.
 	borderStyle := tcell.StyleDefault.Background(g.backgroundColor).Foreground(g.bordersColor)
 	for _, item := range items {
-		// Final primitive position.
+		// Final model position.
 		if !item.visible {
 			continue
 		}
@@ -626,14 +626,14 @@ ItemLoop:
 		item.y += y
 		item.Item.SetRect(item.x, item.y, item.w, item.h)
 
-		// Draw primitive.
+		// Draw model.
 		if item == focus {
 			defer item.Item.Draw(screen)
 		} else {
 			item.Item.Draw(screen)
 		}
 
-		// Draw border around primitive.
+		// Draw border around model.
 		if g.borders {
 			for bx := item.x; bx < item.x+item.w; bx++ { // Top/bottom lines.
 				if bx < 0 || bx >= screenWidth {
@@ -681,7 +681,7 @@ ItemLoop:
 	}
 }
 
-// HandleEvent handles input events for this primitive.
+// HandleEvent handles input events for this model.
 func (g *Grid) HandleEvent(event Event) Command {
 	switch event := event.(type) {
 	case *MouseEvent:
@@ -701,7 +701,7 @@ func (g *Grid) HandleEvent(event Event) Command {
 	case *KeyEvent:
 		previousRowOffset, previousColumnOffset := g.rowOffset, g.columnOffset
 		if !g.hasFocus {
-			// Pass event on to child primitive.
+			// Pass event on to child model.
 			for _, item := range g.items {
 				if item != nil && item.Item.HasFocus() {
 					return item.Item.HandleEvent(event)

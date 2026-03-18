@@ -9,7 +9,10 @@ type Item struct {
 type Items []Item
 
 func (is Items) String(index int) string {
-	return is[index].FilterText
+	if is[index].FilterText != "" {
+		return is[index].FilterText
+	}
+	return is[index].Text
 }
 
 func (is Items) Len() int {

@@ -135,12 +135,12 @@ func (m *Model) HandleEvent(event tview.Event) tview.Command {
 		case keybind.Matches(event, m.keybinds.SelectDown):
 			m.list.HandleEvent(event)
 			return nil
-		case keybind.Matches(event, m.keybinds.Top):
+		case keybind.Matches(event, m.keybinds.SelectTop):
 			if len(m.filtered) > 0 {
 				m.list.SetCursor(0)
 			}
 			return nil
-		case keybind.Matches(event, m.keybinds.Bottom):
+		case keybind.Matches(event, m.keybinds.SelectBottom):
 			if len(m.filtered) > 0 {
 				m.list.SetCursor(len(m.filtered) - 1)
 			}

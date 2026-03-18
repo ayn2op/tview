@@ -20,7 +20,7 @@ var (
 // FormItem is the interface all form items must implement to be able to be
 // included in a form.
 type FormItem interface {
-	Primitive
+	Model
 
 	// GetLabel returns the item's label text.
 	GetLabel() string
@@ -101,15 +101,30 @@ type Form struct {
 
 	// A function to set the application's current focus. Does nothing
 	// initially.
-	setFocus func(Primitive)
+	setFocus func(Model)
 
 	// The last (valid) key that wsa sent to a "finished" handler or -1 if no
 	// such key is known yet.
 	lastFinishedKey tcell.Key
 
-	// An optional function which is called when the user hits Escape.
-	cancel func()
+	// Set when Escape was processed by finished(); consumed in HandleEvent.
+	cancelRequested bool
 }
+
+type FormSubmitEvent struct {
+	tcell.EventTime
+	ButtonIndex int
+	ButtonLabel string
+}
+
+func newFormSubmitEvent(buttonIndex int, buttonLabel string) *FormSubmitEvent {
+	return &FormSubmitEvent{
+		ButtonIndex: buttonIndex,
+		ButtonLabel: buttonLabel,
+	}
+}
+
+type FormCancelEvent struct{ tcell.EventTime }
 
 // NewForm returns a new form.
 func NewForm() *Form {
@@ -124,7 +139,7 @@ func NewForm() *Form {
 		buttonActivatedStyle: tcell.StyleDefault.Reverse(true),
 		buttonDisabledStyle:  tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.ContrastSecondaryTextColor),
 		requestedFocus:       -1,
-		setFocus:             func(Primitive) {},
+		setFocus:             func(Model) {},
 		lastFinishedKey:      tcell.KeyTab, // To skip over inactive elements at the beginning of the form.
 	}
 
@@ -221,7 +236,7 @@ func (f *Form) SetFocus(index int) *Form {
 //
 // The optional callback function is invoked when the content of the text area
 // has changed. Note that especially for larger texts, this is an expensive
-// operation due to technical constraints of the [TextArea] primitive (every key
+// operation due to technical constraints of the [TextArea] model (every key
 // stroke leads to a new reallocation of the entire text).
 func (f *Form) AddTextArea(label, text string, fieldWidth, fieldHeight, maxLength int, changed func(text string)) *Form {
 	if fieldHeight == 0 {
@@ -312,12 +327,9 @@ func (f *Form) AddCheckbox(label string, checked bool, changed func(checked bool
 	return f
 }
 
-// AddButton adds a new button to the form. The "selected" function is called
-// when the user selects this button. It may be nil.
-func (f *Form) AddButton(label string, selected func()) *Form {
-	button := NewButton(label).
-		SetSelectedFunc(selected).
-		SetExitFunc(f.finished)
+// AddButton adds a new button to the form.
+func (f *Form) AddButton(label string) *Form {
+	button := NewButton(label)
 	f.buttons = append(f.buttons, button)
 	return f
 }
@@ -445,19 +457,12 @@ func (f *Form) GetFocusedItemIndex() (formItem, button int) {
 	return -1, index - len(f.items)
 }
 
-// SetCancelFunc sets a handler which is called when the user hits the Escape
-// key.
-func (f *Form) SetCancelFunc(callback func()) *Form {
-	f.cancel = callback
-	return f
-}
-
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (f *Form) Draw(screen tcell.Screen) {
 	f.DrawForSubclass(screen, f)
 
 	// Determine the dimensions.
-	x, y, width, height := f.GetInnerRect()
+	x, y, width, height := f.InnerRect()
 	topLimit := y
 	bottomLimit := y + height
 	rightLimit := x + width
@@ -652,8 +657,8 @@ func (f *Form) Draw(screen tcell.Screen) {
 	}
 }
 
-// Focus is called by the application when the primitive receives focus.
-func (f *Form) Focus(delegate func(p Primitive)) {
+// Focus is called by the application when the model receives focus.
+func (f *Form) Focus(delegate func(m Model)) {
 	f.setFocus = delegate
 
 	// If there is no current focus, pick one.
@@ -692,7 +697,7 @@ func (f *Form) finished(key tcell.Key) {
 	switch key {
 	case tcell.KeyTab, tcell.KeyEnter:
 		// Find the next focusable item.
-		for index := 0; index < totalCount; index++ {
+		for range totalCount {
 			focus = (focus + 1) % totalCount
 			if focus < len(f.items) {
 				if !f.items[focus].GetDisabled() {
@@ -708,7 +713,7 @@ func (f *Form) finished(key tcell.Key) {
 		}
 	case tcell.KeyBacktab:
 		// Find the previous focusable item.
-		for index := 0; index < totalCount; index++ {
+		for range totalCount {
 			focus = (focus + totalCount - 1) % totalCount
 			if focus < len(f.items) {
 				if !f.items[focus].GetDisabled() {
@@ -723,15 +728,25 @@ func (f *Form) finished(key tcell.Key) {
 			}
 		}
 	case tcell.KeyEscape:
-		if f.cancel != nil {
-			f.cancel()
-		}
+		f.cancelRequested = true
 	default:
 		if key < 0 && f.lastFinishedKey >= 0 {
 			// Repeat the last action.
 			f.finished(f.lastFinishedKey)
 		}
 	}
+}
+
+func (f *Form) consumeCancelEvent(cmd Command) Command {
+	if !f.cancelRequested {
+		return cmd
+	}
+	f.cancelRequested = false
+	cancelCmd := func() Event { return &FormCancelEvent{} }
+	if cmd == nil {
+		return cancelCmd
+	}
+	return Batch(cmd, cancelCmd)
 }
 
 // focusIndex returns the index of the currently focused item, counting form
@@ -751,7 +766,7 @@ func (f *Form) focusIndex() int {
 	return -1
 }
 
-// HasFocus returns whether or not this primitive has focus.
+// HasFocus returns whether or not this model has focus.
 func (f *Form) HasFocus() bool {
 	if f.focusIndex() >= 0 {
 		return true
@@ -759,73 +774,77 @@ func (f *Form) HasFocus() bool {
 	return f.Box.HasFocus()
 }
 
-// MouseHandler returns the mouse handler for this primitive.
-func (f *Form) MouseHandler(action MouseAction, event *tcell.EventMouse) (Primitive, Command) {
-	var (
-		capture Primitive
-		cmd     Command
-	)
-	// Determine items to pass mouse events to.
-	for _, item := range f.items {
-		if item.GetDisabled() {
-			continue
+// HandleEvent handles input events for this model.
+func (f *Form) HandleEvent(event Event) Command {
+	switch event := event.(type) {
+	case *ButtonExitEvent:
+		f.finished(event.Key)
+		return f.consumeCancelEvent(nil)
+	case *MouseEvent:
+		// Determine items to pass mouse events to.
+		for _, item := range f.items {
+			if item.GetDisabled() {
+				continue
+			}
+			childCmds := item.HandleEvent(event)
+			if childCmds != nil {
+				return f.consumeCancelEvent(childCmds)
+			}
 		}
-		var childCmds Command
-		capture, childCmds = item.MouseHandler(action, event)
-		cmd = AppendCommand(cmd, childCmds)
-		if childCmds != nil {
-			return capture, cmd
+		for index, button := range f.buttons {
+			if button.GetDisabled() {
+				continue
+			}
+			if !button.InRect(event.Position()) {
+				continue
+			}
+			switch event.Action {
+			case MouseLeftDown:
+				return SetFocus(button)
+			case MouseLeftClick:
+				buttonIndex := index
+				buttonLabel := button.GetLabel()
+				return Batch(
+					func() Event {
+						return newFormSubmitEvent(buttonIndex, buttonLabel)
+					},
+					nil,
+				)
+			default:
+				childCmds := button.HandleEvent(event)
+				if childCmds != nil {
+					return f.consumeCancelEvent(childCmds)
+				}
+			}
 		}
-	}
-	for _, button := range f.buttons {
-		if button.GetDisabled() {
-			continue
-		}
-		var childCmds Command
-		capture, childCmds = button.MouseHandler(action, event)
-		cmd = AppendCommand(cmd, childCmds)
-		if childCmds != nil {
-			return capture, cmd
-		}
-	}
 
-	// A mouse down anywhere else will focus this form.
-	if action == MouseLeftDown && f.InRect(event.Position()) {
-		cmd = AppendCommand(cmd, SetFocusCommand{Target: f})
-		cmd = AppendCommand(cmd, ConsumeEventCommand{})
-	}
+		// A mouse down anywhere else will focus this form.
+		if event.Action == MouseLeftDown && f.InRect(event.Position()) {
+			return SetFocus(f)
+		}
+	case *KeyEvent, *PasteEvent:
+		for _, item := range f.items {
+			if item.HasFocus() {
+				return f.consumeCancelEvent(item.HandleEvent(event))
+			}
+		}
 
-	return capture, cmd
-}
-
-// InputHandler returns the handler for this primitive.
-func (f *Form) InputHandler(event *tcell.EventKey) Command {
-	for _, item := range f.items {
-		if item.HasFocus() {
-			return item.InputHandler(event)
+		for index, button := range f.buttons {
+			if !button.HasFocus() {
+				continue
+			}
+			if keyEvent, ok := event.(*KeyEvent); ok && keyEvent.Key() == tcell.KeyEnter {
+				buttonIndex := index
+				buttonLabel := button.GetLabel()
+				return Batch(
+					func() Event {
+						return newFormSubmitEvent(buttonIndex, buttonLabel)
+					},
+					nil,
+				)
+			}
+			return f.consumeCancelEvent(button.HandleEvent(event))
 		}
 	}
-
-	for _, button := range f.buttons {
-		if button.HasFocus() {
-			return button.InputHandler(event)
-		}
-	}
-	return nil
-}
-
-// PasteHandler handles pasted text for this primitive.
-func (f *Form) PasteHandler(pastedText string) Command {
-	for _, item := range f.items {
-		if item.HasFocus() {
-			return item.PasteHandler(pastedText)
-		}
-	}
-
-	for _, button := range f.buttons {
-		if button.HasFocus() {
-			return button.PasteHandler(pastedText)
-		}
-	}
-	return nil
+	return f.consumeCancelEvent(nil)
 }

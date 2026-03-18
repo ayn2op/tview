@@ -1,28 +1,31 @@
-package tview
+package list
 
 import (
+	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
 
-// ListItem represents a primitive which can be measured for a given width.
+// Item represents a model which can be measured for a given width.
 //
 // Scroll list items are responsible for reporting their own height so the list can
 // layout and scroll variable-height items.
-type ListItem interface {
-	Primitive
+type Item interface {
+	tview.Model
 	Height(width int) int
 }
 
-// ListBuilder returns a list item for the given index and cursor position.
+// Builder returns a list item for the given index and cursor position.
 // It must return nil when the index is out of range.
-type ListBuilder func(index int, cursor int) ListItem
+type Builder func(index int, cursor int) Item
 
-// List displays a virtual list of primitives returned by a builder function.
-type List struct {
-	*Box
+// Model displays a virtual list of models returned by a builder function.
+type Model struct {
+	*tview.Box
+	keybinds Keybinds
 
-	Builder      ListBuilder
+	builder      Builder
 	gap          int
 	snapToItems  bool
 	centerCursor bool
@@ -30,19 +33,19 @@ type List struct {
 	atEnd        bool
 
 	cursor int
-	scroll listState
+	scroll state
 
 	changed func(index int)
 
-	lastDraw []listDrawnItem
-	lastRect listRect
+	lastDraw []drawnItem
+	lastRect rect
 
+	scrollBar            *tview.ScrollBar
 	scrollBarVisibility  ScrollBarVisibility
-	scrollBar            *ScrollBar
 	scrollBarInteraction scrollBarInteractionState
 }
 
-// ScrollBarVisibility controls when List renders its vertical scrollBar.
+// ScrollBarVisibility controls when Model renders its vertical scrollBar.
 type ScrollBarVisibility uint8
 
 const (
@@ -51,7 +54,7 @@ const (
 	ScrollBarVisibilityNever
 )
 
-type listState struct {
+type state struct {
 	// Index of the top item in the viewport.
 	top int
 	// Line offset into the top item; negative values mean the item is scrolled up.
@@ -62,14 +65,14 @@ type listState struct {
 	wantsCursor bool
 }
 
-type listDrawnItem struct {
+type drawnItem struct {
 	index  int
-	item   ListItem
+	item   Item
 	row    int
 	height int
 }
 
-type listRect struct {
+type rect struct {
 	x      int
 	y      int
 	width  int
@@ -85,6 +88,13 @@ type listScrollBarState struct {
 	metrics        scrollMetrics
 }
 
+type scrollMetrics struct {
+	trackCells int
+	trackLen   int
+	thumbLen   int
+	thumbStart int
+}
+
 type scrollBarInteractionState struct {
 	dragDelta int
 	dragMoved bool
@@ -93,16 +103,40 @@ type scrollBarInteractionState struct {
 
 const (
 	listScrollBarNoDrag = -1
+	subcell             = 8
 )
 
-// NewList returns a new scroll list.
-func NewList() *List {
-	return &List{
-		Box:                 NewBox(),
+func computeScrollMetrics(trackCells int, contentLen int, viewportLen int, offset int) scrollMetrics {
+	trackLen := trackCells * subcell
+	if trackLen == 0 {
+		return scrollMetrics{}
+	}
+
+	contentLen = max(contentLen, 1)
+	viewportLen = min(max(viewportLen, 1), contentLen)
+	maxOffset := max(contentLen-viewportLen, 0)
+	offset = min(max(offset, 0), maxOffset)
+
+	if maxOffset == 0 {
+		return scrollMetrics{trackCells: trackCells, trackLen: trackLen, thumbLen: trackLen, thumbStart: 0}
+	}
+
+	thumbLen := min(max((trackLen*viewportLen)/contentLen, subcell), trackLen)
+	thumbTravel := max(trackLen-thumbLen, 0)
+	thumbStart := (thumbTravel * offset) / maxOffset
+
+	return scrollMetrics{trackCells: trackCells, trackLen: trackLen, thumbLen: thumbLen, thumbStart: thumbStart}
+}
+
+// NewModel returns a new scroll list.
+func NewModel() *Model {
+	return &Model{
+		Box:                 tview.NewBox(),
+		keybinds:            DefaultKeybinds(),
 		centerCursor:        true,
 		cursor:              -1,
 		scrollBarVisibility: ScrollBarVisibilityAutomatic,
-		scrollBar:           NewScrollBar(),
+		scrollBar:           tview.NewScrollBar(),
 		scrollBarInteraction: scrollBarInteractionState{
 			dragDelta: listScrollBarNoDrag,
 		},
@@ -110,15 +144,15 @@ func NewList() *List {
 }
 
 // SetScrollBarVisibility sets when the list scrollBar is rendered.
-func (l *List) SetScrollBarVisibility(visibility ScrollBarVisibility) *List {
+func (l *Model) SetScrollBarVisibility(visibility ScrollBarVisibility) *Model {
 	if l.scrollBarVisibility != visibility {
 		l.scrollBarVisibility = visibility
 	}
 	return l
 }
 
-// SetScrollBar sets the ScrollBar primitive used by this list.
-func (l *List) SetScrollBar(scrollBar *ScrollBar) *List {
+// SetScrollBar sets the tview.ScrollBar model used by this list.
+func (l *Model) SetScrollBar(scrollBar *tview.ScrollBar) *Model {
 	if l.scrollBar != scrollBar {
 		l.scrollBar = scrollBar
 	}
@@ -126,27 +160,32 @@ func (l *List) SetScrollBar(scrollBar *ScrollBar) *List {
 }
 
 // SetBuilder sets the builder used to create list items on demand.
-func (l *List) SetBuilder(builder ListBuilder) *List {
-	if l.Builder != nil || builder != nil {
-		l.Builder = builder
+func (l *Model) SetBuilder(builder Builder) *Model {
+	if l.builder != nil || builder != nil {
+		l.builder = builder
 	}
 	return l
 }
 
+// Builder returns the current item builder.
+func (l *Model) Builder() Builder {
+	return l.builder
+}
+
 // Clear removes all items from the list by clearing the builder and resetting
 // scroll state.
-func (l *List) Clear() *List {
-	l.Builder = nil
+func (l *Model) Clear() *Model {
+	l.builder = nil
 	l.cursor = -1
-	l.scroll = listState{}
+	l.scroll = state{}
 	l.setLastDraw(nil)
-	l.lastRect = listRect{}
+	l.lastRect = rect{}
 	l.atEnd = false
 	return l
 }
 
 // SetGap sets the number of blank rows between items.
-func (l *List) SetGap(gap int) *List {
+func (l *Model) SetGap(gap int) *Model {
 	if gap < 0 {
 		gap = 0
 	}
@@ -157,7 +196,7 @@ func (l *List) SetGap(gap int) *List {
 }
 
 // SetSnapToItems toggles snapping so only fully visible items are shown.
-func (l *List) SetSnapToItems(snap bool) *List {
+func (l *Model) SetSnapToItems(snap bool) *Model {
 	if l.snapToItems != snap {
 		l.snapToItems = snap
 	}
@@ -166,7 +205,7 @@ func (l *List) SetSnapToItems(snap bool) *List {
 
 // SetCenterCursor controls whether the cursor is kept centered whenever
 // possible.
-func (l *List) SetCenterCursor(center bool) *List {
+func (l *Model) SetCenterCursor(center bool) *Model {
 	if l.centerCursor != center {
 		l.centerCursor = center
 	}
@@ -174,16 +213,16 @@ func (l *List) SetCenterCursor(center bool) *List {
 }
 
 // SetTrackEnd toggles auto-scrolling when the view is already at the end.
-func (l *List) SetTrackEnd(track bool) *List {
+func (l *Model) SetTrackEnd(track bool) *Model {
 	if l.trackEnd != track {
 		l.trackEnd = track
 	}
 	return l
 }
 
-// ScrollToStart resets the scroll position to the top (index 0), without
-// changing the cursor.
-func (l *List) ScrollToStart() *List {
+// ScrollTop resets the scroll position to the top (index 0), without changing
+// the cursor.
+func (l *Model) ScrollTop() *Model {
 	if l.scroll.top != 0 || l.scroll.offset != 0 || l.scroll.wantsCursor || l.atEnd {
 		l.scroll.top = 0
 		l.scroll.offset = 0
@@ -193,9 +232,9 @@ func (l *List) ScrollToStart() *List {
 	return l
 }
 
-// ScrollToEnd scrolls the view so the last items are visible.
-func (l *List) ScrollToEnd() *List {
-	_, _, width, height := l.GetInnerRect()
+// ScrollBottom scrolls the view so the last items are visible.
+func (l *Model) ScrollBottom() *Model {
+	_, _, width, height := l.InnerRect()
 	if width <= 0 || height <= 0 {
 		return l
 	}
@@ -209,7 +248,7 @@ func (l *List) ScrollToEnd() *List {
 }
 
 // SetCursor sets the currently selected item index.
-func (l *List) SetCursor(index int) *List {
+func (l *Model) SetCursor(index int) *Model {
 	if index < -1 {
 		index = -1
 	}
@@ -225,13 +264,13 @@ func (l *List) SetCursor(index int) *List {
 }
 
 // Cursor returns the current cursor index.
-func (l *List) Cursor() int {
+func (l *Model) Cursor() int {
 	return l.cursor
 }
 
 // SetPendingScroll sets a pending scroll amount, in lines. Positive numbers
 // scroll down.
-func (l *List) SetPendingScroll(lines int) *List {
+func (l *Model) SetPendingScroll(lines int) *Model {
 	if l.scroll.pending != lines {
 		l.scroll.pending = lines
 	}
@@ -239,24 +278,24 @@ func (l *List) SetPendingScroll(lines int) *List {
 }
 
 // ScrollUp scrolls the list up by one line.
-func (l *List) ScrollUp() *List {
+func (l *Model) ScrollUp() *Model {
 	l.scroll.pending -= 1
 	return l
 }
 
 // ScrollDown scrolls the list down by one line.
-func (l *List) ScrollDown() *List {
+func (l *Model) ScrollDown() *Model {
 	l.scroll.pending += 1
 	return l
 }
 
 // NextItem moves the cursor to the next item, if any.
-func (l *List) NextItem() bool {
-	if l.Builder == nil {
+func (l *Model) NextItem() bool {
+	if l.builder == nil {
 		return false
 	}
 	if l.cursor < 0 {
-		if l.Builder(0, l.cursor) == nil {
+		if l.builder(0, l.cursor) == nil {
 			return false
 		}
 		l.cursor = 0
@@ -266,7 +305,7 @@ func (l *List) NextItem() bool {
 		}
 		return true
 	}
-	if l.Builder(l.cursor+1, l.cursor) == nil {
+	if l.builder(l.cursor+1, l.cursor) == nil {
 		return false
 	}
 	l.cursor++
@@ -278,14 +317,14 @@ func (l *List) NextItem() bool {
 }
 
 // PrevItem moves the cursor to the previous item, if any.
-func (l *List) PrevItem() bool {
+func (l *Model) PrevItem() bool {
 	if l.cursor <= 0 {
 		return false
 	}
-	if l.Builder == nil {
+	if l.builder == nil {
 		return false
 	}
-	if l.Builder(l.cursor-1, l.cursor) == nil {
+	if l.builder(l.cursor-1, l.cursor) == nil {
 		return false
 	}
 	l.cursor--
@@ -297,22 +336,22 @@ func (l *List) PrevItem() bool {
 }
 
 // SetChangedFunc sets a handler that is called when the cursor changes.
-func (l *List) SetChangedFunc(handler func(index int)) *List {
+func (l *Model) SetChangedFunc(handler func(index int)) *Model {
 	l.changed = handler
 	return l
 }
 
-func (l *List) setLastDraw(children []listDrawnItem) {
+func (l *Model) setLastDraw(children []drawnItem) {
 	l.lastDraw = children
 }
 
-// Draw draws this primitive onto the screen.
-func (l *List) Draw(screen tcell.Screen) {
+// Draw draws this model onto the screen.
+func (l *Model) Draw(screen tcell.Screen) {
 	l.DrawForSubclass(screen, l)
 	l.scrollBarInteraction.state = listScrollBarState{}
 
-	x, y, width, height := l.GetInnerRect()
-	if width <= 0 || height <= 0 || l.Builder == nil {
+	x, y, width, height := l.InnerRect()
+	if width <= 0 || height <= 0 || l.builder == nil {
 		return
 	}
 
@@ -373,7 +412,7 @@ func (l *List) Draw(screen tcell.Screen) {
 
 rebuild:
 	// Rebuild the viewport whenever we change top/offset to keep the cursor in view.
-	children := make([]listDrawnItem, 0, 16)
+	children := make([]drawnItem, 0, 16)
 	startIndex := l.scroll.top
 
 	if ah > 0 {
@@ -387,14 +426,14 @@ rebuild:
 
 	endReached := false
 	for i := startIndex; ; i++ {
-		item := l.Builder(i, l.cursor)
+		item := l.builder(i, l.cursor)
 		if item == nil {
 			endReached = true
 			break
 		}
 
 		itemHeight := l.itemHeight(item, usableWidth)
-		children = append(children, listDrawnItem{
+		children = append(children, drawnItem{
 			index:  i,
 			item:   item,
 			row:    ah,
@@ -414,7 +453,7 @@ rebuild:
 		l.scroll.top = 0
 		l.scroll.offset = 0
 		l.setLastDraw(nil)
-		l.lastRect = listRect{x: x, y: y, width: width, height: height}
+		l.lastRect = rect{x: x, y: y, width: width, height: height}
 		l.atEnd = false
 		return
 	}
@@ -443,7 +482,7 @@ rebuild:
 			l.scroll.top = 0
 			l.scroll.offset = 0
 			l.setLastDraw(nil)
-			l.lastRect = listRect{x: x, y: y, width: width, height: height}
+			l.lastRect = rect{x: x, y: y, width: width, height: height}
 			l.atEnd = false
 			return
 		}
@@ -452,7 +491,7 @@ rebuild:
 		nextIndex := children[len(children)-1].index + 1
 		currentBottom := children[len(children)-1].row + children[len(children)-1].height
 		for {
-			item := l.Builder(nextIndex, l.cursor)
+			item := l.builder(nextIndex, l.cursor)
 			if item == nil {
 				break
 			}
@@ -461,7 +500,7 @@ rebuild:
 			if nextRow+itemHeight > height {
 				break
 			}
-			children = append(children, listDrawnItem{
+			children = append(children, drawnItem{
 				index:  nextIndex,
 				item:   item,
 				row:    nextRow,
@@ -523,13 +562,13 @@ rebuild:
 	}
 
 	last := children[len(children)-1]
-	if !endReached && l.Builder(last.index+1, l.cursor) == nil {
+	if !endReached && l.builder(last.index+1, l.cursor) == nil {
 		endReached = true
 	}
 	l.atEnd = endReached && last.row+last.height <= height
 
 	l.setLastDraw(children)
-	l.lastRect = listRect{x: x, y: y, width: width, height: height}
+	l.lastRect = rect{x: x, y: y, width: width, height: height}
 
 	clipped := newClippedScreen(screen, x, y, width, height)
 	for _, child := range children {
@@ -539,8 +578,8 @@ rebuild:
 
 	if drawScrollBar {
 		if l.scrollBar == nil {
-			l.scrollBar = NewScrollBar().
-				SetArrows(ScrollBarArrowsNone)
+			l.scrollBar = tview.NewScrollBar().
+				SetArrows(tview.ScrollBarArrowsNone)
 		}
 		scrollBarState, ok := l.computeScrollBarState(usableWidth, height, children)
 		if !ok {
@@ -548,7 +587,7 @@ rebuild:
 		}
 		l.scrollBarInteraction.state = scrollBarState
 		l.scrollBar.SetRect(scrollBarX, y, 1, height)
-		l.scrollBar.SetLengths(ScrollLengths{
+		l.scrollBar.SetLengths(tview.ScrollLengths{
 			ContentLen:  scrollBarState.contentLength,
 			ViewportLen: scrollBarState.viewportLength,
 		})
@@ -557,7 +596,7 @@ rebuild:
 	}
 }
 
-func (l *List) itemHeight(item ListItem, width int) int {
+func (l *Model) itemHeight(item Item, width int) int {
 	if item == nil {
 		return 0
 	}
@@ -565,13 +604,13 @@ func (l *List) itemHeight(item ListItem, width int) int {
 	return height
 }
 
-func (l *List) totalContentHeight(width int) int {
-	if l.Builder == nil || width <= 0 {
+func (l *Model) totalContentHeight(width int) int {
+	if l.builder == nil || width <= 0 {
 		return 0
 	}
 	total := 0
 	for i := 0; ; i++ {
-		item := l.Builder(i, l.cursor)
+		item := l.builder(i, l.cursor)
 		if item == nil {
 			break
 		}
@@ -583,15 +622,15 @@ func (l *List) totalContentHeight(width int) int {
 	return total
 }
 
-func (l *List) scrollBarMetrics(width int, viewport int, children []listDrawnItem) (position int, contentLength int, viewportContentLength int) {
+func (l *Model) scrollBarMetrics(width int, viewport int, children []drawnItem) (position int, contentLength int, viewportContentLength int) {
 	content := l.totalContentHeight(width)
 	if len(children) == 0 || content <= 0 || viewport <= 0 {
 		return 0, 0, max(viewport, 0)
 	}
 
 	first := children[0]
-	for i := 0; i < first.index; i++ {
-		item := l.Builder(i, l.cursor)
+	for i := range first.index {
+		item := l.builder(i, l.cursor)
 		if item == nil {
 			break
 		}
@@ -616,7 +655,7 @@ func (l *List) scrollBarMetrics(width int, viewport int, children []listDrawnIte
 	return position, contentLength, viewportContentLength
 }
 
-func (l *List) insertChildren(children *[]listDrawnItem, width int, ah int) {
+func (l *Model) insertChildren(children *[]drawnItem, width int, ah int) {
 	if l.scroll.top <= 0 {
 		return
 	}
@@ -627,19 +666,19 @@ func (l *List) insertChildren(children *[]listDrawnItem, width int, ah int) {
 		if l.gap > 0 {
 			ah -= l.gap
 		}
-		item := l.Builder(l.scroll.top, l.cursor)
+		item := l.builder(l.scroll.top, l.cursor)
 		if item == nil {
 			break
 		}
 		height := l.itemHeight(item, width)
 		ah -= height
-		entry := listDrawnItem{
+		entry := drawnItem{
 			index:  l.scroll.top,
 			item:   item,
 			row:    ah,
 			height: height,
 		}
-		*children = append([]listDrawnItem{entry}, *children...)
+		*children = append([]drawnItem{entry}, *children...)
 
 		if l.scroll.top == 0 {
 			break
@@ -662,7 +701,7 @@ func (l *List) insertChildren(children *[]listDrawnItem, width int, ah int) {
 	}
 }
 
-func (l *List) ensureScroll() {
+func (l *Model) ensureScroll() {
 	if l.cursor < 0 {
 		l.scroll.wantsCursor = false
 		return
@@ -674,11 +713,11 @@ func (l *List) ensureScroll() {
 	l.scroll.wantsCursor = true
 }
 
-func (l *List) centerScrollState(width int, height int) (int, int, bool) {
-	if l.Builder == nil || l.cursor < 0 || width <= 0 || height <= 0 {
+func (l *Model) centerScrollState(width int, height int) (int, int, bool) {
+	if l.builder == nil || l.cursor < 0 || width <= 0 || height <= 0 {
 		return 0, 0, false
 	}
-	cursorItem := l.Builder(l.cursor, l.cursor)
+	cursorItem := l.builder(l.cursor, l.cursor)
 	if cursorItem == nil {
 		return 0, 0, false
 	}
@@ -693,7 +732,7 @@ func (l *List) centerScrollState(width int, height int) (int, int, bool) {
 	remaining := desiredBefore
 	for remaining > 0 && top > 0 {
 		prevIndex := top - 1
-		prevItem := l.Builder(prevIndex, l.cursor)
+		prevItem := l.builder(prevIndex, l.cursor)
 		if prevItem == nil {
 			break
 		}
@@ -727,7 +766,7 @@ func (l *List) centerScrollState(width int, height int) (int, int, bool) {
 	// Verify there is enough content below to keep the viewport filled.
 	ah := -offset
 	for i := top; ; i++ {
-		item := l.Builder(i, l.cursor)
+		item := l.builder(i, l.cursor)
 		if item == nil {
 			return 0, 0, false
 		}
@@ -741,8 +780,8 @@ func (l *List) centerScrollState(width int, height int) (int, int, bool) {
 	return top, offset, true
 }
 
-func (l *List) scrollByItems(delta int, count int, width int, height int) {
-	if l.Builder == nil {
+func (l *Model) scrollByItems(delta int, count int, width int, height int) {
+	if l.builder == nil {
 		return
 	}
 	if count < 1 {
@@ -750,15 +789,15 @@ func (l *List) scrollByItems(delta int, count int, width int, height int) {
 	}
 	if delta > 0 {
 		// Step the top index downward without going past the end.
-		for i := 0; i < count; i++ {
-			if l.Builder(l.scroll.top+1, l.cursor) == nil {
+		for range count {
+			if l.builder(l.scroll.top+1, l.cursor) == nil {
 				break
 			}
 			l.scroll.top++
 		}
 	} else {
 		// Step the top index upward without going below zero.
-		for i := 0; i < count; i++ {
+		for range count {
 			if l.scroll.top <= 0 {
 				break
 			}
@@ -768,17 +807,17 @@ func (l *List) scrollByItems(delta int, count int, width int, height int) {
 	l.scroll.offset = 0
 	l.scroll.wantsCursor = false
 	l.setLastDraw(nil)
-	l.lastRect = listRect{x: 0, y: 0, width: width, height: height}
+	l.lastRect = rect{x: 0, y: 0, width: width, height: height}
 }
 
-func (l *List) visibleItemCount(width int, height int) int {
-	if l.Builder == nil || width <= 0 || height <= 0 {
+func (l *Model) visibleItemCount(width int, height int) int {
+	if l.builder == nil || width <= 0 || height <= 0 {
 		return 0
 	}
 	total := 0
 	count := 0
 	for idx := l.scroll.top; ; idx++ {
-		item := l.Builder(idx, l.cursor)
+		item := l.builder(idx, l.cursor)
 		if item == nil {
 			break
 		}
@@ -799,18 +838,18 @@ func (l *List) visibleItemCount(width int, height int) int {
 	return count
 }
 
-func (l *List) endScrollState(width int, height int) (int, int) {
-	if l.Builder == nil || width <= 0 || height <= 0 {
+func (l *Model) endScrollState(width int, height int) (int, int) {
+	if l.builder == nil || width <= 0 || height <= 0 {
 		return 0, 0
 	}
 	start := max(l.scroll.top, 0)
 	// If the current top is past the end, restart from the beginning.
-	if l.Builder(start, l.cursor) == nil && start != 0 {
+	if l.builder(start, l.cursor) == nil && start != 0 {
 		start = 0
 	}
 	last := start
 	for {
-		if l.Builder(last, l.cursor) == nil {
+		if l.builder(last, l.cursor) == nil {
 			last--
 			break
 		}
@@ -823,7 +862,7 @@ func (l *List) endScrollState(width int, height int) (int, int) {
 	// Walk upward from the last item until we fill a viewport.
 	total := 0
 	for i := last; i >= 0; i-- {
-		item := l.Builder(i, l.cursor)
+		item := l.builder(i, l.cursor)
 		if item == nil {
 			continue
 		}
@@ -843,126 +882,133 @@ func (l *List) endScrollState(width int, height int) (int, int) {
 	return 0, 0
 }
 
-// InputHandler returns the handler for this primitive.
-func (l *List) InputHandler(event *tcell.EventKey) Command {
-	switch event.Key() {
-	case tcell.KeyDown:
-		l.NextItem()
-	case tcell.KeyUp:
-		l.PrevItem()
-	case tcell.KeyPgDn:
-		_, _, width, height := l.GetInnerRect()
-		if l.snapToItems {
-			l.scrollByItems(1, l.visibleItemCount(width, height), width, height)
-		} else {
-			if height < 1 {
-				height = 1
+// HandleEvent handles input events for this model.
+func (l *Model) HandleEvent(event tview.Event) tview.Command {
+	switch event := event.(type) {
+	case *tview.KeyEvent:
+		switch {
+		case keybind.Matches(event, l.keybinds.SelectDown):
+			l.NextItem()
+		case keybind.Matches(event, l.keybinds.SelectUp):
+			l.PrevItem()
+		case keybind.Matches(event, l.keybinds.SelectTop):
+			if l.builder != nil && l.builder(0, l.cursor) != nil {
+				l.SetCursor(0)
 			}
-			l.scroll.pending += height
+		case keybind.Matches(event, l.keybinds.SelectBottom):
+			if last := l.lastIndex(); last >= 0 {
+				l.SetCursor(last)
+			}
+		case keybind.Matches(event, l.keybinds.ScrollDown):
+			l.ScrollDown()
+		case keybind.Matches(event, l.keybinds.ScrollUp):
+			l.ScrollUp()
+		case keybind.Matches(event, l.keybinds.ScrollTop):
+			l.ScrollTop()
+		case keybind.Matches(event, l.keybinds.ScrollBottom):
+			l.ScrollBottom()
 		}
-	case tcell.KeyPgUp:
-		_, _, width, height := l.GetInnerRect()
-		if l.snapToItems {
-			l.scrollByItems(-1, l.visibleItemCount(width, height), width, height)
-		} else {
-			if height < 1 {
-				height = 1
+		return nil
+	case *tview.MouseEvent:
+		var cmd tview.Command
+		x, y := event.Position()
+		if l.scrollBarInteraction.dragDelta >= 0 {
+			_, innerY, innerWidth, innerHeight := l.InnerRect()
+			contentWidth, _ := l.scrollBarLayout(0, innerWidth)
+			row := y - innerY
+			switch event.Action {
+			case tview.MouseMove:
+				l.dragScrollBarTo(row, innerHeight, contentWidth)
+				return tview.SetMouseCapture(nil)
+			case tview.MouseLeftUp:
+				l.scrollBarInteraction.dragDelta = listScrollBarNoDrag
+				return tview.SetMouseCapture(nil)
+			case tview.MouseLeftClick:
+				if l.scrollBarInteraction.dragMoved {
+					l.scrollBarInteraction.dragMoved = false
+					return tview.SetMouseCapture(nil)
+				}
 			}
-			l.scroll.pending -= height
+		}
+
+		if !l.InRect(x, y) {
+			return nil
+		}
+
+		innerX, innerY, innerWidth, innerHeight := l.InnerRect()
+		contentWidth, scrollBarX := l.scrollBarLayout(innerX, innerWidth)
+		drawScrollBar := l.shouldDrawScrollBar(innerWidth, innerHeight)
+		if drawScrollBar && x == scrollBarX && y >= innerY && y < innerY+innerHeight {
+			row := y - innerY
+			switch event.Action {
+			case tview.MouseLeftDown:
+				cmd = tview.SetFocus(l)
+				if l.startScrollBarDrag(row, innerHeight, contentWidth) {
+					return tview.Batch(cmd, tview.SetMouseCapture(l))
+				}
+				return nil
+			case tview.MouseLeftClick:
+				if l.scrollBarInteraction.dragMoved {
+					l.scrollBarInteraction.dragMoved = false
+					return nil
+				}
+			}
+			if l.handleScrollBarMouse(event.Action, row, innerHeight, contentWidth) {
+				return nil
+			}
+			if event.Action == tview.MouseLeftClick {
+				return nil
+			}
+		}
+
+		switch event.Action {
+		case tview.MouseLeftClick:
+			index := l.indexAtPoint(x, y)
+			if index >= 0 {
+				previous := l.cursor
+				l.cursor = index
+				l.ensureScroll()
+				if l.changed != nil && l.cursor != previous {
+					l.changed(l.cursor)
+				}
+			}
+			return nil
+		case tview.MouseScrollUp:
+			_, _, width, height := l.InnerRect()
+			if l.snapToItems {
+				l.scrollByItems(-1, 1, width, height)
+			} else {
+				l.scroll.pending -= l.mouseScrollStep()
+			}
+			return nil
+		case tview.MouseScrollDown:
+			_, _, width, height := l.InnerRect()
+			if l.snapToItems {
+				l.scrollByItems(1, 1, width, height)
+			} else {
+				l.scroll.pending += l.mouseScrollStep()
+			}
+			return nil
 		}
 	}
-	return BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
+	return nil
 }
 
-// MouseHandler returns the mouse handler for this primitive.
-func (l *List) MouseHandler(action MouseAction, event *tcell.EventMouse) (Primitive, Command) {
-	var cmd Command
-	x, y := event.Position()
-	if l.scrollBarInteraction.dragDelta >= 0 {
-		_, innerY, innerWidth, innerHeight := l.GetInnerRect()
-		contentWidth, _ := l.scrollBarLayout(0, innerWidth)
-		row := y - innerY
-		switch action {
-		case MouseMove:
-			l.dragScrollBarTo(row, innerHeight, contentWidth)
-			return l, AppendCommand(nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
-		case MouseLeftUp:
-			l.scrollBarInteraction.dragDelta = listScrollBarNoDrag
-			return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-		case MouseLeftClick:
-			if l.scrollBarInteraction.dragMoved {
-				l.scrollBarInteraction.dragMoved = false
-				return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-			}
-		}
+func (l *Model) lastIndex() int {
+	if l.builder == nil {
+		return -1
 	}
-
-	if !l.InRect(x, y) {
-		return nil, nil
+	last := -1
+	for i := 0; ; i++ {
+		if l.builder(i, l.cursor) == nil {
+			break
+		}
+		last = i
 	}
-
-	innerX, innerY, innerWidth, innerHeight := l.GetInnerRect()
-	contentWidth, scrollBarX := l.scrollBarLayout(innerX, innerWidth)
-	drawScrollBar := l.shouldDrawScrollBar(innerWidth, innerHeight)
-	if drawScrollBar && x == scrollBarX && y >= innerY && y < innerY+innerHeight {
-		row := y - innerY
-		switch action {
-		case MouseLeftDown:
-			cmd = AppendCommand(cmd, SetFocusCommand{Target: l})
-			if l.startScrollBarDrag(row, innerHeight, contentWidth) {
-				return l, AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
-			}
-			return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-		case MouseLeftClick:
-			cmd = AppendCommand(cmd, SetFocusCommand{Target: l})
-			if l.scrollBarInteraction.dragMoved {
-				l.scrollBarInteraction.dragMoved = false
-				return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-			}
-		}
-		if l.handleScrollBarMouse(action, row, innerHeight, contentWidth) {
-			return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-		}
-		if action == MouseLeftClick {
-			return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-		}
-	}
-
-	switch action {
-	case MouseLeftClick:
-		cmd = AppendCommand(cmd, SetFocusCommand{Target: l})
-		index := l.indexAtPoint(x, y)
-		if index >= 0 {
-			previous := l.cursor
-			l.cursor = index
-			l.ensureScroll()
-			if l.changed != nil && l.cursor != previous {
-				l.changed(l.cursor)
-			}
-		}
-		return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-	case MouseScrollUp:
-		_, _, width, height := l.GetInnerRect()
-		if l.snapToItems {
-			l.scrollByItems(-1, 1, width, height)
-		} else {
-			l.scroll.pending -= l.mouseScrollStep()
-		}
-		return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-	case MouseScrollDown:
-		_, _, width, height := l.GetInnerRect()
-		if l.snapToItems {
-			l.scrollByItems(1, 1, width, height)
-		} else {
-			l.scroll.pending += l.mouseScrollStep()
-		}
-		return nil, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-	}
-
-	return nil, nil
+	return last
 }
 
-func (l *List) startScrollBarDrag(row int, height int, contentWidth int) bool {
+func (l *Model) startScrollBarDrag(row int, height int, contentWidth int) bool {
 	if l.scrollBar == nil || contentWidth <= 0 || height <= 0 {
 		return false
 	}
@@ -972,7 +1018,7 @@ func (l *List) startScrollBarDrag(row int, height int, contentWidth int) bool {
 	}
 
 	trackRow := row
-	if l.scrollBar.arrows.hasStart() {
+	if l.scrollBar.HasStartArrow() {
 		trackRow--
 	}
 	if trackRow < 0 || trackRow >= state.metrics.trackCells {
@@ -988,7 +1034,7 @@ func (l *List) startScrollBarDrag(row int, height int, contentWidth int) bool {
 	return true
 }
 
-func (l *List) dragScrollBarTo(row int, height int, contentWidth int) bool {
+func (l *Model) dragScrollBarTo(row int, height int, contentWidth int) bool {
 	if l.scrollBarInteraction.dragDelta < 0 || l.scrollBar == nil || contentWidth <= 0 || height <= 0 {
 		return false
 	}
@@ -998,7 +1044,7 @@ func (l *List) dragScrollBarTo(row int, height int, contentWidth int) bool {
 	}
 
 	trackRow := row
-	if l.scrollBar.arrows.hasStart() {
+	if l.scrollBar.HasStartArrow() {
 		trackRow--
 	}
 	trackRow = min(max(trackRow, 0), state.metrics.trackCells-1)
@@ -1025,7 +1071,7 @@ func (l *List) dragScrollBarTo(row int, height int, contentWidth int) bool {
 	return true
 }
 
-func (l *List) shouldDrawScrollBar(width int, height int) bool {
+func (l *Model) shouldDrawScrollBar(width int, height int) bool {
 	if width <= 1 || l.scrollBarVisibility == ScrollBarVisibilityNever {
 		return false
 	}
@@ -1047,15 +1093,15 @@ func (l *List) shouldDrawScrollBar(width int, height int) bool {
 	}
 }
 
-func (l *List) mouseScrollStep() int {
+func (l *Model) mouseScrollStep() int {
 	step := 3
-	if l.scrollBar != nil && l.scrollBar.scrollStep > 0 {
-		step = l.scrollBar.scrollStep
+	if l.scrollBar != nil && l.scrollBar.ScrollStep() > 0 {
+		step = l.scrollBar.ScrollStep()
 	}
 	return step
 }
 
-func (l *List) handleScrollBarMouse(action MouseAction, row int, height int, contentWidth int) bool {
+func (l *Model) handleScrollBarMouse(action tview.MouseAction, row int, height int, contentWidth int) bool {
 	if l.scrollBar == nil || contentWidth <= 0 || height <= 0 {
 		return false
 	}
@@ -1065,12 +1111,12 @@ func (l *List) handleScrollBarMouse(action MouseAction, row int, height int, con
 	}
 
 	row = max(row, 0)
-	startArrow := l.scrollBar.arrows.hasStart()
-	endArrow := l.scrollBar.arrows.hasEnd()
+	startArrow := l.scrollBar.HasStartArrow()
+	endArrow := l.scrollBar.HasEndArrow()
 	trackRow := row
 	if startArrow {
 		if row == 0 {
-			if action == MouseLeftClick {
+			if action == tview.MouseLeftClick {
 				l.scroll.pending -= l.mouseScrollStep()
 			}
 			return true
@@ -1083,13 +1129,13 @@ func (l *List) handleScrollBarMouse(action MouseAction, row int, height int, con
 			endRow++
 		}
 		if row == endRow {
-			if action == MouseLeftClick {
+			if action == tview.MouseLeftClick {
 				l.scroll.pending += l.mouseScrollStep()
 			}
 			return true
 		}
 	}
-	if trackRow < 0 || trackRow >= state.metrics.trackCells || action != MouseLeftClick {
+	if trackRow < 0 || trackRow >= state.metrics.trackCells || action != tview.MouseLeftClick {
 		return false
 	}
 
@@ -1099,8 +1145,8 @@ func (l *List) handleScrollBarMouse(action MouseAction, row int, height int, con
 		return true
 	}
 
-	switch l.scrollBar.trackClickBehavior {
-	case TrackClickBehaviorJumpToClick:
+	switch l.scrollBar.TrackClickBehavior() {
+	case tview.TrackClickBehaviorJumpToClick:
 		thumbTravel := max(state.metrics.trackLen-state.metrics.thumbLen, 0)
 		if thumbTravel == 0 {
 			l.scroll.pending -= state.position
@@ -1120,7 +1166,7 @@ func (l *List) handleScrollBarMouse(action MouseAction, row int, height int, con
 	return true
 }
 
-func (l *List) currentScrollBarState(height int, contentWidth int) (listScrollBarState, bool) {
+func (l *Model) currentScrollBarState(height int, contentWidth int) (listScrollBarState, bool) {
 	state := l.scrollBarInteraction.state
 	// Reuse cached geometry while viewport/content width is unchanged.
 	if state.viewportHeight == height &&
@@ -1137,18 +1183,19 @@ func (l *List) currentScrollBarState(height int, contentWidth int) (listScrollBa
 	return state, ok
 }
 
-func (l *List) scrollBarLayout(innerX int, innerWidth int) (contentWidth int, scrollBarX int) {
+func (l *Model) scrollBarLayout(innerX int, innerWidth int) (contentWidth int, scrollBarX int) {
 	contentWidth = innerWidth - 1
 	scrollBarX = innerX + contentWidth
 	// Reuse right padding for the scrollBar when available so we don't reduce content width by an extra column.
-	if l.paddingRight > 0 {
+	_, _, _, rightPadding := l.BorderPadding()
+	if rightPadding > 0 {
 		contentWidth = innerWidth
-		scrollBarX = innerX + innerWidth + l.paddingRight - 1
+		scrollBarX = innerX + innerWidth + rightPadding - 1
 	}
 	return contentWidth, scrollBarX
 }
 
-func (l *List) computeScrollBarState(contentWidth int, viewportHeight int, children []listDrawnItem) (listScrollBarState, bool) {
+func (l *Model) computeScrollBarState(contentWidth int, viewportHeight int, children []drawnItem) (listScrollBarState, bool) {
 	state := listScrollBarState{
 		contentWidth:   contentWidth,
 		viewportHeight: viewportHeight,
@@ -1164,7 +1211,7 @@ func (l *List) computeScrollBarState(contentWidth int, viewportHeight int, child
 	// Include pending delta so interactions stay in sync with the next drawn frame.
 	position = min(max(position+l.scroll.pending, 0), maxOffset)
 
-	trackCells := l.scrollBar.trackLengthExcludingArrowHeads(viewportHeight)
+	trackCells := l.scrollBar.TrackLengthExcludingArrowHeads(viewportHeight)
 	metrics := computeScrollMetrics(trackCells, contentLength, viewportLength, position)
 	if metrics.trackCells <= 0 {
 		return state, false
@@ -1177,7 +1224,7 @@ func (l *List) computeScrollBarState(contentWidth int, viewportHeight int, child
 	return state, true
 }
 
-func (l *List) indexAtPoint(x, y int) int {
+func (l *Model) indexAtPoint(x, y int) int {
 	if len(l.lastDraw) == 0 {
 		return -1
 	}
@@ -1198,7 +1245,7 @@ func (l *List) indexAtPoint(x, y int) int {
 	return -1
 }
 
-var _ Primitive = &List{}
+var _ tview.Model = &Model{}
 
 type clippedScreen struct {
 	tcell.Screen
@@ -1267,7 +1314,7 @@ func (s *clippedScreen) ShowCursor(x int, y int) {
 	s.Screen.ShowCursor(x, y)
 }
 
-func (l *List) trimToFullItems(children []listDrawnItem, height int) []listDrawnItem {
+func (l *Model) trimToFullItems(children []drawnItem, height int) []drawnItem {
 	if len(children) == 0 {
 		return children
 	}

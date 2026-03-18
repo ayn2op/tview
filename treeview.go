@@ -6,6 +6,11 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
+type TreeViewSelectedEvent struct {
+	tcell.EventTime
+	Node *TreeNode
+}
+
 // Tree navigation events.
 const (
 	treeNone int = iota
@@ -42,9 +47,6 @@ type TreeNode struct {
 
 	// The additional horizontal indent of this node's text.
 	indent int
-
-	// An optional function which is called when the user selects this node.
-	selected func()
 
 	// The hierarchy level (0 for the root, 1 for its children, and so on). This
 	// is only up to date immediately after a call to process() (e.g. via
@@ -124,7 +126,6 @@ func (n *TreeNode) SetChildren(childNodes []*TreeNode) *TreeNode {
 	}
 	if changed {
 		n.children = childNodes
-
 	}
 	return n
 }
@@ -150,7 +151,6 @@ func (n *TreeNode) GetChildren() []*TreeNode {
 func (n *TreeNode) ClearChildren() *TreeNode {
 	if len(n.children) > 0 {
 		n.children = nil
-
 	}
 	return n
 }
@@ -180,15 +180,7 @@ func (n *TreeNode) RemoveChild(node *TreeNode) *TreeNode {
 func (n *TreeNode) SetSelectable(selectable bool) *TreeNode {
 	if n.selectable != selectable {
 		n.selectable = selectable
-
 	}
-	return n
-}
-
-// SetSelectedFunc sets a function which is called when the user selects this
-// node by hitting Enter when it is selected.
-func (n *TreeNode) SetSelectedFunc(handler func()) *TreeNode {
-	n.selected = handler
 	return n
 }
 
@@ -196,7 +188,6 @@ func (n *TreeNode) SetSelectedFunc(handler func()) *TreeNode {
 func (n *TreeNode) SetExpanded(expanded bool) *TreeNode {
 	if n.expanded != expanded {
 		n.expanded = expanded
-
 	}
 	return n
 }
@@ -206,7 +197,6 @@ func (n *TreeNode) SetExpanded(expanded bool) *TreeNode {
 func (n *TreeNode) SetExpandable(expandable bool) *TreeNode {
 	if n.expandable != expandable {
 		n.expandable = expandable
-
 	}
 	return n
 }
@@ -221,7 +211,6 @@ func (n *TreeNode) IsExpandable() bool {
 func (n *TreeNode) Expand() *TreeNode {
 	if !n.expanded {
 		n.expanded = true
-
 	}
 	return n
 }
@@ -230,7 +219,6 @@ func (n *TreeNode) Expand() *TreeNode {
 func (n *TreeNode) Collapse() *TreeNode {
 	if n.expanded {
 		n.expanded = false
-
 	}
 	return n
 }
@@ -266,7 +254,6 @@ func (n *TreeNode) IsExpanded() bool {
 func (n *TreeNode) SetSelectedTextStyle(style tcell.Style) *TreeNode {
 	if n.selectedTextStyle != style {
 		n.selectedTextStyle = style
-
 	}
 	return n
 }
@@ -283,7 +270,6 @@ func (n *TreeNode) GetSelectedTextStyle() tcell.Style {
 func (n *TreeNode) SetIndent(indent int) *TreeNode {
 	if n.indent != indent {
 		n.indent = indent
-
 	}
 	return n
 }
@@ -317,7 +303,7 @@ func (n *TreeNode) GetLevel() int {
 //   - Ctrl-F, page down: Move (the cursor) down by one page.
 //   - Ctrl-B, page up: Move (the cursor) up by one page.
 //
-// Selected nodes can trigger the "selected" callback when the user hits Enter.
+// Selected nodes emit [TreeViewSelectedEvent] when the user hits Enter.
 //
 // The root node corresponds to level 0, its children correspond to level 1,
 // their children to level 2, and so on. Per default, the first level that is
@@ -374,17 +360,6 @@ type TreeView struct {
 
 	// The color of the lines.
 	graphicsColor tcell.Color
-
-	// An optional function which is called when the user has navigated to a new
-	// tree node.
-	changed func(node *TreeNode)
-
-	// An optional function which is called when a tree item was selected.
-	selected func(node *TreeNode)
-
-	// An optional function which is called when the user moves away from this
-	// primitive.
-	done func(key tcell.Key)
 
 	// The visible nodes, top-down, as set by process().
 	nodes []*TreeNode
@@ -572,33 +547,6 @@ func (t *TreeView) SetGraphicsColor(color tcell.Color) *TreeView {
 	return t
 }
 
-// SetChangedFunc sets the function which is called when the currently selected
-// node changes, for example when the user navigates to a new tree node.
-func (t *TreeView) SetChangedFunc(handler func(node *TreeNode)) *TreeView {
-	t.changed = handler
-	return t
-}
-
-// SetSelectedFunc sets the function which is called when the user selects a
-// node by pressing Enter on the current cursor.
-func (t *TreeView) SetSelectedFunc(handler func(node *TreeNode)) *TreeView {
-	t.selected = handler
-	return t
-}
-
-// GetSelectedFunc returns the function set with [TreeView.SetSelectedFunc]
-// or nil if no such function has been set.
-func (t *TreeView) GetSelectedFunc() func(node *TreeNode) {
-	return t.selected
-}
-
-// SetDoneFunc sets a handler which is called whenever the user presses the
-// Escape, Tab, or Backtab key.
-func (t *TreeView) SetDoneFunc(handler func(key tcell.Key)) *TreeView {
-	t.done = handler
-	return t
-}
-
 // GetScrollOffset returns the number of node rows that were skipped at the top
 // of the tree view. Note that when the user navigates the tree view, this value
 // is only updated after the tree view has been redrawn.
@@ -637,7 +585,7 @@ func (t *TreeView) Move(offset int) *TreeView {
 // having [TreeView.Draw] call it again).
 func (t *TreeView) process(drawingAfter bool) {
 	t.stableNodes = drawingAfter
-	_, _, _, height := t.GetInnerRect()
+	_, _, _, height := t.InnerRect()
 
 	// Determine visible nodes and their placement.
 	t.nodes = nil
@@ -796,14 +744,10 @@ func (t *TreeView) process(drawingAfter bool) {
 		}
 	}
 
-	// Trigger "changed" callback.
-	if t.changed != nil && t.currentNode != nil && t.currentNode != t.lastNode {
-		t.changed(t.currentNode)
-	}
 	t.lastNode = t.currentNode
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (t *TreeView) Draw(screen tcell.Screen) {
 	t.DrawForSubclass(screen, t)
 	if t.root == nil {
@@ -819,7 +763,7 @@ func (t *TreeView) Draw(screen tcell.Screen) {
 
 	// Scroll the tree, t.movement is treeNone after process() when there is a
 	// cursor, except for treeScroll, treeHome, and treeEnd.
-	x, y, width, height := t.GetInnerRect()
+	x, y, width, height := t.InnerRect()
 	switch t.movement {
 	case treeMove:
 		t.movement = treeNone
@@ -1005,27 +949,22 @@ func mergeStyle(base, overlay tcell.Style) tcell.Style {
 	return base
 }
 
-// InputHandler returns the handler for this primitive.
-func (t *TreeView) InputHandler(event *tcell.EventKey) Command {
-	selectNode := func() {
-		node := t.currentNode
-		if node != nil {
-			if t.selected != nil {
-				t.selected(node)
-			}
-			if node.selected != nil {
-				node.selected()
-			}
-		}
+func (t *TreeView) selectCurrentNode() Command {
+	node := t.currentNode
+	if node == nil {
+		return nil
 	}
+	selectedNode := node
+	return func() Event {
+		return &TreeViewSelectedEvent{Node: selectedNode}
+	}
+}
 
+func (t *TreeView) handleKeyEvent(event *KeyEvent) Command {
 	// Because the tree is flattened into a list only at drawing time, we also
 	// postpone the (cursor) movement to drawing time.
+	var selectCmd Command
 	switch key := event.Key(); key {
-	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyEscape:
-		if t.done != nil {
-			t.done(key)
-		}
 	case tcell.KeyDown, tcell.KeyRight:
 		t.movement = treeMove
 		t.step = 1
@@ -1037,11 +976,11 @@ func (t *TreeView) InputHandler(event *tcell.EventKey) Command {
 	case tcell.KeyEnd:
 		t.movement = treeEnd
 	case tcell.KeyPgDn, tcell.KeyCtrlF:
-		_, _, _, height := t.GetInnerRect()
+		_, _, _, height := t.InnerRect()
 		t.movement = treeMove
 		t.step = height
 	case tcell.KeyPgUp, tcell.KeyCtrlB:
-		_, _, _, height := t.GetInnerRect()
+		_, _, _, height := t.InnerRect()
 		t.movement = treeMove
 		t.step = -height
 	case tcell.KeyRune:
@@ -1061,41 +1000,35 @@ func (t *TreeView) InputHandler(event *tcell.EventKey) Command {
 		case "K":
 			t.movement = treeParent
 		case " ":
-			selectNode()
+			selectCmd = t.selectCurrentNode()
 		}
 	case tcell.KeyEnter:
-		selectNode()
+		selectCmd = t.selectCurrentNode()
 	}
 
 	t.process(true)
-	return BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
+	return selectCmd
 }
 
-// MouseHandler returns the mouse handler for this primitive.
-func (t *TreeView) MouseHandler(action MouseAction, event *tcell.EventMouse) (Primitive, Command) {
-	var cmd Command
+func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
 	x, y := event.Position()
 	if !t.InRect(x, y) {
-		return nil, nil
+		return nil
 	}
 
-	switch action {
+	switch event.Action {
 	case MouseLeftDown:
 		t.lastMouseY = y
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	case MouseMove:
 		if event.Buttons()&tcell.Button1 != 0 && t.lastMouseY != -1 {
 			t.movement = treeScroll
 			t.step = t.lastMouseY - y
 			t.lastMouseY = y
 		}
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	case MouseLeftUp:
 		t.lastMouseY = -1
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	case MouseLeftClick:
-		cmd = AppendCommand(cmd, SetFocusCommand{Target: t})
-		_, rectY, _, _ := t.GetInnerRect()
+		_, rectY, _, _ := t.InnerRect()
 		y += t.offsetY - rectY
 		if t.lastMouseY != -1 {
 			y += t.lastMouseY - y
@@ -1105,28 +1038,30 @@ func (t *TreeView) MouseHandler(action MouseAction, event *tcell.EventMouse) (Pr
 		if y >= 0 && y < len(t.nodes) {
 			node := t.nodes[y]
 			if node.selectable {
-				previousNode := t.currentNode
 				t.currentNode = node
-				if previousNode != node && t.changed != nil {
-					t.changed(node)
-				}
-				if t.selected != nil {
-					t.selected(node)
-				}
-				if node.selected != nil {
-					node.selected()
-				}
+				return Batch(SetFocus(t), func() Event {
+					return &TreeViewSelectedEvent{Node: node}
+				})
 			}
 		}
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
+		return SetFocus(t)
 	case MouseScrollUp:
 		t.movement = treeScroll
 		t.step = -1
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	case MouseScrollDown:
 		t.movement = treeScroll
 		t.step = 1
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	}
-	return nil, cmd
+	return nil
+}
+
+// HandleEvent handles input events for this model.
+func (t *TreeView) HandleEvent(event Event) Command {
+	switch event := event.(type) {
+	case *KeyEvent:
+		return t.handleKeyEvent(event)
+	case *MouseEvent:
+		return t.handleMouseEvent(event)
+	}
+	return nil
 }

@@ -100,7 +100,7 @@ func (c *Checkbox) GetLabel() string {
 }
 
 // SetLabelWidth sets the screen width of the label. A value of 0 will cause the
-// primitive to use the width of the label string.
+// model to use the width of the label string.
 func (c *Checkbox) SetLabelWidth(width int) *Checkbox {
 	if c.labelWidth != width {
 		c.labelWidth = width
@@ -206,12 +206,12 @@ func (c *Checkbox) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldT
 	return c
 }
 
-// GetFieldWidth returns this primitive's field width.
+// GetFieldWidth returns this model's field width.
 func (c *Checkbox) GetFieldWidth() int {
 	return 1
 }
 
-// GetFieldHeight returns this primitive's field height.
+// GetFieldHeight returns this model's field height.
 func (c *Checkbox) GetFieldHeight() int {
 	return 1
 }
@@ -257,8 +257,8 @@ func (c *Checkbox) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
 	return c
 }
 
-// Focus is called when this primitive receives focus.
-func (c *Checkbox) Focus(delegate func(p Primitive)) {
+// Focus is called when this model receives focus.
+func (c *Checkbox) Focus(delegate func(m Model)) {
 	// If we're part of a form and this item is disabled, there's nothing the
 	// user can do here so we're finished.
 	if c.finished != nil && c.disabled {
@@ -269,12 +269,12 @@ func (c *Checkbox) Focus(delegate func(p Primitive)) {
 	c.Box.Focus(delegate)
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (c *Checkbox) Draw(screen tcell.Screen) {
 	c.DrawForSubclass(screen, c)
 
 	// Prepare
-	x, y, width, height := c.GetInnerRect()
+	x, y, width, height := c.InnerRect()
 	rightLimit := x + width
 	if height < 1 || rightLimit <= x {
 		return
@@ -309,54 +309,47 @@ func (c *Checkbox) Draw(screen tcell.Screen) {
 	printWithStyle(screen, str, x, y, 0, width, AlignmentLeft, style, c.disabled)
 }
 
-// InputHandler returns the handler for this primitive.
-func (c *Checkbox) InputHandler(event *tcell.EventKey) Command {
+// HandleEvent handles input events for this model.
+func (c *Checkbox) HandleEvent(event Event) Command {
 	if c.disabled {
 		return nil
 	}
 
-	// Process key event.
-	switch key := event.Key(); key {
-	case tcell.KeyRune, tcell.KeyEnter: // Check.
-		if key == tcell.KeyRune && event.Str() != " " {
-			break
-		}
-		c.SetChecked(!c.checked)
-	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyEscape: // We're done.
-		if c.done != nil {
-			c.done(key)
-		}
-		if c.finished != nil {
-			c.finished(key)
-		}
-	}
-	return BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
-}
-
-// MouseHandler returns the mouse handler for this primitive.
-func (c *Checkbox) MouseHandler(action MouseAction, event *tcell.EventMouse) (Primitive, Command) {
-	var cmd Command
-	if c.disabled {
-		return nil, nil
-	}
-
-	x, y := event.Position()
-	_, rectY, _, _ := c.GetInnerRect()
-	if !c.InRect(x, y) {
-		return nil, nil
-	}
-
-	// Process mouse event.
-	if y == rectY {
-		switch action {
-		case MouseLeftDown:
-			cmd = AppendCommand(cmd, SetFocusCommand{Target: c})
-			cmd = AppendCommand(cmd, ConsumeEventCommand{})
-		case MouseLeftClick:
+	switch event := event.(type) {
+	case *KeyEvent:
+		// Process key event.
+		switch key := event.Key(); key {
+		case tcell.KeyRune, tcell.KeyEnter: // Check.
+			if key == tcell.KeyRune && event.Str() != " " {
+				break
+			}
 			c.SetChecked(!c.checked)
-			cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
+		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyEscape: // We're done.
+			if c.done != nil {
+				c.done(key)
+			}
+			if c.finished != nil {
+				c.finished(key)
+			}
+		}
+		return nil
+	case *MouseEvent:
+		x, y := event.Position()
+		_, rectY, _, _ := c.InnerRect()
+		if !c.InRect(x, y) {
+			return nil
+		}
+
+		// Process mouse event.
+		if y == rectY {
+			switch event.Action {
+			case MouseLeftDown:
+				return SetFocus(c)
+			case MouseLeftClick:
+				c.SetChecked(!c.checked)
+				return nil
+			}
 		}
 	}
-
-	return nil, cmd
+	return nil
 }

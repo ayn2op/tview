@@ -5,9 +5,9 @@ import (
 	"github.com/gdamore/tcell/v3/color"
 )
 
-// Theme defines the colors used when primitives are initialized.
+// Theme defines the colors used when models are initialized.
 type Theme struct {
-	PrimitiveBackgroundColor    tcell.Color // Main background color for primitives.
+	PrimitiveBackgroundColor    tcell.Color // Main background color for models.
 	ContrastBackgroundColor     tcell.Color // Background color for contrasting elements.
 	MoreContrastBackgroundColor tcell.Color // Background color for even more contrasting elements.
 	BorderColor                 tcell.Color // Box borders.

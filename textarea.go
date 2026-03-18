@@ -158,7 +158,7 @@ type textAreaUndoItem struct {
 //
 // The Ctrl-Q key was chosen for the default "copy" function to avoid clashing
 // with common Ctrl-C quit bindings in user applications. You may remap keys in
-// your primitive's InputHandler and implement copying to the clipboard. Note
+// your model's HandleEvent and implement copying to the clipboard. Note
 // that using your terminal's /
 // operating system's key bindings for copy+paste functionality may not have the
 // expected effect as tview will not be able to handle these keys. Pasting text
@@ -526,7 +526,7 @@ func (t *TextArea) GetSelection() (text string, start int, end int) {
 	if selection.Len() != 0 {
 		text = selection.String()
 	}
-	return
+	return text, start, end
 }
 
 // GetCursor returns the current cursor position where the first character of
@@ -798,7 +798,7 @@ func (t *TextArea) GetLabel() string {
 }
 
 // SetLabelWidth sets the screen width of the label. A value of 0 will cause the
-// primitive to use the width of the label string.
+// model to use the width of the label string.
 func (t *TextArea) SetLabelWidth(width int) *TextArea {
 	if t.labelWidth != width {
 		t.labelWidth = width
@@ -823,12 +823,12 @@ func (t *TextArea) SetSize(rows, columns int) *TextArea {
 	return t
 }
 
-// GetFieldWidth returns this primitive's field width.
+// GetFieldWidth returns this model's field width.
 func (t *TextArea) GetFieldWidth() int {
 	return t.width
 }
 
-// GetFieldHeight returns this primitive's field height.
+// GetFieldHeight returns this model's field height.
 func (t *TextArea) GetFieldHeight() int {
 	return t.height
 }
@@ -973,8 +973,8 @@ func (t *TextArea) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
 	return t
 }
 
-// Focus is called when this primitive receives focus.
-func (t *TextArea) Focus(delegate func(p Primitive)) {
+// Focus is called when this model receives focus.
+func (t *TextArea) Focus(delegate func(m Model)) {
 	// If we're part of a form and this item is disabled, there's nothing the
 	// user can do here so we're finished.
 	if t.finished != nil && t.disabled {
@@ -1173,12 +1173,12 @@ func (t *TextArea) replace(deleteStart, deleteEnd [3]int, insert string, continu
 	return deleteEnd
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (t *TextArea) Draw(screen tcell.Screen) {
 	t.DrawForSubclass(screen, t)
 
 	// Prepare
-	x, y, width, height := t.GetInnerRect()
+	x, y, width, height := t.InnerRect()
 	if width <= 0 || height <= 0 {
 		return // We have no space for anything.
 	}
@@ -1617,7 +1617,7 @@ func (t *TextArea) setTransform(transform func(cluster, rest string, boundaries 
 // irrelevant.
 func (t *TextArea) step(text string, pos, endPos [3]int) (cluster, rest string, boundaries, width int, newPos, newEndPos [3]int) {
 	if pos[0] == 1 {
-		return // We're already past the end.
+		return cluster, rest, boundaries, width, newPos, newEndPos // We're already past the end.
 	}
 
 	// We want to make sure we have a text at least the size of a grapheme
@@ -1942,19 +1942,11 @@ func (t *TextArea) getSelectedText() string {
 	return text.String()
 }
 
-// InputHandler returns the handler for this primitive.
-func (t *TextArea) InputHandler(event *tcell.EventKey) Command {
+func (t *TextArea) handleKeyEvent(event *tcell.EventKey) Command {
 	if t.disabled {
 		return nil
 	}
 	var cmd Command
-	previousSelectionStart, previousCursor := t.selectionStart, t.cursor
-	previousRowOffset, previousColumnOffset := t.rowOffset, t.columnOffset
-	defer func() {
-		if previousSelectionStart != t.selectionStart || previousCursor != t.cursor ||
-			previousRowOffset != t.rowOffset || previousColumnOffset != t.columnOffset {
-		}
-	}()
 
 	// All actions except a few specific ones are "other" actions.
 	newLastAction := taActionOther
@@ -2118,7 +2110,7 @@ func (t *TextArea) InputHandler(event *tcell.EventKey) Command {
 		// But forwarding takes precedence.
 		if t.finished != nil {
 			t.finished(key)
-			return BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
+			return nil
 		}
 
 		from, to, row := t.getSelection()
@@ -2131,7 +2123,7 @@ func (t *TextArea) InputHandler(event *tcell.EventKey) Command {
 	case tcell.KeyBacktab, tcell.KeyEscape: // Only used in forms.
 		if t.finished != nil {
 			t.finished(key)
-			return BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
+			return nil
 		}
 	case tcell.KeyRune:
 		if event.Modifiers()&tcell.ModAlt > 0 {
@@ -2331,31 +2323,24 @@ func (t *TextArea) InputHandler(event *tcell.EventKey) Command {
 			defer t.changed()
 		}
 	}
-	return AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
+	return cmd
 }
 
-// MouseHandler returns the mouse handler for this primitive.
-func (t *TextArea) MouseHandler(action MouseAction, event *tcell.EventMouse) (Primitive, Command) {
-	var (
-		capture Primitive
-		cmd     Command
-	)
+func (t *TextArea) handleMouseEvent(event *MouseEvent) Command {
 	if t.disabled {
-		return nil, nil
+		return nil
 	}
-	previousSelectionStart, previousCursor := t.selectionStart, t.cursor
-	previousRowOffset, previousColumnOffset := t.rowOffset, t.columnOffset
-	previousDragging := t.dragging
-	defer func() {
-		if previousSelectionStart != t.selectionStart || previousCursor != t.cursor ||
-			previousRowOffset != t.rowOffset || previousColumnOffset != t.columnOffset || previousDragging != t.dragging {
-		}
-	}()
 
 	x, y := event.Position()
-	rectX, rectY, _, _ := t.GetInnerRect()
+	rectX, rectY, _, _ := t.InnerRect()
 	if !t.InRect(x, y) {
-		return nil, nil
+		if t.dragging {
+			if event.Action == MouseLeftUp {
+				t.dragging = false
+			}
+			return SetMouseCapture(nil)
+		}
+		return nil
 	}
 
 	// Trigger a "moved" event at the end if requested.
@@ -2381,26 +2366,24 @@ func (t *TextArea) MouseHandler(action MouseAction, event *tcell.EventMouse) (Pr
 	row += t.rowOffset
 
 	// Process mouse actions.
-	switch action {
+	var cmds []Command
+	switch event.Action {
 	case MouseLeftDown:
 		t.moveCursor(row, column)
 		if event.Modifiers()&tcell.ModShift == 0 {
 			t.selectionStart = t.cursor
 		}
-		cmd = AppendCommand(cmd, SetFocusCommand{Target: t})
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
-		capture = t
+		cmds = append(cmds, SetFocus(t), SetMouseCapture(t))
 		t.dragging = true
 	case MouseMove:
 		if !t.dragging {
 			break
 		}
 		t.moveCursor(row, column)
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
+		cmds = append(cmds, SetMouseCapture(t))
 	case MouseLeftUp:
 		t.moveCursor(row, column)
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
-		capture = nil
+		cmds = append(cmds, SetMouseCapture(nil))
 		t.dragging = false
 	case MouseLeftDoubleClick: // Select word.
 		// Left down/up was already triggered so we are at the correct
@@ -2408,41 +2391,51 @@ func (t *TextArea) MouseHandler(action MouseAction, event *tcell.EventMouse) (Pr
 		t.moveWordLeft(false)
 		t.selectionStart = t.cursor
 		t.moveWordRight(true, false)
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	case MouseScrollUp:
 		if t.rowOffset > 0 {
 			t.rowOffset--
 		}
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	case MouseScrollDown:
 		t.rowOffset++
 		if t.rowOffset >= len(t.lineStarts) {
 			t.rowOffset = max(len(t.lineStarts)-1, 0)
 		}
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	case MouseScrollLeft:
 		if t.columnOffset > 0 {
 			t.columnOffset--
 		}
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	case MouseScrollRight:
 		t.columnOffset++
 		if t.columnOffset >= t.widestLine {
 			t.columnOffset = max(t.widestLine-1, 0)
 		}
-		cmd = AppendCommand(cmd, BatchCommand{RedrawCommand{}, ConsumeEventCommand{}})
 	}
 
-	return capture, cmd
+	if len(cmds) == 0 {
+		return nil
+	}
+	return Batch(cmds...)
 }
 
-// PasteHandler handles pasted text for this primitive.
-func (t *TextArea) PasteHandler(pastedText string) Command {
+func (t *TextArea) handlePasteEvent(event *PasteEvent) Command {
 	from, to, row := t.getSelection()
-	t.cursor.pos = t.replace(from, to, pastedText, false)
+	t.cursor.pos = t.replace(from, to, event.Content, false)
 	t.cursor.row = -1
 	t.truncateLines(row - 1)
 	t.findCursor(true, row)
 	t.selectionStart = t.cursor
-	return BatchCommand{RedrawCommand{}, ConsumeEventCommand{}}
+	return nil
+}
+
+// HandleEvent handles input events for this model.
+func (t *TextArea) HandleEvent(event Event) Command {
+	switch event := event.(type) {
+	case *KeyEvent:
+		return t.handleKeyEvent(event)
+	case *MouseEvent:
+		return t.handleMouseEvent(event)
+	case *PasteEvent:
+		return t.handlePasteEvent(event)
+	}
+	return nil
 }

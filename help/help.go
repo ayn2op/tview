@@ -37,7 +37,7 @@ func New() *Help {
 	}
 }
 
-// SetKeyMap sets the key map used by this help primitive.
+// SetKeyMap sets the key map used by this help model.
 func (h *Help) SetKeyMap(keyMap KeyMap) *Help {
 	h.keyMap = keyMap
 	return h
@@ -84,7 +84,7 @@ func (h *Help) SetStyles(styles Styles) *Help {
 	return h
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (h *Help) Draw(screen tcell.Screen) {
 	h.DrawForSubclass(screen, h)
 
@@ -92,7 +92,7 @@ func (h *Help) Draw(screen tcell.Screen) {
 		return
 	}
 
-	x, y, width, height := h.GetInnerRect()
+	x, y, width, height := h.InnerRect()
 
 	var lines [][]segment
 	if h.showAll {
@@ -239,16 +239,16 @@ func (h *Help) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]se
 	truncated := included < len(columns)
 
 	maxRows := 0
-	for i := 0; i < included; i++ {
+	for i := range included {
 		if len(columns[i].entries) > maxRows {
 			maxRows = len(columns[i].entries)
 		}
 	}
 
 	lines := make([][]segment, 0, maxRows)
-	for row := 0; row < maxRows; row++ {
+	for row := range maxRows {
 		line := make([]segment, 0, included*4)
-		for col := 0; col < included; col++ {
+		for col := range included {
 			if col > 0 {
 				line = append(line, segment{text: sepText, style: h.Styles.FullSeparatorStyle})
 			}

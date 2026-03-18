@@ -56,13 +56,6 @@ type queuedUpdate struct {
 // It is not strictly required to use this class as none of the other classes
 // depend on it. However, it provides useful tools to set up an application and
 // plays nicely with all widgets.
-//
-// The following command displays a primitive p on the screen until the
-// application is stopped (for example via QuitCommand):
-//
-//	if err := tview.NewApplication().SetRoot(p, true).Run(); err != nil {
-//	    panic(err)
-//	}
 type Application struct {
 	sync.RWMutex
 
@@ -71,18 +64,18 @@ type Application struct {
 	// Fini(), to set a new screen (or nil to stop the application).
 	screen tcell.Screen
 
-	// The primitive which currently has the keyboard focus.
-	focus Primitive
+	// The model which currently has the keyboard focus.
+	focus Model
 
-	// The root primitive to be seen on the screen.
-	root Primitive
+	// The root model to be seen on the screen.
+	root Model
 
-	events chan tcell.Event
+	events chan Event
 
-	// Functions queued from goroutines, used to serialize updates to primitives.
+	// Functions queued from goroutines, used to serialize updates to models.
 	updates chan queuedUpdate
 
-	mouseCapturingPrimitive Primitive        // A Primitive returned by a MouseHandler which will capture future mouse events.
+	mouseCapturingPrimitive Model            // A model requested via SetMouseCaptureCommand to capture future mouse events.
 	lastMouseX, lastMouseY  int              // The last position of the mouse.
 	mouseDownX, mouseDownY  int              // The position of the mouse when its button was last pressed.
 	lastMouseClick          time.Time        // The time when a mouse button was last clicked.
@@ -111,7 +104,7 @@ func (a *Application) SetScreen(screen tcell.Screen) *Application {
 }
 
 // Run starts the application and thus the event loop. This function returns
-// when [Application.Stop] was called.
+// when a quit event is received (for example via [Quit]).
 //
 // Note that while an application is running, it fully claims stdin, stdout, and
 // stderr. If you use these standard streams, they may not work as expected.
@@ -120,13 +113,12 @@ func (a *Application) SetScreen(screen tcell.Screen) *Application {
 // example when needing to print a call stack during a panic.
 func (a *Application) Run() error {
 	var (
-		appErr      error
 		lastRedraw  time.Time   // The time the screen was last redrawn.
 		redrawTimer *time.Timer // A timer to schedule the next redraw.
 	)
-	a.Lock()
 
 	// Make a screen if there is none yet.
+	a.Lock()
 	if a.screen == nil {
 		screen, err := tcell.NewScreen()
 		if err != nil {
@@ -139,25 +131,35 @@ func (a *Application) Run() error {
 		}
 		a.screen = screen
 	}
+	a.Unlock()
+
+	defer a.stop()
 
 	// We catch panics to clean up because they mess up the terminal.
 	defer func() {
 		if p := recover(); p != nil {
-			a.Stop()
 			panic(p)
 		}
 	}()
 
-	// Draw the screen for the first time.
+	a.Lock()
+	a.events = a.screen.EventQ()
 	a.Unlock()
-	a.draw()
 
 	a.RLock()
-	screen := a.screen
+	root := a.root
 	a.RUnlock()
-	a.Lock()
-	a.events = screen.EventQ()
-	a.Unlock()
+
+	if root != nil {
+		if command := root.HandleEvent(&InitEvent{}); command != nil {
+			go func() {
+				if event := command(); event != nil {
+					a.QueueEvent(event)
+				}
+			}()
+		}
+		a.draw()
+	}
 
 	// Start event loop.
 	var (
@@ -174,6 +176,33 @@ EventLoop:
 			}
 
 			switch event := event.(type) {
+			case *quitEvent:
+				break EventLoop
+			case *batchEvent:
+				for _, command := range event.commands {
+					if command != nil {
+						go func() {
+							if event := command(); event != nil {
+								a.QueueEvent(event)
+							}
+						}()
+					}
+				}
+
+			case *setFocusEvent:
+				a.SetFocus(event.target)
+			case *setMouseCaptureEvent:
+				a.mouseCapturingPrimitive = event.target
+			case *setTitleEvent:
+				a.screen.SetTitle(event.title)
+			case *notifyEvent:
+				a.screen.ShowNotification(event.title, event.body)
+
+			case *getClipboardEvent:
+				a.screen.GetClipboard()
+			case *setClipboardEvent:
+				a.screen.SetClipboard(event.data)
+
 			case *tcell.EventKey:
 				// If we are pasting, collect runes, nothing else.
 				if pasting {
@@ -192,11 +221,14 @@ EventLoop:
 				root := a.root
 				a.RUnlock()
 
-				// Pass other key events to the root primitive.
+				// Pass other key events to the root model.
 				if root != nil && root.HasFocus() {
-					cmd := root.InputHandler(event)
-					if a.executeCommand(cmd) {
-						a.draw()
+					if command := root.HandleEvent(event); command != nil {
+						go func() {
+							if event := command(); event != nil {
+								a.QueueEvent(event)
+							}
+						}()
 					}
 				}
 			case *tcell.EventPaste:
@@ -209,10 +241,13 @@ EventLoop:
 					root := a.root
 					a.RUnlock()
 					if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
-						// Pass paste event to the root primitive.
-						cmd := root.PasteHandler(pasteBuffer.String())
-						if a.executeCommand(cmd) {
-							a.draw()
+						// Pass paste event to the root model.
+						if command := root.HandleEvent(newPasteEvent(pasteBuffer.String())); command != nil {
+							go func() {
+								if event := command(); event != nil {
+									a.QueueEvent(event)
+								}
+							}()
 						}
 					}
 				}
@@ -227,24 +262,32 @@ EventLoop:
 						redrawTimer.Stop()
 					}
 					redrawTimer = time.AfterFunc(redrawPause, func() {
-						a.events <- event
+						a.QueueEvent(event)
 					})
 				}
 				lastRedraw = time.Now()
-				a.draw()
 			case *tcell.EventMouse:
-				handled, isMouseDownAction := a.fireMouseActions(event)
-				if handled {
-					a.draw()
-				}
+				isMouseDownAction := a.fireMouseActions(event)
 				a.lastMouseButtons = event.Buttons()
 				if isMouseDownAction {
 					a.mouseDownX, a.mouseDownY = event.Position()
 				}
-			case *tcell.EventError:
-				appErr = event
-				a.Stop()
+			default:
+				a.RLock()
+				root := a.root
+				a.RUnlock()
+				if root != nil {
+					if command := root.HandleEvent(event); command != nil {
+						go func() {
+							if event := command(); event != nil {
+								a.QueueEvent(event)
+							}
+						}()
+					}
+				}
 			}
+
+			a.draw()
 
 		// If we have updates, now is the time to execute them.
 		case update := <-a.updates:
@@ -254,15 +297,14 @@ EventLoop:
 			}
 		}
 	}
-
-	return appErr
+	return nil
 }
 
 // fireMouseActions analyzes the provided mouse event, derives mouse actions
-// from it and then forwards them to the corresponding primitives.
-func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMouseDownAction bool) {
-	// We want to relay follow-up events to the same target primitive.
-	var targetPrimitive Primitive
+// from it and then forwards them to the corresponding models.
+func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownAction bool) {
+	// We want to relay follow-up events to the same target model.
+	var targetPrimitive Model
 
 	// Helper function to fire a mouse action.
 	fire := func(action MouseAction) {
@@ -271,8 +313,8 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMous
 			isMouseDownAction = true
 		}
 
-		// Determine the target primitive.
-		var primitive, capturingPrimitive Primitive
+		// Determine the target model.
+		var primitive Model
 		if a.mouseCapturingPrimitive != nil {
 			primitive = a.mouseCapturingPrimitive
 			targetPrimitive = a.mouseCapturingPrimitive
@@ -282,13 +324,14 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMous
 			primitive = a.root
 		}
 		if primitive != nil {
-			var cmd Command
-			capturingPrimitive, cmd = primitive.MouseHandler(action, event)
-			if a.executeCommand(cmd) {
-				handled = true
+			if command := primitive.HandleEvent(newMouseEvent(*event, action)); command != nil {
+				go func() {
+					if event := command(); event != nil {
+						a.QueueEvent(event)
+					}
+				}()
 			}
 		}
-		a.mouseCapturingPrimitive = capturingPrimitive
 	}
 
 	x, y := event.Position()
@@ -314,8 +357,8 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMous
 			if buttons&buttonEvent.button != 0 {
 				fire(buttonEvent.down)
 			} else {
-				fire(buttonEvent.up) // A user override might set event to nil.
-				if !clickMoved && event != nil {
+				fire(buttonEvent.up)
+				if !clickMoved {
 					if a.lastMouseClick.Add(DoubleClickInterval).Before(time.Now()) {
 						fire(buttonEvent.click)
 						a.lastMouseClick = time.Now()
@@ -341,11 +384,11 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (handled, isMous
 		}
 	}
 
-	return handled, isMouseDownAction
+	return isMouseDownAction
 }
 
-// Stop stops the application, causing Run() to return.
-func (a *Application) Stop() {
+// stop finalizes the active screen and leaves terminal UI mode.
+func (a *Application) stop() {
 	a.Lock()
 	defer a.Unlock()
 	screen := a.screen
@@ -383,7 +426,7 @@ func (a *Application) Suspend(f func()) bool {
 	a.RLock()
 	defer a.RUnlock()
 	if a.screen != screen {
-		// Calling Stop() while in suspend mode currently still leads to a
+		// Calling stop() while in suspend mode currently still leads to a
 		// panic, see https://github.com/gdamore/tcell/issues/440.
 		screen.Fini()
 		if a.screen == nil {
@@ -398,37 +441,13 @@ func (a *Application) Suspend(f func()) bool {
 	return true
 }
 
-// Draw refreshes the screen (during the next update cycle). It calls the Draw()
-// function of the application's root primitive and then syncs the screen
-// buffer. It is almost never necessary to call this function. It can actually
-// deadlock your application if you call it from the main thread (e.g. in a
-// callback function of a widget). Please see
-// https://github.com/ayn2op/tview/wiki/Concurrency for details.
-func (a *Application) Draw() *Application {
-	a.QueueUpdate(func() {
-		a.draw()
-	})
-	return a
-}
-
-// ForceDraw refreshes the screen immediately. Use this function with caution as
-// it may lead to race conditions with updates to primitives in other
-// goroutines. It is always preferable to call [Application.Draw] instead.
-// Never call this function from a goroutine.
-//
-// It is safe to call this function during queued updates and direct event
-// handling.
-func (a *Application) ForceDraw() *Application {
-	return a.draw()
-}
-
 // draw actually does what Draw() promises to do.
 func (a *Application) draw() *Application {
-	a.Lock()
+	a.RLock()
 	screen := a.screen
 	root := a.root
 	forceRedraw := a.forceRedraw
-	a.Unlock()
+	a.RUnlock()
 
 	// Maybe we're not ready yet or not anymore.
 	if screen == nil || root == nil {
@@ -454,29 +473,11 @@ func (a *Application) draw() *Application {
 	return a
 }
 
-// Sync forces a full re-sync of the screen buffer with the actual screen during
-// the next event cycle. This is useful for when the terminal screen is
-// corrupted so you may want to offer your users a keyboard shortcut to refresh
-// the screen.
-func (a *Application) Sync() *Application {
-	a.updates <- queuedUpdate{f: func() {
-		a.Lock()
-		screen := a.screen
-		a.forceRedraw = true
-		a.Unlock()
-		if screen == nil {
-			return
-		}
-		screen.Sync()
-	}}
-	return a
-}
-
-// SetRoot sets the root primitive for this application. This function must be called at least once or nothing will be displayed when
+// SetRoot sets the root model for this application. This function must be called at least once or nothing will be displayed when
 // the application starts.
 //
-// It also calls SetFocus() on the primitive.
-func (a *Application) SetRoot(root Primitive) *Application {
+// It also calls SetFocus() on the model.
+func (a *Application) SetRoot(root Model) *Application {
 	a.Lock()
 	a.root = root
 	if a.screen != nil {
@@ -488,40 +489,40 @@ func (a *Application) SetRoot(root Primitive) *Application {
 	return a
 }
 
-// SetFocus sets the focus to a new primitive. All key events will be directed
-// down the hierarchy (starting at the root) until a primitive handles them,
-// which per default goes towards the focused primitive.
+// SetFocus sets the focus to a new model. All key events will be directed
+// down the hierarchy (starting at the root) until a model handles them,
+// which per default goes towards the focused model.
 //
-// Blur() will be called on the previously focused primitive. Focus() will be
-// called on the new primitive.
-func (a *Application) SetFocus(p Primitive) *Application {
+// Blur() will be called on the previously focused model. Focus() will be
+// called on the new model.
+func (a *Application) SetFocus(m Model) *Application {
 	a.Lock()
 	if a.focus != nil {
 		a.focus.Blur()
 	}
-	a.focus = p
+	a.focus = m
 	if a.screen != nil {
 		a.screen.HideCursor()
 	}
 	a.Unlock()
-	if p != nil {
-		p.Focus(func(p Primitive) {
-			a.SetFocus(p)
+	if m != nil {
+		m.Focus(func(m Model) {
+			a.SetFocus(m)
 		})
 	}
 
 	return a
 }
 
-// GetFocus returns the primitive which has the current focus. If none has it,
+// Focused returns the model which has the current focus. If none has it,
 // nil is returned.
-func (a *Application) GetFocus() Primitive {
+func (a *Application) Focused() Model {
 	a.RLock()
 	defer a.RUnlock()
 	return a.focus
 }
 
-// QueueUpdate is used to synchronize access to primitives from non-main
+// QueueUpdate is used to synchronize access to models from non-main
 // goroutines. The provided function will be executed as part of the event loop
 // and thus will not cause race conditions with other such update functions or
 // the Draw() function.
@@ -552,7 +553,7 @@ func (a *Application) QueueUpdateDraw(f func()) *Application {
 // QueueEvent sends an event to the Application event loop.
 //
 // It is not recommended for event to be nil.
-func (a *Application) QueueEvent(event tcell.Event) *Application {
+func (a *Application) QueueEvent(event Event) *Application {
 	a.RLock()
 	events := a.events
 	a.RUnlock()
@@ -561,61 +562,4 @@ func (a *Application) QueueEvent(event tcell.Event) *Application {
 	}
 	events <- event
 	return a
-}
-
-func (a *Application) executeCommand(cmd Command) bool {
-	if cmd == nil {
-		return false
-	}
-
-	a.RLock()
-	screen := a.screen
-	a.RUnlock()
-
-	switch c := cmd.(type) {
-	case BatchCommand:
-		handled := false
-		for _, item := range c {
-			if a.executeCommand(item) {
-				handled = true
-			}
-		}
-		return handled
-	case RedrawCommand:
-		return true
-	case QuitCommand:
-		a.Stop()
-		return false
-	case SetFocusCommand:
-		if c.Target == nil {
-			return false
-		}
-		a.RLock()
-		changed := a.focus != c.Target
-		a.RUnlock()
-		a.SetFocus(c.Target)
-		return changed
-	case SetClipboardCommand:
-		if screen != nil && screen.HasClipboard() {
-			screen.SetClipboard([]byte(string(c)))
-			return true
-		}
-	case SetTitleCommand:
-		if screen == nil {
-			return false
-		}
-		screen.SetTitle(string(c))
-		return false
-	case GetClipboardCommand:
-		if screen == nil || !screen.HasClipboard() {
-			return false
-		}
-		// The clipboard contents will arrive as terminal paste input events.
-		screen.GetClipboard()
-		return true
-	case ConsumeEventCommand:
-		return false
-	}
-
-	return false
 }

@@ -1,55 +1,128 @@
 package tview
 
-// Command is a side effect requested by a primitive during input handling.
+import "github.com/gdamore/tcell/v3"
+
+type Event = tcell.Event
+
+// Command is a side effect requested by a model during input handling.
 // Commands are executed by the Application event loop.
-type Command any
+type Command func() Event
 
-// BatchCommand groups multiple commands into a single command.
-type BatchCommand []Command
-
-// AppendCommand appends next to current and returns a merged command value.
-// It flattens nested BatchCommand values.
-func AppendCommand(current Command, next Command) Command {
-	if next == nil {
-		return current
-	}
-	if current == nil {
-		return next
-	}
-
-	var batch BatchCommand
-	switch c := current.(type) {
-	case BatchCommand:
-		batch = append(batch, c...)
-	default:
-		batch = append(batch, c)
-	}
-
-	switch n := next.(type) {
-	case BatchCommand:
-		batch = append(batch, n...)
-	default:
-		batch = append(batch, n)
-	}
-	return batch
+type batchEvent struct {
+	tcell.EventTime
+	commands []Command
 }
 
-type SetFocusCommand struct {
-	Target Primitive
+// Batch combines multiple commands into a single command.
+func Batch(cmds ...Command) Command {
+	var valid []Command
+	for _, cmd := range cmds {
+		if cmd == nil {
+			continue
+		}
+		valid = append(valid, cmd)
+	}
+	switch len(valid) {
+	case 0:
+		return nil
+	case 1:
+		return valid[0]
+	default:
+		return func() Event {
+			return &batchEvent{commands: valid}
+		}
+	}
 }
 
-// RedrawCommand requests a redraw at the end of the current event.
-type RedrawCommand struct{}
+type InitEvent struct{ tcell.EventTime }
 
-// QuitCommand requests stopping the application event loop.
-type QuitCommand struct{}
+type KeyEvent = tcell.EventKey
 
-// SetTitleCommand requests updating the terminal title.
-type SetTitleCommand string
+type MouseEvent struct {
+	tcell.EventMouse
+	Action MouseAction
+}
 
-type SetClipboardCommand string
+func newMouseEvent(mouseEvent tcell.EventMouse, action MouseAction) *MouseEvent {
+	return &MouseEvent{mouseEvent, action}
+}
 
-type GetClipboardCommand struct{}
+type PasteEvent struct {
+	tcell.EventTime
+	Content string
+}
 
-// ConsumeEventCommand stops further propagation of the current input event.
-type ConsumeEventCommand struct{}
+func newPasteEvent(content string) *PasteEvent {
+	return &PasteEvent{Content: content}
+}
+
+type quitEvent struct{ tcell.EventTime }
+
+func Quit() Command {
+	return func() Event {
+		return &quitEvent{}
+	}
+}
+
+type setFocusEvent struct {
+	tcell.EventTime
+	target Model
+}
+
+func SetFocus(target Model) Command {
+	return func() Event {
+		return &setFocusEvent{target: target}
+	}
+}
+
+type setMouseCaptureEvent struct {
+	tcell.EventTime
+	target Model
+}
+
+func SetMouseCapture(target Model) Command {
+	return func() Event {
+		return &setMouseCaptureEvent{target: target}
+	}
+}
+
+type setTitleEvent struct {
+	tcell.EventTime
+	title string
+}
+
+func SetTitle(title string) Command {
+	return func() Event {
+		return &setTitleEvent{title: title}
+	}
+}
+
+type getClipboardEvent struct{ tcell.EventTime }
+
+func GetClipboard() Command {
+	return func() Event {
+		return &getClipboardEvent{}
+	}
+}
+
+type setClipboardEvent struct {
+	tcell.EventTime
+	data []byte
+}
+
+func SetClipboard(data []byte) Command {
+	return func() Event {
+		return &setClipboardEvent{data: data}
+	}
+}
+
+type notifyEvent struct {
+	tcell.EventTime
+	title, body string
+}
+
+func Notify(title, body string) Command {
+	return func() Event {
+		return &notifyEvent{title: title, body: body}
+	}
+}

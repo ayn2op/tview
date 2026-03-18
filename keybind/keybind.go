@@ -22,6 +22,10 @@ func NewKeybind(options ...Option) Keybind {
 	return *k
 }
 
+func NewSingleKeybind(key, desc string) Keybind {
+	return NewKeybind(WithKeys(key), WithHelp(key, desc))
+}
+
 func WithKeys(keys ...string) Option {
 	return func(k *Keybind) {
 		k.keys = normalizeKeys(keys...)

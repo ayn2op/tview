@@ -196,9 +196,10 @@ func TaggedStringWidth(text string) (width int) {
 
 // WordWrap splits a text such that each resulting line does not exceed the
 // given screen width.
-func WordWrap(text string, width int) (lines []string) {
+func WordWrap(text string, width int) []string {
+	var lines []string
 	if width <= 0 {
-		return
+		return lines
 	}
 
 	var (
@@ -240,5 +241,5 @@ func WordWrap(text string, width int) (lines []string) {
 	}
 	lines = append(lines, text)
 
-	return
+	return lines
 }

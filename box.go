@@ -2,13 +2,13 @@ package tview
 
 import "github.com/gdamore/tcell/v3"
 
-// Box implements the Primitive interface with an empty background and optional
+// Box implements the Model interface with an empty background and optional
 // elements such as a border and a title. Box itself does not hold any content
-// but serves as the superclass of all other primitives. Subclasses add their
+// but serves as the superclass of all other models. Subclasses add their
 // own content, typically (but not necessarily) keeping their content within the
 // box's rectangle.
 //
-// Box provides a number of utility functions available to all primitives.
+// Box provides a number of utility functions available to all models.
 //
 // See https://github.com/ayn2op/tview/wiki/Box for an example.
 type Box struct {
@@ -44,11 +44,11 @@ type Box struct {
 	footerAlignment Alignment
 
 	// Whether or not this box has focus. This is typically ignored for
-	// container primitives (e.g. Flex, Grid, Layers), as they will delegate
+	// container models (e.g. Flex, Grid, Layers), as they will delegate
 	// focus to their children.
 	hasFocus bool
 
-	// Optional callback functions invoked when the primitive receives or loses
+	// Optional callback functions invoked when the model receives or loses
 	// focus.
 	focus, blur func()
 }
@@ -81,21 +81,26 @@ func (b *Box) SetBorderPadding(top, bottom, left, right int) *Box {
 	return b
 }
 
-// GetRect returns the current position of the rectangle, x, y, width, and
+// BorderPadding returns the configured border padding.
+func (b *Box) BorderPadding() (top, bottom, left, right int) {
+	return b.paddingTop, b.paddingBottom, b.paddingLeft, b.paddingRight
+}
+
+// Rect returns the current position of the rectangle, x, y, width, and
 // height.
-func (b *Box) GetRect() (int, int, int, int) {
+func (b *Box) Rect() (int, int, int, int) {
 	return b.x, b.y, b.width, b.height
 }
 
-// GetInnerRect returns the position of the inner rectangle (x, y, width,
+// InnerRect returns the position of the inner rectangle (x, y, width,
 // height), without the border and without any padding. Width and height values
 // will clamp to 0 and thus never be negative.
-func (b *Box) GetInnerRect() (int, int, int, int) {
+func (b *Box) InnerRect() (int, int, int, int) {
 	if b.innerX >= 0 {
 		return b.innerX, b.innerY, b.innerWidth, b.innerHeight
 	}
 
-	x, y, width, height := b.GetRect()
+	x, y, width, height := b.Rect()
 
 	if b.title != "" || b.borders.Has(BordersTop) {
 		y++
@@ -129,8 +134,8 @@ func (b *Box) GetInnerRect() (int, int, int, int) {
 	return x, y, width, height
 }
 
-// SetRect sets a new position of the primitive. Note that this has no effect
-// if this primitive is part of a layout (e.g. Flex, Grid) or if it was added
+// SetRect sets a new position of the model. Note that this has no effect
+// if this model is part of a layout (e.g. Flex, Grid) or if it was added
 // like this:
 //
 //	application.SetRoot(p, true)
@@ -144,38 +149,37 @@ func (b *Box) SetRect(x, y, width, height int) {
 	}
 }
 
-// InputHandler returns a no-op input handler.
-func (b *Box) InputHandler(event *tcell.EventKey) Command {
-	return nil
-}
-
-// PasteHandler handles pasted text for this primitive.
-func (b *Box) PasteHandler(pastedText string) Command {
-	return nil
-}
-
-// MouseHandler handles mouse events for this primitive.
-func (b *Box) MouseHandler(action MouseAction, event *tcell.EventMouse) (Primitive, Command) {
-	var cmd Command
-	if action == MouseLeftDown && b.InRect(event.Position()) {
-		cmd = AppendCommand(cmd, SetFocusCommand{Target: b})
-		cmd = AppendCommand(cmd, ConsumeEventCommand{})
+// HandleEvent handles input events for this model.
+func (b *Box) HandleEvent(event Event) Command {
+	switch event := event.(type) {
+	case *MouseEvent:
+		if event.Action == MouseLeftDown && b.InRect(event.Position()) {
+			return SetFocus(b)
+		}
 	}
-	return nil, cmd
+	return nil
 }
 
 // InRect returns true if the given coordinate is within the bounds of the box's
 // rectangle.
 func (b *Box) InRect(x, y int) bool {
-	rectX, rectY, width, height := b.GetRect()
+	rectX, rectY, width, height := b.Rect()
 	return x >= rectX && x < rectX+width && y >= rectY && y < rectY+height
 }
 
 // InInnerRect returns true if the given coordinate is within the bounds of the
 // box's inner rectangle (within the border and padding).
 func (b *Box) InInnerRect(x, y int) bool {
-	rectX, rectY, width, height := b.GetInnerRect()
+	rectX, rectY, width, height := b.InnerRect()
 	return x >= rectX && x < rectX+width && y >= rectY && y < rectY+height
+}
+
+// SetDontClear sets whether drawing should skip clearing the background.
+func (b *Box) SetDontClear(dontClear bool) *Box {
+	if b.dontClear != dontClear {
+		b.dontClear = dontClear
+	}
+	return b
 }
 
 // SetBackgroundColor sets the box's background color.
@@ -187,8 +191,8 @@ func (b *Box) SetBackgroundColor(color tcell.Color) *Box {
 	return b
 }
 
-// GetBorders returns the borders.
-func (b *Box) GetBorders() Borders {
+// Borders returns the borders.
+func (b *Box) Borders() Borders {
 	return b.borders
 }
 
@@ -201,7 +205,7 @@ func (b *Box) SetBorders(flag Borders) *Box {
 	return b
 }
 
-// SetBorderSet sets the box' borderset
+// SetBorderSet sets the border set.
 func (b *Box) SetBorderSet(borderSet BorderSet) *Box {
 	if b.borderSet != borderSet {
 		b.borderSet = borderSet
@@ -209,7 +213,7 @@ func (b *Box) SetBorderSet(borderSet BorderSet) *Box {
 	return b
 }
 
-// GetBorderSet returns the box' borderSet
+// GetBorderSet returns the border set.
 func (b *Box) GetBorderSet() BorderSet {
 	return b.borderSet
 }
@@ -227,8 +231,8 @@ func (b *Box) GetBackgroundColor() tcell.Color {
 	return b.backgroundColor
 }
 
-// GetTitle returns the box's current title.
-func (b *Box) GetTitle() string {
+// Title returns the box's current title.
+func (b *Box) Title() string {
 	return b.title
 }
 
@@ -287,18 +291,18 @@ func (b *Box) SetFooterAlignment(alignment Alignment) *Box {
 	return b
 }
 
-// Draw draws this primitive onto the screen.
+// Draw draws this model onto the screen.
 func (b *Box) Draw(screen tcell.Screen) {
 	b.DrawForSubclass(screen, b)
 }
 
-// DrawForSubclass draws this box under the assumption that primitive p is a
+// DrawForSubclass draws this box under the assumption that model p is a
 // subclass of this box. This is needed e.g. to draw proper box frames which
 // depend on the subclass's focus.
 //
-// Only call this function from your own custom primitives. It is not needed in
-// applications that have no custom primitives.
-func (b *Box) DrawForSubclass(screen tcell.Screen, p Primitive) {
+// Only call this function from your own custom models. It is not needed in
+// applications that have no custom models.
+func (b *Box) DrawForSubclass(screen tcell.Screen, p Model) {
 	// Don't draw anything if there is no space.
 	if b.width <= 0 || b.height <= 0 {
 		return
@@ -389,15 +393,15 @@ func (b *Box) DrawForSubclass(screen tcell.Screen, p Primitive) {
 
 	// Remember the inner rect.
 	b.innerX = -1
-	b.innerX, b.innerY, b.innerWidth, b.innerHeight = b.GetInnerRect()
+	b.innerX, b.innerY, b.innerWidth, b.innerHeight = b.InnerRect()
 }
 
-// SetFocusFunc sets a callback function which is invoked when this primitive
-// receives focus. Container primitives such as [Flex] or [Grid] will also be
+// SetFocusFunc sets a callback function which is invoked when this model
+// receives focus. Container models such as [Flex] or [Grid] will also be
 // notified if one of their descendents receive focus directly. Note that this
 // may result in a blur notification, immediately followed by a focus
 // notification, when the focus is set to a different descendent of the
-// container primitive.
+// container model.
 //
 // At this point, the order in which the focus callbacks are invoked during one
 // draw cycle, is not defined. However, the blur callbacks are always invoked
@@ -409,11 +413,11 @@ func (b *Box) SetFocusFunc(callback func()) *Box {
 	return b
 }
 
-// SetBlurFunc sets a callback function which is invoked when this primitive
-// loses focus. Container primitives such as [Flex] or [Grid] will also be
+// SetBlurFunc sets a callback function which is invoked when this model
+// loses focus. Container models such as [Flex] or [Grid] will also be
 // notified if one of their descendents lose focus. Note that this may result in
 // a blur notification, immediately followed by a focus notification, when the
-// focus is set to a different different descendent of the container primitive.
+// focus is set to a different descendent of the container model.
 //
 // At this point, the order in which the blur callbacks are invoked during one
 // draw cycle, is not defined. However, the blur callbacks are always invoked
@@ -425,8 +429,8 @@ func (b *Box) SetBlurFunc(callback func()) *Box {
 	return b
 }
 
-// Focus is called when this primitive directly receives focus.
-func (b *Box) Focus(delegate func(p Primitive)) {
+// Focus is called when this model directly receives focus.
+func (b *Box) Focus(delegate func(m Model)) {
 	if !b.hasFocus {
 		b.hasFocus = true
 	}
@@ -435,7 +439,7 @@ func (b *Box) Focus(delegate func(p Primitive)) {
 	}
 }
 
-// Blur is called when this primitive directly loses focus.
+// Blur is called when this model directly loses focus.
 func (b *Box) Blur() {
 	if b.hasFocus {
 		b.hasFocus = false
@@ -445,7 +449,7 @@ func (b *Box) Blur() {
 	}
 }
 
-// HasFocus returns whether or not this primitive has focus.
+// HasFocus returns whether or not this model has focus.
 func (b *Box) HasFocus() bool {
 	return b.hasFocus
 }

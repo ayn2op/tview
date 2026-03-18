@@ -220,9 +220,9 @@ func (l *Model) SetTrackEnd(track bool) *Model {
 	return l
 }
 
-// ScrollToStart resets the scroll position to the top (index 0), without
-// changing the cursor.
-func (l *Model) ScrollToStart() *Model {
+// ScrollTop resets the scroll position to the top (index 0), without changing
+// the cursor.
+func (l *Model) ScrollTop() *Model {
 	if l.scroll.top != 0 || l.scroll.offset != 0 || l.scroll.wantsCursor || l.atEnd {
 		l.scroll.top = 0
 		l.scroll.offset = 0
@@ -232,8 +232,8 @@ func (l *Model) ScrollToStart() *Model {
 	return l
 }
 
-// ScrollToEnd scrolls the view so the last items are visible.
-func (l *Model) ScrollToEnd() *Model {
+// ScrollBottom scrolls the view so the last items are visible.
+func (l *Model) ScrollBottom() *Model {
 	_, _, width, height := l.InnerRect()
 	if width <= 0 || height <= 0 {
 		return l
@@ -904,9 +904,9 @@ func (l *Model) HandleEvent(event tview.Event) tview.Command {
 		case keybind.Matches(event, l.keybinds.ScrollUp):
 			l.ScrollUp()
 		case keybind.Matches(event, l.keybinds.ScrollTop):
-			l.ScrollToStart()
+			l.ScrollTop()
 		case keybind.Matches(event, l.keybinds.ScrollBottom):
-			l.ScrollToEnd()
+			l.ScrollBottom()
 		}
 		return nil
 	case *tview.MouseEvent:

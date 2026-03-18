@@ -2,6 +2,7 @@ package list
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
@@ -22,6 +23,7 @@ type Builder func(index int, cursor int) Item
 // Model displays a virtual list of models returned by a builder function.
 type Model struct {
 	*tview.Box
+	keybinds Keybinds
 
 	builder      Builder
 	gap          int
@@ -130,6 +132,7 @@ func computeScrollMetrics(trackCells int, contentLen int, viewportLen int, offse
 func NewModel() *Model {
 	return &Model{
 		Box:                 tview.NewBox(),
+		keybinds:            DefaultKeybinds(),
 		centerCursor:        true,
 		cursor:              -1,
 		scrollBarVisibility: ScrollBarVisibilityAutomatic,
@@ -883,31 +886,27 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 func (l *Model) HandleEvent(event tview.Event) tview.Command {
 	switch event := event.(type) {
 	case *tview.KeyEvent:
-		switch event.Key() {
-		case tcell.KeyDown:
+		switch {
+		case keybind.Matches(event, l.keybinds.SelectDown):
 			l.NextItem()
-		case tcell.KeyUp:
+		case keybind.Matches(event, l.keybinds.SelectUp):
 			l.PrevItem()
-		case tcell.KeyPgDn:
-			_, _, width, height := l.InnerRect()
-			if l.snapToItems {
-				l.scrollByItems(1, l.visibleItemCount(width, height), width, height)
-			} else {
-				if height < 1 {
-					height = 1
-				}
-				l.scroll.pending += height
+		case keybind.Matches(event, l.keybinds.SelectTop):
+			if l.builder != nil && l.builder(0, l.cursor) != nil {
+				l.SetCursor(0)
 			}
-		case tcell.KeyPgUp:
-			_, _, width, height := l.InnerRect()
-			if l.snapToItems {
-				l.scrollByItems(-1, l.visibleItemCount(width, height), width, height)
-			} else {
-				if height < 1 {
-					height = 1
-				}
-				l.scroll.pending -= height
+		case keybind.Matches(event, l.keybinds.SelectBottom):
+			if last := l.lastIndex(); last >= 0 {
+				l.SetCursor(last)
 			}
+		case keybind.Matches(event, l.keybinds.ScrollDown):
+			l.ScrollDown()
+		case keybind.Matches(event, l.keybinds.ScrollUp):
+			l.ScrollUp()
+		case keybind.Matches(event, l.keybinds.ScrollTop):
+			l.ScrollToStart()
+		case keybind.Matches(event, l.keybinds.ScrollBottom):
+			l.ScrollToEnd()
 		}
 		return nil
 	case *tview.MouseEvent:
@@ -993,6 +992,20 @@ func (l *Model) HandleEvent(event tview.Event) tview.Command {
 		}
 	}
 	return nil
+}
+
+func (l *Model) lastIndex() int {
+	if l.builder == nil {
+		return -1
+	}
+	last := -1
+	for i := 0; ; i++ {
+		if l.builder(i, l.cursor) == nil {
+			break
+		}
+		last = i
+	}
+	return last
 }
 
 func (l *Model) startScrollBarDrag(row int, height int, contentWidth int) bool {

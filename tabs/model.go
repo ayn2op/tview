@@ -2,7 +2,6 @@ package tabs
 
 import (
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/help"
 	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 )
@@ -14,7 +13,7 @@ type Tab interface {
 
 type Model struct {
 	*tview.Box
-	Keybinds Keybinds
+	keybinds Keybinds
 
 	tabs   []Tab
 	active int
@@ -27,7 +26,7 @@ type Model struct {
 func NewModel(tabs []Tab) *Model {
 	return &Model{
 		Box:      tview.NewBox(),
-		Keybinds: DefaultKeybinds(),
+		keybinds: DefaultKeybinds(),
 
 		tabs: tabs,
 
@@ -36,9 +35,6 @@ func NewModel(tabs []Tab) *Model {
 		activeLabelStyle: tcell.StyleDefault.Reverse(true),
 	}
 }
-
-var _ tview.Model = (*Model)(nil)
-var _ help.KeyMap = (*Model)(nil)
 
 func (m *Model) canPrevious() bool {
 	return len(m.tabs) > 0 && m.active > 0
@@ -88,13 +84,13 @@ func (m *Model) HandleEvent(event tview.Event) tview.Command {
 		return m.activateTab()
 	case *tview.KeyEvent:
 		switch {
-		case keybind.Matches(event, m.Keybinds.Previous):
+		case keybind.Matches(event, m.keybinds.Previous):
 			if !m.canPrevious() {
 				return m.tabs[m.active].HandleEvent(event)
 			}
 			m.Previous()
 			return m.activateTab()
-		case keybind.Matches(event, m.Keybinds.Next):
+		case keybind.Matches(event, m.keybinds.Next):
 			if !m.canNext() {
 				return m.tabs[m.active].HandleEvent(event)
 			}
@@ -141,44 +137,4 @@ func (m *Model) activateTab() tview.Command {
 		m.tabs[m.active].HandleEvent(&tview.InitEvent{}),
 		tview.SetFocus(m),
 	)
-}
-
-func (m *Model) ShortHelp() []keybind.Keybind {
-	if len(m.tabs) == 0 {
-		return nil
-	}
-
-	var short []keybind.Keybind
-	if m.canPrevious() {
-		short = append(short, m.Keybinds.Previous)
-	}
-	if m.canNext() {
-		short = append(short, m.Keybinds.Next)
-	}
-	if activeKeyMap, ok := m.tabs[m.active].(help.KeyMap); ok {
-		short = append(short, activeKeyMap.ShortHelp()...)
-	}
-	return short
-}
-
-func (m *Model) FullHelp() [][]keybind.Keybind {
-	if len(m.tabs) == 0 {
-		return nil
-	}
-
-	var nav []keybind.Keybind
-	if m.canPrevious() {
-		nav = append(nav, m.Keybinds.Previous)
-	}
-	if m.canNext() {
-		nav = append(nav, m.Keybinds.Next)
-	}
-	var full [][]keybind.Keybind
-	if len(nav) > 0 {
-		full = append(full, nav)
-	}
-	if activeKeyMap, ok := m.tabs[m.active].(help.KeyMap); ok {
-		full = append(full, activeKeyMap.FullHelp()...)
-	}
-	return full
 }

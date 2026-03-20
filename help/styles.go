@@ -5,27 +5,27 @@ import (
 )
 
 type Styles struct {
-	ShortKeyStyle       tcell.Style
-	ShortDescStyle      tcell.Style
-	ShortSeparatorStyle tcell.Style
+	ShortKey  tcell.Style
+	ShortDesc tcell.Style
 
-	FullKeyStyle       tcell.Style
-	FullDescStyle      tcell.Style
-	FullSeparatorStyle tcell.Style
+	FullKey  tcell.Style
+	FullDesc tcell.Style
 
-	EllipsisStyle tcell.Style
+	ShortSeparator tcell.Style
+	FullSeparator  tcell.Style
+	Ellipsis       tcell.Style
 }
 
 func DefaultStyles() Styles {
 	dim := tcell.StyleDefault.Dim(true)
 	normal := tcell.StyleDefault
 	return Styles{
-		ShortKeyStyle:       dim,
-		ShortDescStyle:      normal,
-		ShortSeparatorStyle: dim,
-		FullKeyStyle:        dim,
-		FullDescStyle:       normal,
-		FullSeparatorStyle:  dim,
-		EllipsisStyle:       dim,
+		ShortKey:       dim,
+		ShortDesc:      normal,
+		ShortSeparator: dim,
+		FullKey:        dim,
+		FullDesc:       normal,
+		FullSeparator:  dim,
+		Ellipsis:       dim,
 	}
 }

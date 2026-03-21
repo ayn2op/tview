@@ -97,6 +97,38 @@ func (m *Model) HandleEvent(event tview.Event) tview.Command {
 			m.Next()
 			return m.activateTab()
 		}
+	case *tview.MouseEvent:
+		x, y := event.Position()
+		if !m.InRect(x, y) {
+			return nil
+		}
+
+		if event.Action == tview.MouseLeftDown {
+			return tview.SetFocus(m)
+		}
+
+		if tab, ok := m.tabAt(x, y); ok {
+			switch event.Action {
+			case tview.MouseLeftClick:
+				if tab == m.active {
+					return tview.SetFocus(m)
+				}
+				m.active = tab
+				return m.activateTab()
+			case tview.MouseScrollUp, tview.MouseScrollLeft:
+				if !m.canPrevious() {
+					return nil
+				}
+				m.Previous()
+				return m.activateTab()
+			case tview.MouseScrollDown, tview.MouseScrollRight:
+				if !m.canNext() {
+					return nil
+				}
+				m.Next()
+				return m.activateTab()
+			}
+		}
 	}
 	return m.tabs[m.active].HandleEvent(event)
 }
@@ -137,4 +169,29 @@ func (m *Model) activateTab() tview.Command {
 		m.tabs[m.active].HandleEvent(&tview.InitEvent{}),
 		tview.SetFocus(m),
 	)
+}
+
+func (m *Model) tabAt(x, y int) (int, bool) {
+	innerX, innerY, width, _ := m.InnerRect()
+	if y != innerY {
+		return 0, false
+	}
+
+	tmpX := innerX
+	for i, tab := range m.tabs {
+		labelWidth := len(tab.Label())
+		labelX := tmpX
+		switch m.labelAlignment {
+		case tview.AlignmentCenter:
+			labelX = tmpX + width/2 - labelWidth/2
+		case tview.AlignmentRight:
+			labelX = tmpX + width - labelWidth
+		}
+		if x >= labelX && x < labelX+labelWidth {
+			return i, true
+		}
+		tmpX += labelWidth + 1
+	}
+
+	return 0, false
 }

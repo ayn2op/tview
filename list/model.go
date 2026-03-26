@@ -972,7 +972,7 @@ func (l *Model) HandleEvent(event tview.Event) tview.Command {
 					l.changed(l.cursor)
 				}
 			}
-			return nil
+			return tview.SetFocus(l)
 		case tview.MouseScrollUp:
 			_, _, width, height := l.InnerRect()
 			if l.snapToItems {

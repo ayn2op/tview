@@ -49,7 +49,7 @@ func NewModel() *Model {
 		AddItem(m.list, 0, 1, false)
 	m.SetKeybinds(DefaultKeybinds())
 
-	m.Update()
+	m.Refresh()
 	return m
 }
 
@@ -109,10 +109,10 @@ func (m *Model) AddItem(item Item) {
 
 func (m *Model) SetItems(items Items) {
 	m.items = append(m.items[:0], items...)
-	m.Update()
+	m.Refresh()
 }
 
-func (m *Model) Update() {
+func (m *Model) Refresh() {
 	m.ClearInput()
 	m.onInputChanged("")
 }

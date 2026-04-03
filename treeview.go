@@ -949,7 +949,7 @@ func mergeStyle(base, overlay tcell.Style) tcell.Style {
 	return base
 }
 
-func (t *TreeView) selectCurrentNode() Command {
+func (t *TreeView) selectCurrentNode() Cmd {
 	node := t.currentNode
 	if node == nil {
 		return nil
@@ -960,10 +960,10 @@ func (t *TreeView) selectCurrentNode() Command {
 	}
 }
 
-func (t *TreeView) handleKeyEvent(event *KeyEvent) Command {
+func (t *TreeView) handleKeyEvent(event *KeyEvent) Cmd {
 	// Because the tree is flattened into a list only at drawing time, we also
 	// postpone the (cursor) movement to drawing time.
-	var selectCmd Command
+	var selectCmd Cmd
 	switch key := event.Key(); key {
 	case tcell.KeyDown, tcell.KeyRight:
 		t.movement = treeMove
@@ -1010,7 +1010,7 @@ func (t *TreeView) handleKeyEvent(event *KeyEvent) Command {
 	return selectCmd
 }
 
-func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
+func (t *TreeView) handleMouseEvent(event *MouseEvent) Cmd {
 	x, y := event.Position()
 	if !t.InRect(x, y) {
 		return nil
@@ -1056,7 +1056,7 @@ func (t *TreeView) handleMouseEvent(event *MouseEvent) Command {
 }
 
 // HandleEvent handles input events for this model.
-func (t *TreeView) HandleEvent(event Event) Command {
+func (t *TreeView) HandleEvent(event Event) Cmd {
 	switch event := event.(type) {
 	case *KeyEvent:
 		return t.handleKeyEvent(event)

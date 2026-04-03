@@ -14,7 +14,7 @@ func newSelectedEvent(item Item) *SelectedEvent {
 	return &SelectedEvent{Item: item}
 }
 
-func (m *Model) selectItem() tview.Command {
+func (m *Model) selectItem() tview.Cmd {
 	index := m.list.Cursor()
 	if index >= 0 && index < len(m.filtered) {
 		item := m.filtered[index]
@@ -27,7 +27,7 @@ func (m *Model) selectItem() tview.Command {
 
 type CancelEvent struct{ tcell.EventTime }
 
-func cancel() tview.Command {
+func cancel() tview.Cmd {
 	return func() tview.Event {
 		return &CancelEvent{}
 	}

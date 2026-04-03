@@ -179,7 +179,7 @@ EventLoop:
 			case *quitEvent:
 				break EventLoop
 			case *batchEvent:
-				for _, command := range event.commands {
+				for _, command := range event.cmds {
 					if command != nil {
 						go func() {
 							if event := command(); event != nil {

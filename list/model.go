@@ -883,7 +883,7 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 }
 
 // HandleEvent handles input events for this model.
-func (l *Model) HandleEvent(event tview.Event) tview.Command {
+func (l *Model) HandleEvent(event tview.Event) tview.Cmd {
 	switch event := event.(type) {
 	case *tview.KeyEvent:
 		switch {
@@ -910,7 +910,7 @@ func (l *Model) HandleEvent(event tview.Event) tview.Command {
 		}
 		return nil
 	case *tview.MouseEvent:
-		var cmd tview.Command
+		var cmd tview.Cmd
 		x, y := event.Position()
 		if l.scrollBarInteraction.dragDelta >= 0 {
 			_, innerY, innerWidth, innerHeight := l.InnerRect()

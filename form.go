@@ -737,7 +737,7 @@ func (f *Form) finished(key tcell.Key) {
 	}
 }
 
-func (f *Form) consumeCancelEvent(cmd Command) Command {
+func (f *Form) consumeCancelEvent(cmd Cmd) Cmd {
 	if !f.cancelRequested {
 		return cmd
 	}
@@ -775,7 +775,7 @@ func (f *Form) HasFocus() bool {
 }
 
 // HandleEvent handles input events for this model.
-func (f *Form) HandleEvent(event Event) Command {
+func (f *Form) HandleEvent(event Event) Cmd {
 	switch event := event.(type) {
 	case *ButtonExitEvent:
 		f.finished(event.Key)

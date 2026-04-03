@@ -74,7 +74,7 @@ func (m *Model) Blur() {
 	m.Box.Blur()
 }
 
-func (m *Model) HandleEvent(event tview.Event) tview.Command {
+func (m *Model) HandleEvent(event tview.Event) tview.Cmd {
 	if len(m.tabs) == 0 {
 		return nil
 	}
@@ -164,7 +164,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 	}
 }
 
-func (m *Model) activateTab() tview.Command {
+func (m *Model) activateTab() tview.Cmd {
 	return tview.Batch(
 		m.tabs[m.active].HandleEvent(&tview.InitEvent{}),
 		tview.SetFocus(m),

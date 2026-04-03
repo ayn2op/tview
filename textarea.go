@@ -1942,11 +1942,11 @@ func (t *TextArea) getSelectedText() string {
 	return text.String()
 }
 
-func (t *TextArea) handleKeyEvent(event *tcell.EventKey) Command {
+func (t *TextArea) handleKeyEvent(event *tcell.EventKey) Cmd {
 	if t.disabled {
 		return nil
 	}
-	var cmd Command
+	var cmd Cmd
 
 	// All actions except a few specific ones are "other" actions.
 	newLastAction := taActionOther
@@ -2326,7 +2326,7 @@ func (t *TextArea) handleKeyEvent(event *tcell.EventKey) Command {
 	return cmd
 }
 
-func (t *TextArea) handleMouseEvent(event *MouseEvent) Command {
+func (t *TextArea) handleMouseEvent(event *MouseEvent) Cmd {
 	if t.disabled {
 		return nil
 	}
@@ -2366,7 +2366,7 @@ func (t *TextArea) handleMouseEvent(event *MouseEvent) Command {
 	row += t.rowOffset
 
 	// Process mouse actions.
-	var cmds []Command
+	var cmds []Cmd
 	switch event.Action {
 	case MouseLeftDown:
 		t.moveCursor(row, column)
@@ -2417,7 +2417,7 @@ func (t *TextArea) handleMouseEvent(event *MouseEvent) Command {
 	return Batch(cmds...)
 }
 
-func (t *TextArea) handlePasteEvent(event *PasteEvent) Command {
+func (t *TextArea) handlePasteEvent(event *PasteEvent) Cmd {
 	from, to, row := t.getSelection()
 	t.cursor.pos = t.replace(from, to, event.Content, false)
 	t.cursor.row = -1
@@ -2428,7 +2428,7 @@ func (t *TextArea) handlePasteEvent(event *PasteEvent) Command {
 }
 
 // HandleEvent handles input events for this model.
-func (t *TextArea) HandleEvent(event Event) Command {
+func (t *TextArea) HandleEvent(event Event) Cmd {
 	switch event := event.(type) {
 	case *KeyEvent:
 		return t.handleKeyEvent(event)

@@ -4,18 +4,17 @@ import "github.com/gdamore/tcell/v3"
 
 type Event = tcell.Event
 
-// Command is a side effect requested by a model during input handling.
-// Commands are executed by the Application event loop.
-type Command func() Event
+// Cmd is a side effect requested by a model during input handling.
+type Cmd func() Event
 
 type batchEvent struct {
 	tcell.EventTime
-	commands []Command
+	cmds []Cmd
 }
 
 // Batch combines multiple commands into a single command.
-func Batch(cmds ...Command) Command {
-	var valid []Command
+func Batch(cmds ...Cmd) Cmd {
+	var valid []Cmd
 	for _, cmd := range cmds {
 		if cmd == nil {
 			continue
@@ -29,7 +28,7 @@ func Batch(cmds ...Command) Command {
 		return valid[0]
 	default:
 		return func() Event {
-			return &batchEvent{commands: valid}
+			return &batchEvent{cmds: valid}
 		}
 	}
 }
@@ -58,7 +57,7 @@ func newPasteEvent(content string) *PasteEvent {
 
 type quitEvent struct{ tcell.EventTime }
 
-func Quit() Command {
+func Quit() Cmd {
 	return func() Event {
 		return &quitEvent{}
 	}
@@ -69,7 +68,7 @@ type setFocusEvent struct {
 	target Model
 }
 
-func SetFocus(target Model) Command {
+func SetFocus(target Model) Cmd {
 	return func() Event {
 		return &setFocusEvent{target: target}
 	}
@@ -80,7 +79,7 @@ type setMouseCaptureEvent struct {
 	target Model
 }
 
-func SetMouseCapture(target Model) Command {
+func SetMouseCapture(target Model) Cmd {
 	return func() Event {
 		return &setMouseCaptureEvent{target: target}
 	}
@@ -91,7 +90,7 @@ type setTitleEvent struct {
 	title string
 }
 
-func SetTitle(title string) Command {
+func SetTitle(title string) Cmd {
 	return func() Event {
 		return &setTitleEvent{title: title}
 	}
@@ -99,7 +98,7 @@ func SetTitle(title string) Command {
 
 type getClipboardEvent struct{ tcell.EventTime }
 
-func GetClipboard() Command {
+func GetClipboard() Cmd {
 	return func() Event {
 		return &getClipboardEvent{}
 	}
@@ -110,7 +109,7 @@ type setClipboardEvent struct {
 	data []byte
 }
 
-func SetClipboard(data []byte) Command {
+func SetClipboard(data []byte) Cmd {
 	return func() Event {
 		return &setClipboardEvent{data: data}
 	}
@@ -121,7 +120,7 @@ type notifyEvent struct {
 	title, body string
 }
 
-func Notify(title, body string) Command {
+func Notify(title, body string) Cmd {
 	return func() Event {
 		return &notifyEvent{title: title, body: body}
 	}

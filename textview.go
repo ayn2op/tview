@@ -879,7 +879,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 }
 
 // HandleEvent handles input events for this model.
-func (t *TextView) HandleEvent(event Event) Command {
+func (t *TextView) HandleEvent(event Event) Cmd {
 	switch event := event.(type) {
 	case *KeyEvent:
 		previousLineOffset, previousColumnOffset, previousTrackEnd := t.lineOffset, t.columnOffset, t.trackEnd
@@ -947,7 +947,7 @@ func (t *TextView) HandleEvent(event Event) Command {
 			return nil
 		}
 	case *MouseEvent:
-		var cmds []Command
+		var cmds []Cmd
 		x, y := event.Position()
 		if !t.InRect(x, y) {
 			return nil

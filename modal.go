@@ -158,7 +158,7 @@ func (m *Modal) Draw(screen tcell.Screen) {
 }
 
 // HandleEvent handles input events for this model.
-func (m *Modal) HandleEvent(event Event) Command {
+func (m *Modal) HandleEvent(event Event) Cmd {
 	switch event := event.(type) {
 	case *FormSubmitEvent:
 		buttonIndex := event.ButtonIndex

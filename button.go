@@ -158,7 +158,7 @@ func (b *Button) Draw(screen tcell.Screen) {
 }
 
 // HandleEvent handles input events for this model.
-func (b *Button) HandleEvent(event Event) Command {
+func (b *Button) HandleEvent(event Event) Cmd {
 	if b.disabled {
 		return nil
 	}

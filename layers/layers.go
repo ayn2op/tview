@@ -376,14 +376,14 @@ func (l *Layers) Draw(screen tcell.Screen) {
 	}
 }
 
-// HandleEvent handles input events for this model.
-func (l *Layers) HandleEvent(event tview.Event) tview.Cmd {
+// Update handles input events for this model.
+func (l *Layers) Update(event tview.Event) tview.Cmd {
 	if mouseEvent, ok := event.(*tview.MouseEvent); ok && !l.InRect(mouseEvent.Position()) {
 		return nil
 	}
 
 	if top := l.topVisibleEnabledLayer(); top != nil {
-		return top.item.HandleEvent(event)
+		return top.item.Update(event)
 	}
 	return nil
 }

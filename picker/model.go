@@ -130,14 +130,14 @@ func (m *Model) onInputChanged(text string) {
 	m.setFilteredItems(fuzzied)
 }
 
-func (m *Model) HandleEvent(event tview.Event) tview.Cmd {
+func (m *Model) Update(event tview.Event) tview.Cmd {
 	switch event := event.(type) {
 	case *tview.KeyEvent:
 		switch {
 		case keybind.Matches(event, m.keybinds.SelectUp):
-			return m.list.HandleEvent(event)
+			return m.list.Update(event)
 		case keybind.Matches(event, m.keybinds.SelectDown):
-			return m.list.HandleEvent(event)
+			return m.list.Update(event)
 		case keybind.Matches(event, m.keybinds.SelectTop):
 			if len(m.filtered) > 0 {
 				m.list.SetCursor(0)
@@ -155,7 +155,7 @@ func (m *Model) HandleEvent(event tview.Event) tview.Cmd {
 			return cancel()
 		}
 
-		return m.Model.HandleEvent(event)
+		return m.Model.Update(event)
 	}
-	return m.Model.HandleEvent(event)
+	return m.Model.Update(event)
 }

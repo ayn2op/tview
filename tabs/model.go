@@ -74,7 +74,7 @@ func (m *Model) Blur() {
 	m.Box.Blur()
 }
 
-func (m *Model) HandleEvent(event tview.Event) tview.Cmd {
+func (m *Model) Update(event tview.Event) tview.Cmd {
 	if len(m.tabs) == 0 {
 		return nil
 	}
@@ -86,13 +86,13 @@ func (m *Model) HandleEvent(event tview.Event) tview.Cmd {
 		switch {
 		case keybind.Matches(event, m.keybinds.Previous):
 			if !m.canPrevious() {
-				return m.tabs[m.active].HandleEvent(event)
+				return m.tabs[m.active].Update(event)
 			}
 			m.Previous()
 			return m.activateTab()
 		case keybind.Matches(event, m.keybinds.Next):
 			if !m.canNext() {
-				return m.tabs[m.active].HandleEvent(event)
+				return m.tabs[m.active].Update(event)
 			}
 			m.Next()
 			return m.activateTab()
@@ -130,7 +130,7 @@ func (m *Model) HandleEvent(event tview.Event) tview.Cmd {
 			}
 		}
 	}
-	return m.tabs[m.active].HandleEvent(event)
+	return m.tabs[m.active].Update(event)
 }
 
 func (m *Model) Draw(screen tcell.Screen) {
@@ -166,7 +166,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 
 func (m *Model) activateTab() tview.Cmd {
 	return tview.Batch(
-		m.tabs[m.active].HandleEvent(&tview.InitEvent{}),
+		m.tabs[m.active].Update(&tview.InitEvent{}),
 		tview.SetFocus(m),
 	)
 }

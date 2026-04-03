@@ -272,8 +272,8 @@ func (i *InputField) Draw(screen tcell.Screen) {
 	i.textArea.Draw(screen)
 }
 
-// HandleEvent handles input events for this model.
-func (i *InputField) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (i *InputField) Update(event Event) Cmd {
 	if i.textArea.GetDisabled() {
 		return nil
 	}
@@ -297,7 +297,7 @@ func (i *InputField) HandleEvent(event Event) Cmd {
 			return nil
 		default:
 			// Forward other key events to the text area.
-			return i.textArea.HandleEvent(event)
+			return i.textArea.Update(event)
 		}
 	case *MouseEvent:
 		// Is mouse event within the input field?
@@ -307,7 +307,7 @@ func (i *InputField) HandleEvent(event Event) Cmd {
 		}
 
 		// Forward mouse event to the text area.
-		cmd := i.textArea.HandleEvent(event)
+		cmd := i.textArea.Update(event)
 
 		// Focus in any case.
 		if event.Action == MouseLeftDown && cmd == nil {
@@ -316,7 +316,7 @@ func (i *InputField) HandleEvent(event Event) Cmd {
 		return cmd
 	case *PasteEvent:
 		// Forward the pasted text to the text area.
-		return i.textArea.HandleEvent(event)
+		return i.textArea.Update(event)
 	}
 	return nil
 }

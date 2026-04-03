@@ -235,8 +235,8 @@ func (m *Model) HasFocus() bool {
 	return m.Box.HasFocus()
 }
 
-// HandleEvent handles input events for this model.
-func (m *Model) HandleEvent(event tview.Event) tview.Cmd {
+// Update handles input events for this model.
+func (m *Model) Update(event tview.Event) tview.Cmd {
 	switch event := event.(type) {
 	case *tview.MouseEvent:
 		if !m.InRect(event.Position()) {
@@ -248,7 +248,7 @@ func (m *Model) HandleEvent(event tview.Event) tview.Cmd {
 			if item.Item == nil {
 				continue
 			}
-			childCmds := item.Item.HandleEvent(event)
+			childCmds := item.Item.Update(event)
 			if childCmds != nil {
 				return childCmds
 			}
@@ -259,7 +259,7 @@ func (m *Model) HandleEvent(event tview.Event) tview.Cmd {
 	// Forward events to the focused child.
 	for _, item := range m.items {
 		if item.Item != nil && item.Item.HasFocus() {
-			return item.Item.HandleEvent(event)
+			return item.Item.Update(event)
 		}
 	}
 	return nil

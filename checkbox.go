@@ -309,8 +309,8 @@ func (c *Checkbox) Draw(screen tcell.Screen) {
 	printWithStyle(screen, str, x, y, 0, width, AlignmentLeft, style, c.disabled)
 }
 
-// HandleEvent handles input events for this model.
-func (c *Checkbox) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (c *Checkbox) Update(event Event) Cmd {
 	if c.disabled {
 		return nil
 	}

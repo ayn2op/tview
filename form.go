@@ -107,7 +107,7 @@ type Form struct {
 	// such key is known yet.
 	lastFinishedKey tcell.Key
 
-	// Set when Escape was processed by finished(); consumed in HandleEvent.
+	// Set when Escape was processed by finished(); consumed in Update.
 	cancelRequested bool
 }
 
@@ -774,8 +774,8 @@ func (f *Form) HasFocus() bool {
 	return f.Box.HasFocus()
 }
 
-// HandleEvent handles input events for this model.
-func (f *Form) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (f *Form) Update(event Event) Cmd {
 	switch event := event.(type) {
 	case *ButtonExitEvent:
 		f.finished(event.Key)
@@ -786,7 +786,7 @@ func (f *Form) HandleEvent(event Event) Cmd {
 			if item.GetDisabled() {
 				continue
 			}
-			childCmds := item.HandleEvent(event)
+			childCmds := item.Update(event)
 			if childCmds != nil {
 				return f.consumeCancelEvent(childCmds)
 			}
@@ -811,7 +811,7 @@ func (f *Form) HandleEvent(event Event) Cmd {
 					nil,
 				)
 			default:
-				childCmds := button.HandleEvent(event)
+				childCmds := button.Update(event)
 				if childCmds != nil {
 					return f.consumeCancelEvent(childCmds)
 				}
@@ -825,7 +825,7 @@ func (f *Form) HandleEvent(event Event) Cmd {
 	case *KeyEvent, *PasteEvent:
 		for _, item := range f.items {
 			if item.HasFocus() {
-				return f.consumeCancelEvent(item.HandleEvent(event))
+				return f.consumeCancelEvent(item.Update(event))
 			}
 		}
 
@@ -843,7 +843,7 @@ func (f *Form) HandleEvent(event Event) Cmd {
 					nil,
 				)
 			}
-			return f.consumeCancelEvent(button.HandleEvent(event))
+			return f.consumeCancelEvent(button.Update(event))
 		}
 	}
 	return f.consumeCancelEvent(nil)

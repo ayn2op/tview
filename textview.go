@@ -878,8 +878,8 @@ func (t *TextView) Draw(screen tcell.Screen) {
 	}
 }
 
-// HandleEvent handles input events for this model.
-func (t *TextView) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (t *TextView) Update(event Event) Cmd {
 	switch event := event.(type) {
 	case *KeyEvent:
 		previousLineOffset, previousColumnOffset, previousTrackEnd := t.lineOffset, t.columnOffset, t.trackEnd

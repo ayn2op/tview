@@ -157,8 +157,8 @@ func (m *Modal) Draw(screen tcell.Screen) {
 	m.frame.Draw(screen)
 }
 
-// HandleEvent handles input events for this model.
-func (m *Modal) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (m *Modal) Update(event Event) Cmd {
 	switch event := event.(type) {
 	case *FormSubmitEvent:
 		buttonIndex := event.ButtonIndex
@@ -171,10 +171,10 @@ func (m *Modal) HandleEvent(event Event) Cmd {
 			return newModalDoneEvent(-1, "")
 		}
 	case *ButtonExitEvent:
-		return m.form.HandleEvent(event)
+		return m.form.Update(event)
 	case *MouseEvent:
 		// Pass mouse events on to the form.
-		cmd := m.form.HandleEvent(event)
+		cmd := m.form.Update(event)
 		if cmd == nil && event.Action == MouseLeftDown && m.InRect(event.Position()) {
 			cmd = SetFocus(m)
 		}
@@ -189,11 +189,11 @@ func (m *Modal) HandleEvent(event Event) Cmd {
 		}
 		// Forward the key event to the frame so the focused form button receives Tab/Backtab and Form.finished can move focus to the next/previous button.
 		if m.frame.HasFocus() {
-			return m.frame.HandleEvent(event)
+			return m.frame.Update(event)
 		}
 	case *PasteEvent:
 		if m.frame.HasFocus() {
-			return m.frame.HandleEvent(event)
+			return m.frame.Update(event)
 		}
 	}
 	return nil

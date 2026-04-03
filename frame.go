@@ -189,8 +189,8 @@ func (f *Frame) HasFocus() bool {
 	return f.primitive.HasFocus()
 }
 
-// HandleEvent handles input events for this model.
-func (f *Frame) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (f *Frame) Update(event Event) Cmd {
 	switch event := event.(type) {
 	case *MouseEvent:
 		if !f.InRect(event.Position()) {
@@ -199,7 +199,7 @@ func (f *Frame) HandleEvent(event Event) Cmd {
 
 		// Pass mouse events on to contained model.
 		if f.primitive != nil {
-			childCmds := f.primitive.HandleEvent(event)
+			childCmds := f.primitive.Update(event)
 			if childCmds != nil {
 				return childCmds
 			}
@@ -213,7 +213,7 @@ func (f *Frame) HandleEvent(event Event) Cmd {
 		if f.primitive == nil {
 			return nil
 		}
-		return f.primitive.HandleEvent(event)
+		return f.primitive.Update(event)
 	}
 	return nil
 }

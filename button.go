@@ -157,8 +157,8 @@ func (b *Button) Draw(screen tcell.Screen) {
 	}
 }
 
-// HandleEvent handles input events for this model.
-func (b *Button) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (b *Button) Update(event Event) Cmd {
 	if b.disabled {
 		return nil
 	}

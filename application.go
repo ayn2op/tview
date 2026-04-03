@@ -151,9 +151,9 @@ func (a *Application) Run() error {
 	a.RUnlock()
 
 	if root != nil {
-		if command := root.HandleEvent(&InitEvent{}); command != nil {
+		if cmd := root.Update(&InitEvent{}); cmd != nil {
 			go func() {
-				if event := command(); event != nil {
+				if event := cmd(); event != nil {
 					a.QueueEvent(event)
 				}
 			}()
@@ -179,10 +179,10 @@ EventLoop:
 			case *quitEvent:
 				break EventLoop
 			case *batchEvent:
-				for _, command := range event.cmds {
-					if command != nil {
+				for _, cmd := range event.cmds {
+					if cmd != nil {
 						go func() {
-							if event := command(); event != nil {
+							if event := cmd(); event != nil {
 								a.QueueEvent(event)
 							}
 						}()
@@ -223,9 +223,9 @@ EventLoop:
 
 				// Pass other key events to the root model.
 				if root != nil && root.HasFocus() {
-					if command := root.HandleEvent(event); command != nil {
+					if cmd := root.Update(event); cmd != nil {
 						go func() {
-							if event := command(); event != nil {
+							if event := cmd(); event != nil {
 								a.QueueEvent(event)
 							}
 						}()
@@ -242,9 +242,9 @@ EventLoop:
 					a.RUnlock()
 					if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
 						// Pass paste event to the root model.
-						if command := root.HandleEvent(newPasteEvent(pasteBuffer.String())); command != nil {
+						if cmd := root.Update(newPasteEvent(pasteBuffer.String())); cmd != nil {
 							go func() {
-								if event := command(); event != nil {
+								if event := cmd(); event != nil {
 									a.QueueEvent(event)
 								}
 							}()
@@ -277,9 +277,9 @@ EventLoop:
 				root := a.root
 				a.RUnlock()
 				if root != nil {
-					if command := root.HandleEvent(event); command != nil {
+					if cmd := root.Update(event); cmd != nil {
 						go func() {
-							if event := command(); event != nil {
+							if event := cmd(); event != nil {
 								a.QueueEvent(event)
 							}
 						}()
@@ -314,19 +314,19 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 		}
 
 		// Determine the target model.
-		var primitive Model
+		var model Model
 		if a.mouseCapturingPrimitive != nil {
-			primitive = a.mouseCapturingPrimitive
+			model = a.mouseCapturingPrimitive
 			targetPrimitive = a.mouseCapturingPrimitive
 		} else if targetPrimitive != nil {
-			primitive = targetPrimitive
+			model = targetPrimitive
 		} else {
-			primitive = a.root
+			model = a.root
 		}
-		if primitive != nil {
-			if command := primitive.HandleEvent(newMouseEvent(*event, action)); command != nil {
+		if model != nil {
+			if cmd := model.Update(newMouseEvent(*event, action)); cmd != nil {
 				go func() {
-					if event := command(); event != nil {
+					if event := cmd(); event != nil {
 						a.QueueEvent(event)
 					}
 				}()

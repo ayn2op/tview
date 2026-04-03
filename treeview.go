@@ -1055,8 +1055,8 @@ func (t *TreeView) handleMouseEvent(event *MouseEvent) Cmd {
 	return nil
 }
 
-// HandleEvent handles input events for this model.
-func (t *TreeView) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (t *TreeView) Update(event Event) Cmd {
 	switch event := event.(type) {
 	case *KeyEvent:
 		return t.handleKeyEvent(event)

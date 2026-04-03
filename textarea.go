@@ -158,7 +158,7 @@ type textAreaUndoItem struct {
 //
 // The Ctrl-Q key was chosen for the default "copy" function to avoid clashing
 // with common Ctrl-C quit bindings in user applications. You may remap keys in
-// your model's HandleEvent and implement copying to the clipboard. Note
+// your model's Update and implement copying to the clipboard. Note
 // that using your terminal's /
 // operating system's key bindings for copy+paste functionality may not have the
 // expected effect as tview will not be able to handle these keys. Pasting text
@@ -2427,8 +2427,8 @@ func (t *TextArea) handlePasteEvent(event *PasteEvent) Cmd {
 	return nil
 }
 
-// HandleEvent handles input events for this model.
-func (t *TextArea) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (t *TextArea) Update(event Event) Cmd {
 	switch event := event.(type) {
 	case *KeyEvent:
 		return t.handleKeyEvent(event)

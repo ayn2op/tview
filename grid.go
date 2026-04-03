@@ -681,8 +681,8 @@ ItemLoop:
 	}
 }
 
-// HandleEvent handles input events for this model.
-func (g *Grid) HandleEvent(event Event) Cmd {
+// Update handles input events for this model.
+func (g *Grid) Update(event Event) Cmd {
 	switch event := event.(type) {
 	case *MouseEvent:
 		if !g.InRect(event.Position()) {
@@ -694,7 +694,7 @@ func (g *Grid) HandleEvent(event Event) Cmd {
 			if item.Item == nil {
 				continue
 			}
-			if cmd := item.Item.HandleEvent(event); cmd != nil {
+			if cmd := item.Item.Update(event); cmd != nil {
 				return cmd
 			}
 		}
@@ -704,7 +704,7 @@ func (g *Grid) HandleEvent(event Event) Cmd {
 			// Pass event on to child model.
 			for _, item := range g.items {
 				if item != nil && item.Item.HasFocus() {
-					return item.Item.HandleEvent(event)
+					return item.Item.Update(event)
 				}
 			}
 			return nil
@@ -748,7 +748,7 @@ func (g *Grid) HandleEvent(event Event) Cmd {
 	// Forward events to the focused child.
 	for _, item := range g.items {
 		if item != nil && item.Item.HasFocus() {
-			return item.Item.HandleEvent(event)
+			return item.Item.Update(event)
 		}
 	}
 	return nil

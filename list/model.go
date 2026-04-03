@@ -882,8 +882,8 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 	return 0, 0
 }
 
-// HandleEvent handles input events for this model.
-func (l *Model) HandleEvent(event tview.Event) tview.Cmd {
+// Update handles input events for this model.
+func (l *Model) Update(event tview.Event) tview.Cmd {
 	switch event := event.(type) {
 	case *tview.KeyEvent:
 		switch {

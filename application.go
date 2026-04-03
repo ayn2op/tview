@@ -1,6 +1,10 @@
 package tview
 
 import (
+	"errors"
+	"fmt"
+	"os"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -71,6 +75,7 @@ type Application struct {
 	root Model
 
 	events chan Event
+	cmds   chan Cmd
 
 	// Functions queued from goroutines, used to serialize updates to models.
 	updates chan queuedUpdate
@@ -83,12 +88,16 @@ type Application struct {
 
 	// forceRedraw requests a full clear before the next frame.
 	forceRedraw bool
+
+	catchPanics bool
 }
 
 // NewApplication creates and returns a new application.
 func NewApplication() *Application {
 	return &Application{
-		updates: make(chan queuedUpdate, updatesQueueSize),
+		updates:     make(chan queuedUpdate, updatesQueueSize),
+		cmds:        make(chan Cmd),
+		catchPanics: true,
 	}
 }
 
@@ -100,6 +109,14 @@ func (a *Application) SetScreen(screen tcell.Screen) *Application {
 		a.screen = screen
 		a.forceRedraw = true
 	}
+	return a
+}
+
+// SetCatchPanics sets whether cmd panics should be recovered.
+func (a *Application) SetCatchPanics(catchPanics bool) *Application {
+	a.Lock()
+	defer a.Unlock()
+	a.catchPanics = catchPanics
 	return a
 }
 
@@ -131,6 +148,7 @@ func (a *Application) Run() error {
 		}
 		a.screen = screen
 	}
+	a.cmds = make(chan Cmd)
 	a.Unlock()
 
 	defer a.stop()
@@ -142,6 +160,8 @@ func (a *Application) Run() error {
 		}
 	}()
 
+	go a.handleCmds()
+
 	a.Lock()
 	a.events = a.screen.EventQ()
 	a.Unlock()
@@ -152,11 +172,7 @@ func (a *Application) Run() error {
 
 	if root != nil {
 		if cmd := root.Update(&InitEvent{}); cmd != nil {
-			go func() {
-				if event := cmd(); event != nil {
-					a.QueueEvent(event)
-				}
-			}()
+			a.cmds <- cmd
 		}
 		a.draw()
 	}
@@ -178,14 +194,13 @@ EventLoop:
 			switch event := event.(type) {
 			case *quitEvent:
 				break EventLoop
+			case *tcell.EventError:
+				return event
+
 			case *batchEvent:
 				for _, cmd := range event.cmds {
 					if cmd != nil {
-						go func() {
-							if event := cmd(); event != nil {
-								a.QueueEvent(event)
-							}
-						}()
+						a.cmds <- cmd
 					}
 				}
 
@@ -224,11 +239,7 @@ EventLoop:
 				// Pass other key events to the root model.
 				if root != nil && root.HasFocus() {
 					if cmd := root.Update(event); cmd != nil {
-						go func() {
-							if event := cmd(); event != nil {
-								a.QueueEvent(event)
-							}
-						}()
+						a.cmds <- cmd
 					}
 				}
 			case *tcell.EventPaste:
@@ -243,11 +254,7 @@ EventLoop:
 					if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
 						// Pass paste event to the root model.
 						if cmd := root.Update(newPasteEvent(pasteBuffer.String())); cmd != nil {
-							go func() {
-								if event := cmd(); event != nil {
-									a.QueueEvent(event)
-								}
-							}()
+							a.cmds <- cmd
 						}
 					}
 				}
@@ -278,11 +285,7 @@ EventLoop:
 				a.RUnlock()
 				if root != nil {
 					if cmd := root.Update(event); cmd != nil {
-						go func() {
-							if event := cmd(); event != nil {
-								a.QueueEvent(event)
-							}
-						}()
+						a.cmds <- cmd
 					}
 				}
 			}
@@ -298,6 +301,29 @@ EventLoop:
 		}
 	}
 	return nil
+}
+
+func (a *Application) handleCmds() {
+	for cmd := range a.cmds {
+		if cmd == nil {
+			continue
+		}
+
+		go func() {
+			if a.catchPanics {
+				defer func() {
+					if r := recover(); r != nil {
+						text := fmt.Sprintf("goroutine panicked: %v", r)
+						fmt.Fprintf(os.Stderr, "%s\nstack trace:\n%s\n", text, debug.Stack())
+						a.QueueEvent(tcell.NewEventError(errors.New(text)))
+					}
+				}()
+			}
+			if event := cmd(); event != nil {
+				a.QueueEvent(event)
+			}
+		}()
+	}
 }
 
 // fireMouseActions analyzes the provided mouse event, derives mouse actions
@@ -325,11 +351,7 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 		}
 		if model != nil {
 			if cmd := model.Update(newMouseEvent(*event, action)); cmd != nil {
-				go func() {
-					if event := cmd(); event != nil {
-						a.QueueEvent(event)
-					}
-				}()
+				a.cmds <- cmd
 			}
 		}
 	}
@@ -397,6 +419,7 @@ func (a *Application) stop() {
 	}
 	screen.Fini()
 	a.screen = nil
+	close(a.cmds)
 }
 
 // Suspend temporarily suspends the application by exiting terminal UI mode and

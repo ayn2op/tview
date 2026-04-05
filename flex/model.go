@@ -236,10 +236,10 @@ func (m *Model) HasFocus() bool {
 }
 
 // Update handles input events for this model.
-func (m *Model) Update(event tview.Event) tview.Cmd {
-	switch event := event.(type) {
-	case *tview.MouseEvent:
-		if !m.InRect(event.Position()) {
+func (m *Model) Update(msg tview.Msg) tview.Cmd {
+	switch msg := msg.(type) {
+	case *tview.MouseMsg:
+		if !m.InRect(msg.Position()) {
 			return nil
 		}
 
@@ -248,7 +248,7 @@ func (m *Model) Update(event tview.Event) tview.Cmd {
 			if item.Item == nil {
 				continue
 			}
-			childCmds := item.Item.Update(event)
+			childCmds := item.Item.Update(msg)
 			if childCmds != nil {
 				return childCmds
 			}
@@ -259,7 +259,7 @@ func (m *Model) Update(event tview.Event) tview.Cmd {
 	// Forward events to the focused child.
 	for _, item := range m.items {
 		if item.Item != nil && item.Item.HasFocus() {
-			return item.Item.Update(event)
+			return item.Item.Update(msg)
 		}
 	}
 	return nil

@@ -59,12 +59,14 @@ type Help struct {
 	Desc string
 }
 
-func Matches(event *tcell.EventKey, keybinds ...Keybind) bool {
-	if event == nil {
+type KeyMsg = tcell.EventKey
+
+func Matches(msg *KeyMsg, keybinds ...Keybind) bool {
+	if msg == nil {
 		return false
 	}
 
-	key := eventKeyString(event)
+	key := keyMsgString(msg)
 	for _, keybind := range keybinds {
 		if slices.Contains(keybind.keys, key) {
 			return true
@@ -176,35 +178,35 @@ func uniqueOrdered(in []string) []string {
 	return out
 }
 
-func eventKeyString(event *tcell.EventKey) string {
-	if event == nil {
+func keyMsgString(msg *KeyMsg) string {
+	if msg == nil {
 		return ""
 	}
 
-	key := event.Key()
+	key := msg.Key()
 	if key >= tcell.KeyCtrlA && key <= tcell.KeyCtrlZ {
 		return "ctrl+" + string(rune('a'+(key-tcell.KeyCtrlA)))
 	}
 
 	primary := keyName(key)
 	if primary == "" && key == tcell.KeyRune {
-		primary = event.Str()
+		primary = msg.Str()
 	}
 	if primary == "" {
-		return normalizeKey(event.Name())
+		return normalizeKey(msg.Name())
 	}
 
 	mods := make([]string, 0, 4)
-	if event.Modifiers()&tcell.ModCtrl != 0 {
+	if msg.Modifiers()&tcell.ModCtrl != 0 {
 		mods = append(mods, "ctrl")
 	}
-	if event.Modifiers()&tcell.ModAlt != 0 {
+	if msg.Modifiers()&tcell.ModAlt != 0 {
 		mods = append(mods, "alt")
 	}
-	if event.Modifiers()&tcell.ModShift != 0 {
+	if msg.Modifiers()&tcell.ModShift != 0 {
 		mods = append(mods, "shift")
 	}
-	if event.Modifiers()&tcell.ModMeta != 0 {
+	if msg.Modifiers()&tcell.ModMeta != 0 {
 		mods = append(mods, "meta")
 	}
 	if len(mods) == 0 {

@@ -74,41 +74,41 @@ func (m *Model) Blur() {
 	m.Box.Blur()
 }
 
-func (m *Model) Update(event tview.Event) tview.Cmd {
+func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	if len(m.tabs) == 0 {
 		return nil
 	}
 
-	switch event := event.(type) {
-	case *tview.InitEvent:
+	switch msg := msg.(type) {
+	case *tview.InitMsg:
 		return m.activateTab()
-	case *tview.KeyEvent:
+	case *tview.KeyMsg:
 		switch {
-		case keybind.Matches(event, m.keybinds.Previous):
+		case keybind.Matches(msg, m.keybinds.Previous):
 			if !m.canPrevious() {
-				return m.tabs[m.active].Update(event)
+				return m.tabs[m.active].Update(msg)
 			}
 			m.Previous()
 			return m.activateTab()
-		case keybind.Matches(event, m.keybinds.Next):
+		case keybind.Matches(msg, m.keybinds.Next):
 			if !m.canNext() {
-				return m.tabs[m.active].Update(event)
+				return m.tabs[m.active].Update(msg)
 			}
 			m.Next()
 			return m.activateTab()
 		}
-	case *tview.MouseEvent:
-		x, y := event.Position()
+	case *tview.MouseMsg:
+		x, y := msg.Position()
 		if !m.InRect(x, y) {
 			return nil
 		}
 
-		if event.Action == tview.MouseLeftDown {
+		if msg.Action == tview.MouseLeftDown {
 			return tview.SetFocus(m)
 		}
 
 		if tab, ok := m.tabAt(x, y); ok {
-			switch event.Action {
+			switch msg.Action {
 			case tview.MouseLeftClick:
 				if tab == m.active {
 					return tview.SetFocus(m)
@@ -130,7 +130,7 @@ func (m *Model) Update(event tview.Event) tview.Cmd {
 			}
 		}
 	}
-	return m.tabs[m.active].Update(event)
+	return m.tabs[m.active].Update(msg)
 }
 
 func (m *Model) Draw(screen tcell.Screen) {
@@ -166,7 +166,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 
 func (m *Model) activateTab() tview.Cmd {
 	return tview.Batch(
-		m.tabs[m.active].Update(&tview.InitEvent{}),
+		m.tabs[m.active].Update(&tview.InitMsg{}),
 		tview.SetFocus(m),
 	)
 }

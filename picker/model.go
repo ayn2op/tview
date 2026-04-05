@@ -130,32 +130,32 @@ func (m *Model) onInputChanged(text string) {
 	m.setFilteredItems(fuzzied)
 }
 
-func (m *Model) Update(event tview.Event) tview.Cmd {
-	switch event := event.(type) {
-	case *tview.KeyEvent:
+func (m *Model) Update(msg tview.Msg) tview.Cmd {
+	switch msg := msg.(type) {
+	case *tview.KeyMsg:
 		switch {
-		case keybind.Matches(event, m.keybinds.SelectUp):
-			return m.list.Update(event)
-		case keybind.Matches(event, m.keybinds.SelectDown):
-			return m.list.Update(event)
-		case keybind.Matches(event, m.keybinds.SelectTop):
+		case keybind.Matches(msg, m.keybinds.SelectUp):
+			return m.list.Update(msg)
+		case keybind.Matches(msg, m.keybinds.SelectDown):
+			return m.list.Update(msg)
+		case keybind.Matches(msg, m.keybinds.SelectTop):
 			if len(m.filtered) > 0 {
 				m.list.SetCursor(0)
 			}
 			return nil
-		case keybind.Matches(event, m.keybinds.SelectBottom):
+		case keybind.Matches(msg, m.keybinds.SelectBottom):
 			if len(m.filtered) > 0 {
 				m.list.SetCursor(len(m.filtered) - 1)
 			}
 			return nil
 
-		case keybind.Matches(event, m.keybinds.Select):
+		case keybind.Matches(msg, m.keybinds.Select):
 			return m.selectItem()
-		case keybind.Matches(event, m.keybinds.Cancel):
+		case keybind.Matches(msg, m.keybinds.Cancel):
 			return cancel()
 		}
 
-		return m.Model.Update(event)
+		return m.Model.Update(msg)
 	}
-	return m.Model.Update(event)
+	return m.Model.Update(msg)
 }

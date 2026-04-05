@@ -682,10 +682,10 @@ ItemLoop:
 }
 
 // Update handles input events for this model.
-func (g *Grid) Update(event Event) Cmd {
-	switch event := event.(type) {
-	case *MouseEvent:
-		if !g.InRect(event.Position()) {
+func (g *Grid) Update(msg Msg) Cmd {
+	switch msg := msg.(type) {
+	case *MouseMsg:
+		if !g.InRect(msg.Position()) {
 			return nil
 		}
 
@@ -694,26 +694,26 @@ func (g *Grid) Update(event Event) Cmd {
 			if item.Item == nil {
 				continue
 			}
-			if cmd := item.Item.Update(event); cmd != nil {
+			if cmd := item.Item.Update(msg); cmd != nil {
 				return cmd
 			}
 		}
-	case *KeyEvent:
+	case *KeyMsg:
 		previousRowOffset, previousColumnOffset := g.rowOffset, g.columnOffset
 		if !g.hasFocus {
 			// Pass event on to child model.
 			for _, item := range g.items {
 				if item != nil && item.Item.HasFocus() {
-					return item.Item.Update(event)
+					return item.Item.Update(msg)
 				}
 			}
 			return nil
 		}
 
 		// Process our own key events if we have direct focus.
-		switch event.Key() {
+		switch msg.Key() {
 		case tcell.KeyRune:
-			switch event.Str() {
+			switch msg.Str() {
 			case "g":
 				g.rowOffset, g.columnOffset = 0, 0
 			case "G":
@@ -748,7 +748,7 @@ func (g *Grid) Update(event Event) Cmd {
 	// Forward events to the focused child.
 	for _, item := range g.items {
 		if item != nil && item.Item.HasFocus() {
-			return item.Item.Update(event)
+			return item.Item.Update(msg)
 		}
 	}
 	return nil

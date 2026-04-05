@@ -329,7 +329,7 @@ type TextArea struct {
 	// been performed yet, this is the same as len(undoStack).
 	nextUndo int
 
-	// Event handlers:
+	// Message handlers:
 
 	// An optional function which is called when the input has changed.
 	changed func()
@@ -1942,7 +1942,7 @@ func (t *TextArea) getSelectedText() string {
 	return text.String()
 }
 
-func (t *TextArea) handleKeyEvent(event *tcell.EventKey) Cmd {
+func (t *TextArea) handleKeyMsg(event *KeyMsg) Cmd {
 	if t.disabled {
 		return nil
 	}
@@ -2326,16 +2326,16 @@ func (t *TextArea) handleKeyEvent(event *tcell.EventKey) Cmd {
 	return cmd
 }
 
-func (t *TextArea) handleMouseEvent(event *MouseEvent) Cmd {
+func (t *TextArea) handleMouseMsg(msg *MouseMsg) Cmd {
 	if t.disabled {
 		return nil
 	}
 
-	x, y := event.Position()
+	x, y := msg.Position()
 	rectX, rectY, _, _ := t.InnerRect()
 	if !t.InRect(x, y) {
 		if t.dragging {
-			if event.Action == MouseLeftUp {
+			if msg.Action == MouseLeftUp {
 				t.dragging = false
 			}
 			return SetMouseCapture(nil)
@@ -2367,10 +2367,10 @@ func (t *TextArea) handleMouseEvent(event *MouseEvent) Cmd {
 
 	// Process mouse actions.
 	var cmds []Cmd
-	switch event.Action {
+	switch msg.Action {
 	case MouseLeftDown:
 		t.moveCursor(row, column)
-		if event.Modifiers()&tcell.ModShift == 0 {
+		if msg.Modifiers()&tcell.ModShift == 0 {
 			t.selectionStart = t.cursor
 		}
 		cmds = append(cmds, SetFocus(t), SetMouseCapture(t))
@@ -2417,9 +2417,9 @@ func (t *TextArea) handleMouseEvent(event *MouseEvent) Cmd {
 	return Batch(cmds...)
 }
 
-func (t *TextArea) handlePasteEvent(event *PasteEvent) Cmd {
+func (t *TextArea) handlePasteMsg(msg *PasteMsg) Cmd {
 	from, to, row := t.getSelection()
-	t.cursor.pos = t.replace(from, to, event.Content, false)
+	t.cursor.pos = t.replace(from, to, msg.Content, false)
 	t.cursor.row = -1
 	t.truncateLines(row - 1)
 	t.findCursor(true, row)
@@ -2428,14 +2428,14 @@ func (t *TextArea) handlePasteEvent(event *PasteEvent) Cmd {
 }
 
 // Update handles input events for this model.
-func (t *TextArea) Update(event Event) Cmd {
-	switch event := event.(type) {
-	case *KeyEvent:
-		return t.handleKeyEvent(event)
-	case *MouseEvent:
-		return t.handleMouseEvent(event)
-	case *PasteEvent:
-		return t.handlePasteEvent(event)
+func (t *TextArea) Update(msg Msg) Cmd {
+	switch msg := msg.(type) {
+	case *KeyMsg:
+		return t.handleKeyMsg(msg)
+	case *MouseMsg:
+		return t.handleMouseMsg(msg)
+	case *PasteMsg:
+		return t.handlePasteMsg(msg)
 	}
 	return nil
 }

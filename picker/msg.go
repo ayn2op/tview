@@ -5,30 +5,30 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
-type SelectedEvent struct {
+type SelectedMsg struct {
 	tcell.EventTime
 	Item
 }
 
-func newSelectedEvent(item Item) *SelectedEvent {
-	return &SelectedEvent{Item: item}
+func newSelectedMsg(item Item) *SelectedMsg {
+	return &SelectedMsg{Item: item}
 }
 
 func (m *Model) selectItem() tview.Cmd {
 	index := m.list.Cursor()
 	if index >= 0 && index < len(m.filtered) {
 		item := m.filtered[index]
-		return func() tview.Event {
-			return newSelectedEvent(item)
+		return func() tview.Msg {
+			return newSelectedMsg(item)
 		}
 	}
 	return nil
 }
 
-type CancelEvent struct{ tcell.EventTime }
+type CancelMsg struct{ tcell.EventTime }
 
 func cancel() tview.Cmd {
-	return func() tview.Event {
-		return &CancelEvent{}
+	return func() tview.Msg {
+		return &CancelMsg{}
 	}
 }

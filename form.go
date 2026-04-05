@@ -111,20 +111,20 @@ type Form struct {
 	cancelRequested bool
 }
 
-type FormSubmitEvent struct {
+type FormSubmitMsg struct {
 	tcell.EventTime
 	ButtonIndex int
 	ButtonLabel string
 }
 
-func newFormSubmitEvent(buttonIndex int, buttonLabel string) *FormSubmitEvent {
-	return &FormSubmitEvent{
+func newFormSubmitMsg(buttonIndex int, buttonLabel string) *FormSubmitMsg {
+	return &FormSubmitMsg{
 		ButtonIndex: buttonIndex,
 		ButtonLabel: buttonLabel,
 	}
 }
 
-type FormCancelEvent struct{ tcell.EventTime }
+type FormCancelMsg struct{ tcell.EventTime }
 
 // NewForm returns a new form.
 func NewForm() *Form {
@@ -737,12 +737,12 @@ func (f *Form) finished(key tcell.Key) {
 	}
 }
 
-func (f *Form) consumeCancelEvent(cmd Cmd) Cmd {
+func (f *Form) consumeCancelMsg(cmd Cmd) Cmd {
 	if !f.cancelRequested {
 		return cmd
 	}
 	f.cancelRequested = false
-	cancelCmd := func() Event { return &FormCancelEvent{} }
+	cancelCmd := func() Msg { return &FormCancelMsg{} }
 	if cmd == nil {
 		return cancelCmd
 	}
@@ -775,57 +775,57 @@ func (f *Form) HasFocus() bool {
 }
 
 // Update handles input events for this model.
-func (f *Form) Update(event Event) Cmd {
-	switch event := event.(type) {
-	case *ButtonExitEvent:
-		f.finished(event.Key)
-		return f.consumeCancelEvent(nil)
-	case *MouseEvent:
+func (f *Form) Update(msg Msg) Cmd {
+	switch msg := msg.(type) {
+	case *ButtonExitMsg:
+		f.finished(msg.Key)
+		return f.consumeCancelMsg(nil)
+	case *MouseMsg:
 		// Determine items to pass mouse events to.
 		for _, item := range f.items {
 			if item.GetDisabled() {
 				continue
 			}
-			childCmds := item.Update(event)
+			childCmds := item.Update(msg)
 			if childCmds != nil {
-				return f.consumeCancelEvent(childCmds)
+				return f.consumeCancelMsg(childCmds)
 			}
 		}
 		for index, button := range f.buttons {
 			if button.GetDisabled() {
 				continue
 			}
-			if !button.InRect(event.Position()) {
+			if !button.InRect(msg.Position()) {
 				continue
 			}
-			switch event.Action {
+			switch msg.Action {
 			case MouseLeftDown:
 				return SetFocus(button)
 			case MouseLeftClick:
 				buttonIndex := index
 				buttonLabel := button.GetLabel()
 				return Batch(
-					func() Event {
-						return newFormSubmitEvent(buttonIndex, buttonLabel)
+					func() Msg {
+						return newFormSubmitMsg(buttonIndex, buttonLabel)
 					},
 					nil,
 				)
 			default:
-				childCmds := button.Update(event)
+				childCmds := button.Update(msg)
 				if childCmds != nil {
-					return f.consumeCancelEvent(childCmds)
+					return f.consumeCancelMsg(childCmds)
 				}
 			}
 		}
 
 		// A mouse down anywhere else will focus this form.
-		if event.Action == MouseLeftDown && f.InRect(event.Position()) {
+		if msg.Action == MouseLeftDown && f.InRect(msg.Position()) {
 			return SetFocus(f)
 		}
-	case *KeyEvent, *PasteEvent:
+	case *KeyMsg, *PasteMsg:
 		for _, item := range f.items {
 			if item.HasFocus() {
-				return f.consumeCancelEvent(item.Update(event))
+				return f.consumeCancelMsg(item.Update(msg))
 			}
 		}
 
@@ -833,18 +833,18 @@ func (f *Form) Update(event Event) Cmd {
 			if !button.HasFocus() {
 				continue
 			}
-			if keyEvent, ok := event.(*KeyEvent); ok && keyEvent.Key() == tcell.KeyEnter {
+			if keyMsg, ok := msg.(*KeyMsg); ok && keyMsg.Key() == tcell.KeyEnter {
 				buttonIndex := index
 				buttonLabel := button.GetLabel()
 				return Batch(
-					func() Event {
-						return newFormSubmitEvent(buttonIndex, buttonLabel)
+					func() Msg {
+						return newFormSubmitMsg(buttonIndex, buttonLabel)
 					},
 					nil,
 				)
 			}
-			return f.consumeCancelEvent(button.Update(event))
+			return f.consumeCancelMsg(button.Update(msg))
 		}
 	}
-	return f.consumeCancelEvent(nil)
+	return f.consumeCancelMsg(nil)
 }

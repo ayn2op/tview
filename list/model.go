@@ -883,40 +883,40 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 }
 
 // Update handles input events for this model.
-func (l *Model) Update(event tview.Event) tview.Cmd {
-	switch event := event.(type) {
-	case *tview.KeyEvent:
+func (l *Model) Update(msg tview.Msg) tview.Cmd {
+	switch msg := msg.(type) {
+	case *tview.KeyMsg:
 		switch {
-		case keybind.Matches(event, l.keybinds.SelectDown):
+		case keybind.Matches(msg, l.keybinds.SelectDown):
 			l.NextItem()
-		case keybind.Matches(event, l.keybinds.SelectUp):
+		case keybind.Matches(msg, l.keybinds.SelectUp):
 			l.PrevItem()
-		case keybind.Matches(event, l.keybinds.SelectTop):
+		case keybind.Matches(msg, l.keybinds.SelectTop):
 			if l.builder != nil && l.builder(0, l.cursor) != nil {
 				l.SetCursor(0)
 			}
-		case keybind.Matches(event, l.keybinds.SelectBottom):
+		case keybind.Matches(msg, l.keybinds.SelectBottom):
 			if last := l.lastIndex(); last >= 0 {
 				l.SetCursor(last)
 			}
-		case keybind.Matches(event, l.keybinds.ScrollDown):
+		case keybind.Matches(msg, l.keybinds.ScrollDown):
 			l.ScrollDown()
-		case keybind.Matches(event, l.keybinds.ScrollUp):
+		case keybind.Matches(msg, l.keybinds.ScrollUp):
 			l.ScrollUp()
-		case keybind.Matches(event, l.keybinds.ScrollTop):
+		case keybind.Matches(msg, l.keybinds.ScrollTop):
 			l.ScrollTop()
-		case keybind.Matches(event, l.keybinds.ScrollBottom):
+		case keybind.Matches(msg, l.keybinds.ScrollBottom):
 			l.ScrollBottom()
 		}
 		return nil
-	case *tview.MouseEvent:
+	case *tview.MouseMsg:
 		var cmd tview.Cmd
-		x, y := event.Position()
+		x, y := msg.Position()
 		if l.scrollBarInteraction.dragDelta >= 0 {
 			_, innerY, innerWidth, innerHeight := l.InnerRect()
 			contentWidth, _ := l.scrollBarLayout(0, innerWidth)
 			row := y - innerY
-			switch event.Action {
+			switch msg.Action {
 			case tview.MouseMove:
 				l.dragScrollBarTo(row, innerHeight, contentWidth)
 				return tview.SetMouseCapture(nil)
@@ -940,7 +940,7 @@ func (l *Model) Update(event tview.Event) tview.Cmd {
 		drawScrollBar := l.shouldDrawScrollBar(innerWidth, innerHeight)
 		if drawScrollBar && x == scrollBarX && y >= innerY && y < innerY+innerHeight {
 			row := y - innerY
-			switch event.Action {
+			switch msg.Action {
 			case tview.MouseLeftDown:
 				cmd = tview.SetFocus(l)
 				if l.startScrollBarDrag(row, innerHeight, contentWidth) {
@@ -953,15 +953,15 @@ func (l *Model) Update(event tview.Event) tview.Cmd {
 					return nil
 				}
 			}
-			if l.handleScrollBarMouse(event.Action, row, innerHeight, contentWidth) {
+			if l.handleScrollBarMouse(msg.Action, row, innerHeight, contentWidth) {
 				return nil
 			}
-			if event.Action == tview.MouseLeftClick {
+			if msg.Action == tview.MouseLeftClick {
 				return nil
 			}
 		}
 
-		switch event.Action {
+		switch msg.Action {
 		case tview.MouseLeftClick:
 			index := l.indexAtPoint(x, y)
 			if index >= 0 {

@@ -25,14 +25,14 @@ type Modal struct {
 	textColor tcell.Color
 }
 
-type ModalDoneEvent struct {
+type ModalDoneMsg struct {
 	tcell.EventTime
 	ButtonIndex int
 	ButtonLabel string
 }
 
-func newModalDoneEvent(buttonIndex int, buttonLabel string) *ModalDoneEvent {
-	return &ModalDoneEvent{
+func newModalDoneMsg(buttonIndex int, buttonLabel string) *ModalDoneMsg {
+	return &ModalDoneMsg{
 		ButtonIndex: buttonIndex,
 		ButtonLabel: buttonLabel,
 	}
@@ -158,42 +158,42 @@ func (m *Modal) Draw(screen tcell.Screen) {
 }
 
 // Update handles input events for this model.
-func (m *Modal) Update(event Event) Cmd {
-	switch event := event.(type) {
-	case *FormSubmitEvent:
-		buttonIndex := event.ButtonIndex
-		buttonLabel := event.ButtonLabel
-		return func() Event {
-			return newModalDoneEvent(buttonIndex, buttonLabel)
+func (m *Modal) Update(msg Msg) Cmd {
+	switch msg := msg.(type) {
+	case *FormSubmitMsg:
+		buttonIndex := msg.ButtonIndex
+		buttonLabel := msg.ButtonLabel
+		return func() Msg {
+			return newModalDoneMsg(buttonIndex, buttonLabel)
 		}
-	case *FormCancelEvent:
-		return func() Event {
-			return newModalDoneEvent(-1, "")
+	case *FormCancelMsg:
+		return func() Msg {
+			return newModalDoneMsg(-1, "")
 		}
-	case *ButtonExitEvent:
-		return m.form.Update(event)
-	case *MouseEvent:
+	case *ButtonExitMsg:
+		return m.form.Update(msg)
+	case *MouseMsg:
 		// Pass mouse events on to the form.
-		cmd := m.form.Update(event)
-		if cmd == nil && event.Action == MouseLeftDown && m.InRect(event.Position()) {
+		cmd := m.form.Update(msg)
+		if cmd == nil && msg.Action == MouseLeftDown && m.InRect(msg.Position()) {
 			cmd = SetFocus(m)
 		}
 		return cmd
-	case *KeyEvent:
+	case *KeyMsg:
 		// Keep arrow-key navigation between modal buttons.
-		switch event.Key() {
+		switch msg.Key() {
 		case tcell.KeyDown, tcell.KeyRight:
-			event = tcell.NewEventKey(tcell.KeyTab, "", tcell.ModNone)
+			msg = tcell.NewEventKey(tcell.KeyTab, "", tcell.ModNone)
 		case tcell.KeyUp, tcell.KeyLeft:
-			event = tcell.NewEventKey(tcell.KeyBacktab, "", tcell.ModNone)
+			msg = tcell.NewEventKey(tcell.KeyBacktab, "", tcell.ModNone)
 		}
 		// Forward the key event to the frame so the focused form button receives Tab/Backtab and Form.finished can move focus to the next/previous button.
 		if m.frame.HasFocus() {
-			return m.frame.Update(event)
+			return m.frame.Update(msg)
 		}
-	case *PasteEvent:
+	case *PasteMsg:
 		if m.frame.HasFocus() {
-			return m.frame.Update(event)
+			return m.frame.Update(msg)
 		}
 	}
 	return nil

@@ -190,30 +190,30 @@ func (f *Frame) HasFocus() bool {
 }
 
 // Update handles input events for this model.
-func (f *Frame) Update(event Event) Cmd {
-	switch event := event.(type) {
-	case *MouseEvent:
-		if !f.InRect(event.Position()) {
+func (f *Frame) Update(msg Msg) Cmd {
+	switch msg := msg.(type) {
+	case *MouseMsg:
+		if !f.InRect(msg.Position()) {
 			return nil
 		}
 
 		// Pass mouse events on to contained model.
 		if f.primitive != nil {
-			childCmds := f.primitive.Update(event)
+			childCmds := f.primitive.Update(msg)
 			if childCmds != nil {
 				return childCmds
 			}
 		}
 
 		// Clicking on the frame parts.
-		if event.Action == MouseLeftDown {
+		if msg.Action == MouseLeftDown {
 			return SetFocus(f)
 		}
-	case *KeyEvent, *PasteEvent:
+	case *KeyMsg, *PasteMsg:
 		if f.primitive == nil {
 			return nil
 		}
-		return f.primitive.Update(event)
+		return f.primitive.Update(msg)
 	}
 	return nil
 }

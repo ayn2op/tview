@@ -7,9 +7,9 @@ type Model interface {
 	// Draw draws this model onto the screen. Implementers can call the
 	// screen's ShowCursor() function but should only do so when they have focus.
 	// (They will need to keep track of this themselves.)
-	Draw(screen tcell.Screen)
-	// Update receives events when this model has focus.
-	Update(event Event) Cmd
+	Draw(tcell.Screen)
+	// Update receives messages when this model has focus.
+	Update(Msg) Cmd
 
 	// Rect returns the current position of the model, x, y, width, and
 	// height.

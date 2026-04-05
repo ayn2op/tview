@@ -150,10 +150,10 @@ func (b *Box) SetRect(x, y, width, height int) {
 }
 
 // Update handles input events for this model.
-func (b *Box) Update(event Event) Cmd {
-	switch event := event.(type) {
-	case *MouseEvent:
-		if event.Action == MouseLeftDown && b.InRect(event.Position()) {
+func (b *Box) Update(msg Msg) Cmd {
+	switch msg := msg.(type) {
+	case *MouseMsg:
+		if msg.Action == MouseLeftDown && b.InRect(msg.Position()) {
 			return SetFocus(b)
 		}
 	}

@@ -2,12 +2,12 @@ package tview
 
 import "github.com/gdamore/tcell/v3"
 
-type Event = tcell.Event
+type Msg = tcell.Event
 
 // Cmd is a side effect requested by a model during input handling.
-type Cmd func() Event
+type Cmd func() Msg
 
-type batchEvent struct {
+type batchMsg struct {
 	tcell.EventTime
 	cmds []Cmd
 }
@@ -27,101 +27,93 @@ func Batch(cmds ...Cmd) Cmd {
 	case 1:
 		return valid[0]
 	default:
-		return func() Event {
-			return &batchEvent{cmds: valid}
+		return func() Msg {
+			return &batchMsg{cmds: valid}
 		}
 	}
 }
 
-type InitEvent struct{ tcell.EventTime }
+type InitMsg struct{ tcell.EventTime }
 
-type KeyEvent = tcell.EventKey
+type KeyMsg = tcell.EventKey
 
-type MouseEvent struct {
+type MouseMsg struct {
 	tcell.EventMouse
 	Action MouseAction
 }
 
-func newMouseEvent(mouseEvent tcell.EventMouse, action MouseAction) *MouseEvent {
-	return &MouseEvent{mouseEvent, action}
-}
-
-type PasteEvent struct {
+type PasteMsg struct {
 	tcell.EventTime
 	Content string
 }
 
-func newPasteEvent(content string) *PasteEvent {
-	return &PasteEvent{Content: content}
-}
-
-type quitEvent struct{ tcell.EventTime }
+type quitMsg struct{ tcell.EventTime }
 
 func Quit() Cmd {
-	return func() Event {
-		return &quitEvent{}
+	return func() Msg {
+		return &quitMsg{}
 	}
 }
 
-type setFocusEvent struct {
+type setFocusMsg struct {
 	tcell.EventTime
 	target Model
 }
 
 func SetFocus(target Model) Cmd {
-	return func() Event {
-		return &setFocusEvent{target: target}
+	return func() Msg {
+		return &setFocusMsg{target: target}
 	}
 }
 
-type setMouseCaptureEvent struct {
+type setMouseCaptureMsg struct {
 	tcell.EventTime
 	target Model
 }
 
 func SetMouseCapture(target Model) Cmd {
-	return func() Event {
-		return &setMouseCaptureEvent{target: target}
+	return func() Msg {
+		return &setMouseCaptureMsg{target: target}
 	}
 }
 
-type setTitleEvent struct {
+type setTitleMsg struct {
 	tcell.EventTime
 	title string
 }
 
 func SetTitle(title string) Cmd {
-	return func() Event {
-		return &setTitleEvent{title: title}
+	return func() Msg {
+		return &setTitleMsg{title: title}
 	}
 }
 
-type getClipboardEvent struct{ tcell.EventTime }
+type getClipboardMsg struct{ tcell.EventTime }
 
 func GetClipboard() Cmd {
-	return func() Event {
-		return &getClipboardEvent{}
+	return func() Msg {
+		return &getClipboardMsg{}
 	}
 }
 
-type setClipboardEvent struct {
+type setClipboardMsg struct {
 	tcell.EventTime
 	data []byte
 }
 
 func SetClipboard(data []byte) Cmd {
-	return func() Event {
-		return &setClipboardEvent{data: data}
+	return func() Msg {
+		return &setClipboardMsg{data: data}
 	}
 }
 
-type notifyEvent struct {
+type notifyMsg struct {
 	tcell.EventTime
 	title, body string
 }
 
 func Notify(title, body string) Cmd {
-	return func() Event {
-		return &notifyEvent{title: title, body: body}
+	return func() Msg {
+		return &notifyMsg{title: title, body: body}
 	}
 }

@@ -310,17 +310,17 @@ func (c *Checkbox) Draw(screen tcell.Screen) {
 }
 
 // Update handles input events for this model.
-func (c *Checkbox) Update(event Event) Cmd {
+func (c *Checkbox) Update(msg Msg) Cmd {
 	if c.disabled {
 		return nil
 	}
 
-	switch event := event.(type) {
-	case *KeyEvent:
+	switch msg := msg.(type) {
+	case *KeyMsg:
 		// Process key event.
-		switch key := event.Key(); key {
+		switch key := msg.Key(); key {
 		case tcell.KeyRune, tcell.KeyEnter: // Check.
-			if key == tcell.KeyRune && event.Str() != " " {
+			if key == tcell.KeyRune && msg.Str() != " " {
 				break
 			}
 			c.SetChecked(!c.checked)
@@ -333,8 +333,8 @@ func (c *Checkbox) Update(event Event) Cmd {
 			}
 		}
 		return nil
-	case *MouseEvent:
-		x, y := event.Position()
+	case *MouseMsg:
+		x, y := msg.Position()
 		_, rectY, _, _ := c.InnerRect()
 		if !c.InRect(x, y) {
 			return nil
@@ -342,7 +342,7 @@ func (c *Checkbox) Update(event Event) Cmd {
 
 		// Process mouse event.
 		if y == rectY {
-			switch event.Action {
+			switch msg.Action {
 			case MouseLeftDown:
 				return SetFocus(c)
 			case MouseLeftClick:

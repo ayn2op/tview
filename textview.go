@@ -879,11 +879,11 @@ func (t *TextView) Draw(screen tcell.Screen) {
 }
 
 // Update handles input events for this model.
-func (t *TextView) Update(event Event) Cmd {
-	switch event := event.(type) {
-	case *KeyEvent:
+func (t *TextView) Update(msg Msg) Cmd {
+	switch msg := msg.(type) {
+	case *KeyMsg:
 		previousLineOffset, previousColumnOffset, previousTrackEnd := t.lineOffset, t.columnOffset, t.trackEnd
-		key := event.Key()
+		key := msg.Key()
 
 		if key == tcell.KeyEscape || key == tcell.KeyEnter || key == tcell.KeyTab || key == tcell.KeyBacktab {
 			if t.done != nil {
@@ -901,7 +901,7 @@ func (t *TextView) Update(event Event) Cmd {
 
 		switch key {
 		case tcell.KeyRune:
-			switch event.Str() {
+			switch msg.Str() {
 			case "g":
 				t.trackEnd = false
 				t.lineOffset = 0
@@ -946,15 +946,15 @@ func (t *TextView) Update(event Event) Cmd {
 		if t.lineOffset != previousLineOffset || t.columnOffset != previousColumnOffset || t.trackEnd != previousTrackEnd {
 			return nil
 		}
-	case *MouseEvent:
+	case *MouseMsg:
 		var cmds []Cmd
-		x, y := event.Position()
+		x, y := msg.Position()
 		if !t.InRect(x, y) {
 			return nil
 		}
 
 		_, _, width, _ := t.InnerRect()
-		switch event.Action {
+		switch msg.Action {
 		case MouseLeftDown:
 			cmds = append(cmds, SetFocus(t))
 		case MouseLeftClick:

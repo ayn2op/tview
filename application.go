@@ -74,17 +74,17 @@ type Application struct {
 	// The root model to be seen on the screen.
 	root Model
 
-	events chan Event
-	cmds   chan Cmd
+	msgs chan Msg
+	cmds chan Cmd
 
 	// Functions queued from goroutines, used to serialize updates to models.
 	updates chan queuedUpdate
 
-	mouseCapturingPrimitive Model            // A model requested via SetMouseCaptureCommand to capture future mouse events.
-	lastMouseX, lastMouseY  int              // The last position of the mouse.
-	mouseDownX, mouseDownY  int              // The position of the mouse when its button was last pressed.
-	lastMouseClick          time.Time        // The time when a mouse button was last clicked.
-	lastMouseButtons        tcell.ButtonMask // The last mouse button state.
+	mouseCapturingModel    Model            // A model requested via SetMouseCaptureCommand to capture future mouse messages.
+	lastMouseX, lastMouseY int              // The last position of the mouse.
+	mouseDownX, mouseDownY int              // The position of the mouse when its button was last pressed.
+	lastMouseClick         time.Time        // The time when a mouse button was last clicked.
+	lastMouseButtons       tcell.ButtonMask // The last mouse button state.
 
 	// forceRedraw requests a full clear before the next frame.
 	forceRedraw bool
@@ -120,14 +120,7 @@ func (a *Application) SetCatchPanics(catchPanics bool) *Application {
 	return a
 }
 
-// Run starts the application and thus the event loop. This function returns
-// when a quit event is received (for example via [Quit]).
-//
-// Note that while an application is running, it fully claims stdin, stdout, and
-// stderr. If you use these standard streams, they may not work as expected.
-// Consider stopping the application first or suspending it (using
-// [Application.Suspend]) if you have to interact with the standard streams, for
-// example when needing to print a call stack during a panic.
+// Run starts the application and thus the messages loop.
 func (a *Application) Run() error {
 	var (
 		lastRedraw  time.Time   // The time the screen was last redrawn.
@@ -148,7 +141,6 @@ func (a *Application) Run() error {
 		}
 		a.screen = screen
 	}
-	a.cmds = make(chan Cmd)
 	a.Unlock()
 
 	defer a.stop()
@@ -163,7 +155,7 @@ func (a *Application) Run() error {
 	go a.handleCmds()
 
 	a.Lock()
-	a.events = a.screen.EventQ()
+	a.msgs = a.screen.EventQ()
 	a.Unlock()
 
 	a.RLock()
@@ -171,13 +163,13 @@ func (a *Application) Run() error {
 	a.RUnlock()
 
 	if root != nil {
-		if cmd := root.Update(&InitEvent{}); cmd != nil {
+		if cmd := root.Update(&InitMsg{}); cmd != nil {
 			a.cmds <- cmd
 		}
 		a.draw()
 	}
 
-	// Start event loop.
+	// Start messages loop.
 	var (
 		pasteBuffer strings.Builder
 		pasting     bool // Set to true while we receive paste key events.
@@ -185,45 +177,44 @@ func (a *Application) Run() error {
 EventLoop:
 	for {
 		select {
-		// If we received an event, handle it.
-		case event := <-a.events:
-			if event == nil {
+		// If we received an msg, handle it.
+		case msg := <-a.msgs:
+			if msg == nil {
 				break EventLoop
 			}
-
-			switch event := event.(type) {
-			case *quitEvent:
+			switch msg := msg.(type) {
+			case *quitMsg:
 				break EventLoop
 			case *tcell.EventError:
-				return event
+				return msg
 
-			case *batchEvent:
-				for _, cmd := range event.cmds {
+			case *batchMsg:
+				for _, cmd := range msg.cmds {
 					if cmd != nil {
 						a.cmds <- cmd
 					}
 				}
 
-			case *setFocusEvent:
-				a.SetFocus(event.target)
-			case *setMouseCaptureEvent:
-				a.mouseCapturingPrimitive = event.target
-			case *setTitleEvent:
-				a.screen.SetTitle(event.title)
-			case *notifyEvent:
-				a.screen.ShowNotification(event.title, event.body)
+			case *setFocusMsg:
+				a.SetFocus(msg.target)
+			case *setMouseCaptureMsg:
+				a.mouseCapturingModel = msg.target
+			case *setTitleMsg:
+				a.screen.SetTitle(msg.title)
+			case *notifyMsg:
+				a.screen.ShowNotification(msg.title, msg.body)
 
-			case *getClipboardEvent:
+			case *getClipboardMsg:
 				a.screen.GetClipboard()
-			case *setClipboardEvent:
-				a.screen.SetClipboard(event.data)
+			case *setClipboardMsg:
+				a.screen.SetClipboard(msg.data)
 
-			case *tcell.EventKey:
+			case *KeyMsg:
 				// If we are pasting, collect runes, nothing else.
 				if pasting {
-					switch event.Key() {
+					switch msg.Key() {
 					case tcell.KeyRune:
-						pasteBuffer.WriteString(event.Str())
+						pasteBuffer.WriteString(msg.Str())
 					case tcell.KeyEnter:
 						pasteBuffer.WriteRune('\n')
 					case tcell.KeyTab:
@@ -238,22 +229,21 @@ EventLoop:
 
 				// Pass other key events to the root model.
 				if root != nil && root.HasFocus() {
-					if cmd := root.Update(event); cmd != nil {
+					if cmd := root.Update(msg); cmd != nil {
 						a.cmds <- cmd
 					}
 				}
 			case *tcell.EventPaste:
-				if event.Start() {
+				if msg.Start() {
 					pasting = true
 					pasteBuffer.Reset()
-				} else if event.End() {
+				} else if msg.End() {
 					pasting = false
 					a.RLock()
 					root := a.root
 					a.RUnlock()
 					if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
-						// Pass paste event to the root model.
-						if cmd := root.Update(newPasteEvent(pasteBuffer.String())); cmd != nil {
+						if cmd := root.Update(&PasteMsg{Content: pasteBuffer.String()}); cmd != nil {
 							a.cmds <- cmd
 						}
 					}
@@ -269,22 +259,22 @@ EventLoop:
 						redrawTimer.Stop()
 					}
 					redrawTimer = time.AfterFunc(redrawPause, func() {
-						a.QueueEvent(event)
+						a.Send(msg)
 					})
 				}
 				lastRedraw = time.Now()
 			case *tcell.EventMouse:
-				isMouseDownAction := a.fireMouseActions(event)
-				a.lastMouseButtons = event.Buttons()
+				isMouseDownAction := a.fireMouseActions(msg)
+				a.lastMouseButtons = msg.Buttons()
 				if isMouseDownAction {
-					a.mouseDownX, a.mouseDownY = event.Position()
+					a.mouseDownX, a.mouseDownY = msg.Position()
 				}
 			default:
 				a.RLock()
 				root := a.root
 				a.RUnlock()
 				if root != nil {
-					if cmd := root.Update(event); cmd != nil {
+					if cmd := root.Update(msg); cmd != nil {
 						a.cmds <- cmd
 					}
 				}
@@ -315,12 +305,12 @@ func (a *Application) handleCmds() {
 					if r := recover(); r != nil {
 						text := fmt.Sprintf("goroutine panicked: %v", r)
 						fmt.Fprintf(os.Stderr, "%s\nstack trace:\n%s\n", text, debug.Stack())
-						a.QueueEvent(tcell.NewEventError(errors.New(text)))
+						a.Send(tcell.NewEventError(errors.New(text)))
 					}
 				}()
 			}
-			if event := cmd(); event != nil {
-				a.QueueEvent(event)
+			if msg := cmd(); msg != nil {
+				a.Send(msg)
 			}
 		}()
 	}
@@ -341,16 +331,16 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 
 		// Determine the target model.
 		var model Model
-		if a.mouseCapturingPrimitive != nil {
-			model = a.mouseCapturingPrimitive
-			targetPrimitive = a.mouseCapturingPrimitive
+		if a.mouseCapturingModel != nil {
+			model = a.mouseCapturingModel
+			targetPrimitive = a.mouseCapturingModel
 		} else if targetPrimitive != nil {
 			model = targetPrimitive
 		} else {
 			model = a.root
 		}
 		if model != nil {
-			if cmd := model.Update(newMouseEvent(*event, action)); cmd != nil {
+			if cmd := model.Update(&MouseMsg{EventMouse: *event, Action: action}); cmd != nil {
 				a.cmds <- cmd
 			}
 		}
@@ -367,7 +357,7 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 		a.lastMouseY = y
 	}
 
-	for _, buttonEvent := range []struct {
+	for _, buttonMsg := range []struct {
 		button                  tcell.ButtonMask
 		down, up, click, dclick MouseAction
 	}{
@@ -375,17 +365,17 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 		{tcell.ButtonMiddle, MouseMiddleDown, MouseMiddleUp, MouseMiddleClick, MouseMiddleDoubleClick},
 		{tcell.ButtonSecondary, MouseRightDown, MouseRightUp, MouseRightClick, MouseRightDoubleClick},
 	} {
-		if buttonChanges&buttonEvent.button != 0 {
-			if buttons&buttonEvent.button != 0 {
-				fire(buttonEvent.down)
+		if buttonChanges&buttonMsg.button != 0 {
+			if buttons&buttonMsg.button != 0 {
+				fire(buttonMsg.down)
 			} else {
-				fire(buttonEvent.up)
+				fire(buttonMsg.up)
 				if !clickMoved {
 					if a.lastMouseClick.Add(DoubleClickInterval).Before(time.Now()) {
-						fire(buttonEvent.click)
+						fire(buttonMsg.click)
 						a.lastMouseClick = time.Now()
 					} else {
-						fire(buttonEvent.dclick)
+						fire(buttonMsg.dclick)
 						a.lastMouseClick = time.Time{} // reset
 					}
 				}
@@ -393,7 +383,7 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 		}
 	}
 
-	for _, wheelEvent := range []struct {
+	for _, wheelMsg := range []struct {
 		button tcell.ButtonMask
 		action MouseAction
 	}{
@@ -401,8 +391,8 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 		{tcell.WheelDown, MouseScrollDown},
 		{tcell.WheelLeft, MouseScrollLeft},
 		{tcell.WheelRight, MouseScrollRight}} {
-		if buttons&wheelEvent.button != 0 {
-			fire(wheelEvent.action)
+		if buttons&wheelMsg.button != 0 {
+			fire(wheelMsg.action)
 		}
 	}
 
@@ -573,16 +563,14 @@ func (a *Application) QueueUpdateDraw(f func()) *Application {
 	return a
 }
 
-// QueueEvent sends an event to the Application event loop.
-//
-// It is not recommended for event to be nil.
-func (a *Application) QueueEvent(event Event) *Application {
+// Send sends a message to the internal messages loop.
+func (a *Application) Send(msg Msg) *Application {
 	a.RLock()
-	events := a.events
+	msgs := a.msgs
 	a.RUnlock()
-	if events == nil {
+	if msgs == nil {
 		return a
 	}
-	events <- event
+	msgs <- msg
 	return a
 }

@@ -273,13 +273,13 @@ func (i *InputField) Draw(screen tcell.Screen) {
 }
 
 // Update handles input events for this model.
-func (i *InputField) Update(event Event) Cmd {
+func (i *InputField) Update(msg Msg) Cmd {
 	if i.textArea.GetDisabled() {
 		return nil
 	}
 
-	switch event := event.(type) {
-	case *KeyEvent:
+	switch msg := msg.(type) {
+	case *KeyMsg:
 		// Finish up.
 		finish := func(key tcell.Key) {
 			if i.done != nil {
@@ -291,32 +291,32 @@ func (i *InputField) Update(event Event) Cmd {
 		}
 
 		// Process special key events for the input field.
-		switch key := event.Key(); key {
+		switch key := msg.Key(); key {
 		case tcell.KeyEnter, tcell.KeyEscape, tcell.KeyTab, tcell.KeyBacktab:
 			finish(key)
 			return nil
 		default:
 			// Forward other key events to the text area.
-			return i.textArea.Update(event)
+			return i.textArea.Update(msg)
 		}
-	case *MouseEvent:
+	case *MouseMsg:
 		// Is mouse event within the input field?
-		x, y := event.Position()
+		x, y := msg.Position()
 		if !i.InRect(x, y) {
 			return nil
 		}
 
 		// Forward mouse event to the text area.
-		cmd := i.textArea.Update(event)
+		cmd := i.textArea.Update(msg)
 
 		// Focus in any case.
-		if event.Action == MouseLeftDown && cmd == nil {
+		if msg.Action == MouseLeftDown && cmd == nil {
 			cmd = SetFocus(i)
 		}
 		return cmd
-	case *PasteEvent:
+	case *PasteMsg:
 		// Forward the pasted text to the text area.
-		return i.textArea.Update(event)
+		return i.textArea.Update(msg)
 	}
 	return nil
 }

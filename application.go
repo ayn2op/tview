@@ -45,6 +45,21 @@ const (
 	MouseScrollRight
 )
 
+type ApplicationOption func(*Application)
+
+func WithScreen(screen tcell.Screen) ApplicationOption {
+	return func(a *Application) {
+		a.screen = screen
+		a.forceRedraw = true
+	}
+}
+
+func WithoutCatchPanics() ApplicationOption {
+	return func(a *Application) {
+		a.disableCatchPanics = true
+	}
+}
+
 // Application represents the top node of an application.
 //
 // It is not strictly required to use this class as none of the other classes
@@ -53,19 +68,13 @@ const (
 type Application struct {
 	sync.RWMutex
 
-	// The application's screen. Apart from Run(), this variable should never be
-	// set directly. Always use the screenReplacement channel after calling
-	// Fini(), to set a new screen (or nil to stop the application).
-	screen tcell.Screen
-
-	// The model which currently has the keyboard focus.
-	focus Model
+	msgs chan Msg
+	cmds chan Cmd
 
 	// The root model to be seen on the screen.
 	root Model
-
-	msgs chan Msg
-	cmds chan Cmd
+	// The model which currently has the keyboard focus.
+	focus Model
 
 	mouseCapturingModel    Model            // A model requested via SetMouseCaptureCommand to capture future mouse messages.
 	lastMouseX, lastMouseY int              // The last position of the mouse.
@@ -76,33 +85,20 @@ type Application struct {
 	// forceRedraw requests a full clear before the next frame.
 	forceRedraw bool
 
-	catchPanics bool
+	// options
+	screen             tcell.Screen
+	disableCatchPanics bool
 }
 
 // NewApplication creates and returns a new application.
-func NewApplication() *Application {
-	return &Application{
-		cmds:        make(chan Cmd),
-		catchPanics: true,
+func NewApplication(options ...ApplicationOption) *Application {
+	a := &Application{
+		msgs: make(chan Msg),
+		cmds: make(chan Cmd),
 	}
-}
-
-// SetScreen sets the application's screen.
-func (a *Application) SetScreen(screen tcell.Screen) *Application {
-	a.Lock()
-	defer a.Unlock()
-	if a.screen == nil {
-		a.screen = screen
-		a.forceRedraw = true
+	for _, option := range options {
+		option(a)
 	}
-	return a
-}
-
-// SetCatchPanics sets whether cmd panics should be recovered.
-func (a *Application) SetCatchPanics(catchPanics bool) *Application {
-	a.Lock()
-	defer a.Unlock()
-	a.catchPanics = catchPanics
 	return a
 }
 
@@ -274,7 +270,7 @@ func (a *Application) handleCmds() {
 		}
 
 		go func() {
-			if a.catchPanics {
+			if !a.disableCatchPanics {
 				defer func() {
 					if r := recover(); r != nil {
 						text := fmt.Sprintf("goroutine panicked: %v", r)

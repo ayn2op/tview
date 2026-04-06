@@ -13,8 +13,6 @@ import (
 )
 
 const (
-	// The size of the queued updates channel.
-	updatesQueueSize = 100
 	// The minimum time between two consecutive redraws.
 	redrawPause = 50 * time.Millisecond
 )
@@ -47,14 +45,6 @@ const (
 	MouseScrollRight
 )
 
-// queuedUpdate represented the execution of f queued by
-// Application.QueueUpdate(). If "done" is not nil, it receives exactly one
-// element after f has executed.
-type queuedUpdate struct {
-	f    func()
-	done chan struct{}
-}
-
 // Application represents the top node of an application.
 //
 // It is not strictly required to use this class as none of the other classes
@@ -77,9 +67,6 @@ type Application struct {
 	msgs chan Msg
 	cmds chan Cmd
 
-	// Functions queued from goroutines, used to serialize updates to models.
-	updates chan queuedUpdate
-
 	mouseCapturingModel    Model            // A model requested via SetMouseCaptureCommand to capture future mouse messages.
 	lastMouseX, lastMouseY int              // The last position of the mouse.
 	mouseDownX, mouseDownY int              // The position of the mouse when its button was last pressed.
@@ -95,7 +82,6 @@ type Application struct {
 // NewApplication creates and returns a new application.
 func NewApplication() *Application {
 	return &Application{
-		updates:     make(chan queuedUpdate, updatesQueueSize),
 		cmds:        make(chan Cmd),
 		catchPanics: true,
 	}
@@ -175,120 +161,109 @@ func (a *Application) Run() error {
 		pasting     bool // Set to true while we receive paste key events.
 	)
 EventLoop:
-	for {
-		select {
-		// If we received an msg, handle it.
-		case msg := <-a.msgs:
-			if msg == nil {
-				break EventLoop
+	for msg := range a.msgs {
+		if msg == nil {
+			break EventLoop
+		}
+		switch msg := msg.(type) {
+		case *quitMsg:
+			break EventLoop
+		case *tcell.EventError:
+			return msg
+
+		case *batchMsg:
+			for _, cmd := range msg.cmds {
+				if cmd != nil {
+					a.cmds <- cmd
+				}
 			}
-			switch msg := msg.(type) {
-			case *quitMsg:
-				break EventLoop
-			case *tcell.EventError:
-				return msg
 
-			case *batchMsg:
-				for _, cmd := range msg.cmds {
-					if cmd != nil {
-						a.cmds <- cmd
-					}
+		case *setFocusMsg:
+			a.SetFocus(msg.target)
+		case *setMouseCaptureMsg:
+			a.mouseCapturingModel = msg.target
+		case *setTitleMsg:
+			a.screen.SetTitle(msg.title)
+		case *notifyMsg:
+			a.screen.ShowNotification(msg.title, msg.body)
+
+		case *getClipboardMsg:
+			a.screen.GetClipboard()
+		case *setClipboardMsg:
+			a.screen.SetClipboard(msg.data)
+
+		case *KeyMsg:
+			// If we are pasting, collect runes, nothing else.
+			if pasting {
+				switch msg.Key() {
+				case tcell.KeyRune:
+					pasteBuffer.WriteString(msg.Str())
+				case tcell.KeyEnter:
+					pasteBuffer.WriteRune('\n')
+				case tcell.KeyTab:
+					pasteBuffer.WriteRune('\t')
 				}
+				break
+			}
 
-			case *setFocusMsg:
-				a.SetFocus(msg.target)
-			case *setMouseCaptureMsg:
-				a.mouseCapturingModel = msg.target
-			case *setTitleMsg:
-				a.screen.SetTitle(msg.title)
-			case *notifyMsg:
-				a.screen.ShowNotification(msg.title, msg.body)
+			a.RLock()
+			root := a.root
+			a.RUnlock()
 
-			case *getClipboardMsg:
-				a.screen.GetClipboard()
-			case *setClipboardMsg:
-				a.screen.SetClipboard(msg.data)
-
-			case *KeyMsg:
-				// If we are pasting, collect runes, nothing else.
-				if pasting {
-					switch msg.Key() {
-					case tcell.KeyRune:
-						pasteBuffer.WriteString(msg.Str())
-					case tcell.KeyEnter:
-						pasteBuffer.WriteRune('\n')
-					case tcell.KeyTab:
-						pasteBuffer.WriteRune('\t')
-					}
-					break
+			// Pass other key events to the root model.
+			if root != nil && root.HasFocus() {
+				if cmd := root.Update(msg); cmd != nil {
+					a.cmds <- cmd
 				}
-
+			}
+		case *tcell.EventPaste:
+			if msg.Start() {
+				pasting = true
+				pasteBuffer.Reset()
+			} else if msg.End() {
+				pasting = false
 				a.RLock()
 				root := a.root
 				a.RUnlock()
-
-				// Pass other key events to the root model.
-				if root != nil && root.HasFocus() {
-					if cmd := root.Update(msg); cmd != nil {
-						a.cmds <- cmd
-					}
-				}
-			case *tcell.EventPaste:
-				if msg.Start() {
-					pasting = true
-					pasteBuffer.Reset()
-				} else if msg.End() {
-					pasting = false
-					a.RLock()
-					root := a.root
-					a.RUnlock()
-					if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
-						if cmd := root.Update(&PasteMsg{Content: pasteBuffer.String()}); cmd != nil {
-							a.cmds <- cmd
-						}
-					}
-				}
-			case *tcell.EventResize:
-				a.Lock()
-				// Resize events can imply terminal state changes even when size
-				// reports unchanged, so force one redraw pass.
-				a.forceRedraw = true
-				a.Unlock()
-				if time.Since(lastRedraw) < redrawPause {
-					if redrawTimer != nil {
-						redrawTimer.Stop()
-					}
-					redrawTimer = time.AfterFunc(redrawPause, func() {
-						a.Send(msg)
-					})
-				}
-				lastRedraw = time.Now()
-			case *tcell.EventMouse:
-				isMouseDownAction := a.fireMouseActions(msg)
-				a.lastMouseButtons = msg.Buttons()
-				if isMouseDownAction {
-					a.mouseDownX, a.mouseDownY = msg.Position()
-				}
-			default:
-				a.RLock()
-				root := a.root
-				a.RUnlock()
-				if root != nil {
-					if cmd := root.Update(msg); cmd != nil {
+				if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
+					if cmd := root.Update(&PasteMsg{Content: pasteBuffer.String()}); cmd != nil {
 						a.cmds <- cmd
 					}
 				}
 			}
-
-			a.draw()
-
-		// If we have updates, now is the time to execute them.
-		case update := <-a.updates:
-			update.f()
-			if update.done != nil {
-				update.done <- struct{}{}
+		case *tcell.EventResize:
+			a.Lock()
+			// Resize events can imply terminal state changes even when size
+			// reports unchanged, so force one redraw pass.
+			a.forceRedraw = true
+			a.Unlock()
+			if time.Since(lastRedraw) < redrawPause {
+				if redrawTimer != nil {
+					redrawTimer.Stop()
+				}
+				redrawTimer = time.AfterFunc(redrawPause, func() {
+					a.Send(msg)
+				})
+			}
+			lastRedraw = time.Now()
+		case *tcell.EventMouse:
+			isMouseDownAction := a.fireMouseActions(msg)
+			a.lastMouseButtons = msg.Buttons()
+			if isMouseDownAction {
+				a.mouseDownX, a.mouseDownY = msg.Position()
+			}
+		default:
+			a.RLock()
+			root := a.root
+			a.RUnlock()
+			if root != nil {
+				if cmd := root.Update(msg); cmd != nil {
+					a.cmds <- cmd
+				}
 			}
 		}
+
+		a.draw()
 	}
 	return nil
 }
@@ -533,34 +508,6 @@ func (a *Application) Focused() Model {
 	a.RLock()
 	defer a.RUnlock()
 	return a.focus
-}
-
-// QueueUpdate is used to synchronize access to models from non-main
-// goroutines. The provided function will be executed as part of the event loop
-// and thus will not cause race conditions with other such update functions or
-// the Draw() function.
-//
-// Note that Draw() is not implicitly called after the execution of f as that
-// may not be desirable. You can call Draw() from f if the screen should be
-// refreshed after each update. Alternatively, use QueueUpdateDraw() to follow
-// up with an immediate refresh of the screen.
-//
-// This function returns after f has executed.
-func (a *Application) QueueUpdate(f func()) *Application {
-	ch := make(chan struct{})
-	a.updates <- queuedUpdate{f: f, done: ch}
-	<-ch
-	return a
-}
-
-// QueueUpdateDraw works like QueueUpdate() except it refreshes the screen
-// immediately after executing f.
-func (a *Application) QueueUpdateDraw(f func()) *Application {
-	a.QueueUpdate(func() {
-		f()
-		a.draw()
-	})
-	return a
 }
 
 // Send sends a message to the internal messages loop.

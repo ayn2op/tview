@@ -178,7 +178,7 @@ func (a *Application) Run() error {
 			}
 
 		case *setFocusMsg:
-			a.SetFocus(msg.target)
+			a.setFocus(msg.target)
 		case *setMouseCaptureMsg:
 			a.mouseCapturingModel = msg.target
 		case *setTitleMsg:
@@ -472,17 +472,17 @@ func (a *Application) SetRoot(root Model) *Application {
 	}
 	a.Unlock()
 
-	a.SetFocus(root)
+	a.setFocus(root)
 	return a
 }
 
-// SetFocus sets the focus to a new model. All key events will be directed
+// setFocus sets the focus to a new model. All key events will be directed
 // down the hierarchy (starting at the root) until a model handles them,
 // which per default goes towards the focused model.
 //
 // Blur() will be called on the previously focused model. Focus() will be
 // called on the new model.
-func (a *Application) SetFocus(m Model) *Application {
+func (a *Application) setFocus(m Model) *Application {
 	a.Lock()
 	if a.focus != nil {
 		a.focus.Blur()
@@ -494,7 +494,7 @@ func (a *Application) SetFocus(m Model) *Application {
 	a.Unlock()
 	if m != nil {
 		m.Focus(func(m Model) {
-			a.SetFocus(m)
+			a.setFocus(m)
 		})
 	}
 

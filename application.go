@@ -160,14 +160,13 @@ func (a *Application) Run() error {
 		pasteBuffer strings.Builder
 		pasting     bool // Set to true while we receive paste key events.
 	)
-EventLoop:
 	for msg := range a.msgs {
 		if msg == nil {
-			break EventLoop
+			continue
 		}
 		switch msg := msg.(type) {
 		case *quitMsg:
-			break EventLoop
+			return nil
 		case *tcell.EventError:
 			return msg
 

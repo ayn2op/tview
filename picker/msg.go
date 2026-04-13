@@ -2,16 +2,14 @@ package picker
 
 import (
 	"github.com/ayn2op/tview"
-	"github.com/gdamore/tcell/v3"
 )
 
 type SelectedMsg struct {
-	tcell.EventTime
 	Item
 }
 
-func newSelectedMsg(item Item) *SelectedMsg {
-	return &SelectedMsg{Item: item}
+func newSelectedMsg(item Item) SelectedMsg {
+	return SelectedMsg{Item: item}
 }
 
 func (m *Model) selectItem() tview.Cmd {
@@ -25,10 +23,10 @@ func (m *Model) selectItem() tview.Cmd {
 	return nil
 }
 
-type CancelMsg struct{ tcell.EventTime }
+type CancelMsg struct{}
 
 func cancel() tview.Cmd {
 	return func() tview.Msg {
-		return &CancelMsg{}
+		return CancelMsg{}
 	}
 }

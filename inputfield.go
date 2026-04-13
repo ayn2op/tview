@@ -279,7 +279,7 @@ func (i *InputField) Update(msg Msg) Cmd {
 	}
 
 	switch msg := msg.(type) {
-	case *KeyMsg:
+	case KeyMsg:
 		// Finish up.
 		finish := func(key tcell.Key) {
 			if i.done != nil {
@@ -299,7 +299,7 @@ func (i *InputField) Update(msg Msg) Cmd {
 			// Forward other key events to the text area.
 			return i.textArea.Update(msg)
 		}
-	case *MouseMsg:
+	case MouseMsg:
 		// Is mouse event within the input field?
 		x, y := msg.Position()
 		if !i.InRect(x, y) {
@@ -314,7 +314,7 @@ func (i *InputField) Update(msg Msg) Cmd {
 			cmd = SetFocus(i)
 		}
 		return cmd
-	case *PasteMsg:
+	case PasteMsg:
 		// Forward the pasted text to the text area.
 		return i.textArea.Update(msg)
 	}

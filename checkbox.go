@@ -316,7 +316,7 @@ func (c *Checkbox) Update(msg Msg) Cmd {
 	}
 
 	switch msg := msg.(type) {
-	case *KeyMsg:
+	case KeyMsg:
 		// Process key event.
 		switch key := msg.Key(); key {
 		case tcell.KeyRune, tcell.KeyEnter: // Check.
@@ -333,7 +333,7 @@ func (c *Checkbox) Update(msg Msg) Cmd {
 			}
 		}
 		return nil
-	case *MouseMsg:
+	case MouseMsg:
 		x, y := msg.Position()
 		_, rectY, _, _ := c.InnerRect()
 		if !c.InRect(x, y) {

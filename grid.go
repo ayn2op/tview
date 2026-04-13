@@ -684,7 +684,7 @@ ItemLoop:
 // Update handles input events for this model.
 func (g *Grid) Update(msg Msg) Cmd {
 	switch msg := msg.(type) {
-	case *MouseMsg:
+	case MouseMsg:
 		if !g.InRect(msg.Position()) {
 			return nil
 		}
@@ -698,7 +698,7 @@ func (g *Grid) Update(msg Msg) Cmd {
 				return cmd
 			}
 		}
-	case *KeyMsg:
+	case KeyMsg:
 		previousRowOffset, previousColumnOffset := g.rowOffset, g.columnOffset
 		if !g.hasFocus {
 			// Pass event on to child model.

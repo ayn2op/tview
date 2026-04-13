@@ -192,7 +192,7 @@ func (f *Frame) HasFocus() bool {
 // Update handles input events for this model.
 func (f *Frame) Update(msg Msg) Cmd {
 	switch msg := msg.(type) {
-	case *MouseMsg:
+	case MouseMsg:
 		if !f.InRect(msg.Position()) {
 			return nil
 		}
@@ -209,7 +209,7 @@ func (f *Frame) Update(msg Msg) Cmd {
 		if msg.Action == MouseLeftDown {
 			return SetFocus(f)
 		}
-	case *KeyMsg, *PasteMsg:
+	case KeyMsg, PasteMsg:
 		if f.primitive == nil {
 			return nil
 		}

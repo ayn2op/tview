@@ -144,7 +144,7 @@ func (a *Application) Run() error {
 	a.RUnlock()
 
 	if root != nil {
-		a.queueCmd(root.Update(&InitMsg{}))
+		a.queueCmd(root.Update(InitMsg{}))
 		a.draw()
 	}
 
@@ -158,31 +158,31 @@ func (a *Application) Run() error {
 			continue
 		}
 		switch msg := msg.(type) {
-		case *quitMsg:
+		case quitMsg:
 			return nil
 		case *tcell.EventError:
 			return msg
 
-		case *batchMsg:
-			for _, cmd := range msg.cmds {
+		case batchMsg:
+			for _, cmd := range msg {
 				a.queueCmd(cmd)
 			}
 
-		case *setFocusMsg:
-			a.setFocus(msg.target)
-		case *setMouseCaptureMsg:
-			a.mouseCapturingModel = msg.target
-		case *setTitleMsg:
-			a.screen.SetTitle(msg.title)
-		case *notifyMsg:
+		case setFocusMsg:
+			a.setFocus(Model(msg))
+		case setMouseCaptureMsg:
+			a.mouseCapturingModel = Model(msg)
+		case setTitleMsg:
+			a.screen.SetTitle(string(msg))
+		case notifyMsg:
 			a.screen.ShowNotification(msg.title, msg.body)
 
-		case *getClipboardMsg:
+		case getClipboardMsg:
 			a.screen.GetClipboard()
-		case *setClipboardMsg:
-			a.screen.SetClipboard(msg.data)
+		case setClipboardMsg:
+			a.screen.SetClipboard([]byte(msg))
 
-		case *KeyMsg:
+		case KeyMsg:
 			// If we are pasting, collect runes, nothing else.
 			if pasting {
 				switch msg.Key() {
@@ -214,7 +214,7 @@ func (a *Application) Run() error {
 				root := a.root
 				a.RUnlock()
 				if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
-					a.queueCmd(root.Update(&PasteMsg{Content: pasteBuffer.String()}))
+					a.queueCmd(root.Update(PasteMsg(pasteBuffer.String())))
 				}
 			}
 		case *tcell.EventResize:
@@ -316,7 +316,7 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 			model = a.root
 		}
 		if model != nil {
-			a.queueCmd(model.Update(&MouseMsg{EventMouse: *event, Action: action}))
+			a.queueCmd(model.Update(MouseMsg{EventMouse: event, Action: action}))
 		}
 	}
 

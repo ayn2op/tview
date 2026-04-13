@@ -132,7 +132,7 @@ func (m *Model) onInputChanged(text string) {
 
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case *tview.KeyMsg:
+	case tview.KeyMsg:
 		switch {
 		case keybind.Matches(msg, m.keybinds.SelectUp):
 			return m.list.Update(msg)

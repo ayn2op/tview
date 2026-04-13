@@ -26,13 +26,12 @@ type Modal struct {
 }
 
 type ModalDoneMsg struct {
-	tcell.EventTime
 	ButtonIndex int
 	ButtonLabel string
 }
 
-func newModalDoneMsg(buttonIndex int, buttonLabel string) *ModalDoneMsg {
-	return &ModalDoneMsg{
+func newModalDoneMsg(buttonIndex int, buttonLabel string) ModalDoneMsg {
+	return ModalDoneMsg{
 		ButtonIndex: buttonIndex,
 		ButtonLabel: buttonLabel,
 	}
@@ -160,26 +159,26 @@ func (m *Modal) Draw(screen tcell.Screen) {
 // Update handles input events for this model.
 func (m *Modal) Update(msg Msg) Cmd {
 	switch msg := msg.(type) {
-	case *FormSubmitMsg:
+	case FormSubmitMsg:
 		buttonIndex := msg.ButtonIndex
 		buttonLabel := msg.ButtonLabel
 		return func() Msg {
 			return newModalDoneMsg(buttonIndex, buttonLabel)
 		}
-	case *FormCancelMsg:
+	case FormCancelMsg:
 		return func() Msg {
 			return newModalDoneMsg(-1, "")
 		}
-	case *ButtonExitMsg:
+	case ButtonExitMsg:
 		return m.form.Update(msg)
-	case *MouseMsg:
+	case MouseMsg:
 		// Pass mouse events on to the form.
 		cmd := m.form.Update(msg)
 		if cmd == nil && msg.Action == MouseLeftDown && m.InRect(msg.Position()) {
 			cmd = SetFocus(m)
 		}
 		return cmd
-	case *KeyMsg:
+	case KeyMsg:
 		// Keep arrow-key navigation between modal buttons.
 		switch msg.Key() {
 		case tcell.KeyDown, tcell.KeyRight:
@@ -191,7 +190,7 @@ func (m *Modal) Update(msg Msg) Cmd {
 		if m.frame.HasFocus() {
 			return m.frame.Update(msg)
 		}
-	case *PasteMsg:
+	case PasteMsg:
 		if m.frame.HasFocus() {
 			return m.frame.Update(msg)
 		}

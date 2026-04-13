@@ -59,9 +59,9 @@ type Help struct {
 	Desc string
 }
 
-type KeyMsg = tcell.EventKey
+type KeyMsg = *tcell.EventKey
 
-func Matches(msg *KeyMsg, keybinds ...Keybind) bool {
+func Matches(msg KeyMsg, keybinds ...Keybind) bool {
 	if msg == nil {
 		return false
 	}
@@ -178,7 +178,7 @@ func uniqueOrdered(in []string) []string {
 	return out
 }
 
-func keyMsgString(msg *KeyMsg) string {
+func keyMsgString(msg KeyMsg) string {
 	if msg == nil {
 		return ""
 	}

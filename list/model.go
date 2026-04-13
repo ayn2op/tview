@@ -885,7 +885,7 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 // Update handles input events for this model.
 func (l *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case *tview.KeyMsg:
+	case tview.KeyMsg:
 		switch {
 		case keybind.Matches(msg, l.keybinds.SelectDown):
 			l.NextItem()

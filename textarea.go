@@ -1942,7 +1942,7 @@ func (t *TextArea) getSelectedText() string {
 	return text.String()
 }
 
-func (t *TextArea) handleKeyMsg(event *KeyMsg) Cmd {
+func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 	if t.disabled {
 		return nil
 	}
@@ -2326,7 +2326,7 @@ func (t *TextArea) handleKeyMsg(event *KeyMsg) Cmd {
 	return cmd
 }
 
-func (t *TextArea) handleMouseMsg(msg *MouseMsg) Cmd {
+func (t *TextArea) handleMouseMsg(msg MouseMsg) Cmd {
 	if t.disabled {
 		return nil
 	}
@@ -2417,9 +2417,9 @@ func (t *TextArea) handleMouseMsg(msg *MouseMsg) Cmd {
 	return Batch(cmds...)
 }
 
-func (t *TextArea) handlePasteMsg(msg *PasteMsg) Cmd {
+func (t *TextArea) handlePasteMsg(msg PasteMsg) Cmd {
 	from, to, row := t.getSelection()
-	t.cursor.pos = t.replace(from, to, msg.Content, false)
+	t.cursor.pos = t.replace(from, to, string(msg), false)
 	t.cursor.row = -1
 	t.truncateLines(row - 1)
 	t.findCursor(true, row)
@@ -2430,11 +2430,11 @@ func (t *TextArea) handlePasteMsg(msg *PasteMsg) Cmd {
 // Update handles input events for this model.
 func (t *TextArea) Update(msg Msg) Cmd {
 	switch msg := msg.(type) {
-	case *KeyMsg:
+	case KeyMsg:
 		return t.handleKeyMsg(msg)
-	case *MouseMsg:
+	case MouseMsg:
 		return t.handleMouseMsg(msg)
-	case *PasteMsg:
+	case PasteMsg:
 		return t.handlePasteMsg(msg)
 	}
 	return nil

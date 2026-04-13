@@ -80,9 +80,9 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	}
 
 	switch msg := msg.(type) {
-	case *tview.InitMsg:
+	case tview.InitMsg:
 		return m.activateTab()
-	case *tview.KeyMsg:
+	case tview.KeyMsg:
 		switch {
 		case keybind.Matches(msg, m.keybinds.Previous):
 			if !m.canPrevious() {
@@ -166,7 +166,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 
 func (m *Model) activateTab() tview.Cmd {
 	return tview.Batch(
-		m.tabs[m.active].Update(&tview.InitMsg{}),
+		m.tabs[m.active].Update(tview.InitMsg{}),
 		tview.SetFocus(m),
 	)
 }

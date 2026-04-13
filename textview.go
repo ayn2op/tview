@@ -881,7 +881,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 // Update handles input events for this model.
 func (t *TextView) Update(msg Msg) Cmd {
 	switch msg := msg.(type) {
-	case *KeyMsg:
+	case KeyMsg:
 		previousLineOffset, previousColumnOffset, previousTrackEnd := t.lineOffset, t.columnOffset, t.trackEnd
 		key := msg.Key()
 
@@ -946,7 +946,7 @@ func (t *TextView) Update(msg Msg) Cmd {
 		if t.lineOffset != previousLineOffset || t.columnOffset != previousColumnOffset || t.trackEnd != previousTrackEnd {
 			return nil
 		}
-	case *MouseMsg:
+	case MouseMsg:
 		var cmds []Cmd
 		x, y := msg.Position()
 		if !t.InRect(x, y) {

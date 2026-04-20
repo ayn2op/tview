@@ -169,9 +169,9 @@ func (a *Application) Run() error {
 			}
 
 		case setFocusMsg:
-			a.setFocus(Model(msg))
+			a.setFocus(msg.target)
 		case setMouseCaptureMsg:
-			a.mouseCapturingModel = Model(msg)
+			a.mouseCapturingModel = msg.target
 		case setTitleMsg:
 			a.screen.SetTitle(string(msg))
 		case notifyMsg:

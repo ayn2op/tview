@@ -49,19 +49,23 @@ func Quit() Cmd {
 	}
 }
 
-type setFocusMsg Model
+type setFocusMsg struct {
+	target Model
+}
 
 func SetFocus(target Model) Cmd {
 	return func() Msg {
-		return setFocusMsg(target)
+		return setFocusMsg{target: target}
 	}
 }
 
-type setMouseCaptureMsg Model
+type setMouseCaptureMsg struct {
+	target Model
+}
 
 func SetMouseCapture(target Model) Cmd {
 	return func() Msg {
-		return setMouseCaptureMsg(target)
+		return setMouseCaptureMsg{target: target}
 	}
 }
 

@@ -97,7 +97,7 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 			m.Next()
 			return m.activateTab()
 		}
-	case *tview.MouseMsg:
+	case tview.MouseMsg:
 		x, y := msg.Position()
 		if !m.InRect(x, y) {
 			return nil

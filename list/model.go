@@ -909,7 +909,7 @@ func (l *Model) Update(msg tview.Msg) tview.Cmd {
 			l.ScrollBottom()
 		}
 		return nil
-	case *tview.MouseMsg:
+	case tview.MouseMsg:
 		var cmd tview.Cmd
 		x, y := msg.Position()
 		if l.scrollBarInteraction.dragDelta >= 0 {

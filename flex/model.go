@@ -238,7 +238,7 @@ func (m *Model) HasFocus() bool {
 // Update handles input events for this model.
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case *tview.MouseMsg:
+	case tview.MouseMsg:
 		if !m.InRect(msg.Position()) {
 			return nil
 		}

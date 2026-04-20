@@ -378,7 +378,7 @@ func (l *Layers) Draw(screen tcell.Screen) {
 
 // Update handles input events for this model.
 func (l *Layers) Update(msg tview.Msg) tview.Cmd {
-	if mouseMsg, ok := msg.(*tview.MouseMsg); ok && !l.InRect(mouseMsg.Position()) {
+	if mouseMsg, ok := msg.(tview.MouseMsg); ok && !l.InRect(mouseMsg.Position()) {
 		return nil
 	}
 

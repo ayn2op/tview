@@ -11,13 +11,7 @@ type batchMsg []Cmd
 
 // Batch combines multiple commands into a single command.
 func Batch(cmds ...Cmd) Cmd {
-	var valid []Cmd
-	for _, cmd := range cmds {
-		if cmd == nil {
-			continue
-		}
-		valid = append(valid, cmd)
-	}
+	valid := compactCmds(cmds...)
 	switch len(valid) {
 	case 0:
 		return nil
@@ -28,6 +22,33 @@ func Batch(cmds ...Cmd) Cmd {
 			return batchMsg(valid)
 		}
 	}
+}
+
+type sequenceMsg []Cmd
+
+// Sequence executes commands one at a time, in order.
+func Sequence(cmds ...Cmd) Cmd {
+	valid := compactCmds(cmds...)
+	switch len(valid) {
+	case 0:
+		return nil
+	case 1:
+		return valid[0]
+	default:
+		return func() Msg {
+			return sequenceMsg(valid)
+		}
+	}
+}
+
+func compactCmds(cmds ...Cmd) []Cmd {
+	valid := cmds[:0]
+	for _, cmd := range cmds {
+		if cmd != nil {
+			valid = append(valid, cmd)
+		}
+	}
+	return valid
 }
 
 type InitMsg struct{}

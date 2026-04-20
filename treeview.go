@@ -1038,7 +1038,7 @@ func (t *TreeView) handleMouseMsg(msg MouseMsg) Cmd {
 			node := t.nodes[y]
 			if node.selectable {
 				t.currentNode = node
-				return Batch(SetFocus(t), func() Msg {
+				return Sequence(SetFocus(t), func() Msg {
 					return TreeViewSelectedMsg{Node: node}
 				})
 			}

@@ -745,7 +745,7 @@ func (f *Form) consumeCancelMsg(cmd Cmd) Cmd {
 	if cmd == nil {
 		return cancelCmd
 	}
-	return Batch(cmd, cancelCmd)
+	return Sequence(cmd, cancelCmd)
 }
 
 // focusIndex returns the index of the currently focused item, counting form

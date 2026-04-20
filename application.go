@@ -163,11 +163,6 @@ func (a *Application) Run() error {
 		case *tcell.EventError:
 			return msg
 
-		case batchMsg:
-			for _, cmd := range msg {
-				a.queueCmd(cmd)
-			}
-
 		case setFocusMsg:
 			a.setFocus(msg.target)
 		case setMouseCaptureMsg:
@@ -275,21 +270,55 @@ func (a *Application) handleCmds() {
 			if cmd == nil {
 				continue
 			}
-
-			go func() {
-				if !a.disableCatchPanics {
-					defer func() {
-						if r := recover(); r != nil {
-							text := fmt.Sprintf("goroutine panicked: %v", r)
-							fmt.Fprintf(os.Stderr, "%s\nstack trace:\n%s\n", text, debug.Stack())
-							a.queueMsg(tcell.NewEventError(errors.New(text)))
-						}
-					}()
-				}
-				a.queueMsg(cmd())
-			}()
+			go a.execCmd(cmd)
 		}
 	}
+}
+
+func (a *Application) execCmd(cmd Cmd) {
+	if cmd == nil {
+		return
+	}
+
+	if !a.disableCatchPanics {
+		defer func() {
+			if r := recover(); r != nil {
+				text := fmt.Sprintf("goroutine panicked: %v", r)
+				fmt.Fprintf(os.Stderr, "%s\nstack trace:\n%s\n", text, debug.Stack())
+				a.queueMsg(tcell.NewEventError(errors.New(text)))
+			}
+		}()
+	}
+
+	switch msg := cmd().(type) {
+	case batchMsg:
+		a.execBatchMsg(msg)
+	case sequenceMsg:
+		a.execSequenceMsg(msg)
+	default:
+		a.queueMsg(msg)
+	}
+}
+
+func (a *Application) execSequenceMsg(msg sequenceMsg) {
+	for _, cmd := range msg {
+		a.execCmd(cmd)
+	}
+}
+
+func (a *Application) execBatchMsg(msg batchMsg) {
+	var wg sync.WaitGroup
+	for _, cmd := range msg {
+		if cmd == nil {
+			continue
+		}
+		wg.Add(1)
+		go func(cmd Cmd) {
+			defer wg.Done()
+			a.execCmd(cmd)
+		}(cmd)
+	}
+	wg.Wait()
 }
 
 // fireMouseActions analyzes the provided mouse event, derives mouse actions

@@ -165,7 +165,7 @@ func (m *Model) Draw(screen tcell.Screen) {
 }
 
 func (m *Model) activateTab() tview.Cmd {
-	return tview.Batch(
+	return tview.Sequence(
 		m.tabs[m.active].Update(tview.InitMsg{}),
 		tview.SetFocus(m),
 	)

@@ -312,11 +312,9 @@ func (a *Application) execBatchMsg(msg batchMsg) {
 		if cmd == nil {
 			continue
 		}
-		wg.Add(1)
-		go func(cmd Cmd) {
-			defer wg.Done()
+		wg.Go(func() {
 			a.execCmd(cmd)
-		}(cmd)
+		})
 	}
 	wg.Wait()
 }

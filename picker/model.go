@@ -30,6 +30,8 @@ func NewModel() *Model {
 		list:  list.NewModel(),
 	}
 
+	m.list.SetSelectedStyle(tcell.StyleDefault.Reverse(true))
+
 	// Show a horizontal bottom border to visually separate input from list.
 	var borderSet tview.BorderSet
 	borderSet.Bottom = tview.BoxDrawingsLightHorizontal
@@ -56,14 +58,11 @@ func NewModel() *Model {
 func (m *Model) setFilteredItems(filtered Items) {
 	m.filtered = filtered
 
-	m.list.SetBuilder(func(index int, cursor int) list.Item {
+	m.list.SetBuilder(func(index int) list.Item {
 		if index < 0 || index >= len(m.filtered) {
 			return nil
 		}
 		style := tcell.StyleDefault
-		if index == cursor {
-			style = style.Reverse(true)
-		}
 		return tview.NewTextView().
 			SetScrollable(false).
 			SetWrap(false).

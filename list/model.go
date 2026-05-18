@@ -16,9 +16,9 @@ type Item interface {
 	Height(width int) int
 }
 
-// Builder returns a list item for the given index and cursor position.
+// Builder returns a list item for the given index.
 // It must return nil when the index is out of range.
-type Builder func(index int, cursor int) Item
+type Builder func(index int) Item
 
 // Model displays a virtual list of models returned by a builder function.
 type Model struct {
@@ -298,7 +298,7 @@ func (l *Model) NextItem() bool {
 		return false
 	}
 	if l.cursor < 0 {
-		if l.builder(0, l.cursor) == nil {
+		if l.builder(0) == nil {
 			return false
 		}
 		l.cursor = 0
@@ -308,7 +308,7 @@ func (l *Model) NextItem() bool {
 		}
 		return true
 	}
-	if l.builder(l.cursor+1, l.cursor) == nil {
+	if l.builder(l.cursor+1) == nil {
 		return false
 	}
 	l.cursor++
@@ -327,7 +327,7 @@ func (l *Model) PrevItem() bool {
 	if l.builder == nil {
 		return false
 	}
-	if l.builder(l.cursor-1, l.cursor) == nil {
+	if l.builder(l.cursor-1) == nil {
 		return false
 	}
 	l.cursor--
@@ -439,7 +439,7 @@ rebuild:
 
 	endReached := false
 	for i := startIndex; ; i++ {
-		item := l.builder(i, l.cursor)
+		item := l.builder(i)
 		if item == nil {
 			endReached = true
 			break
@@ -504,7 +504,7 @@ rebuild:
 		nextIndex := children[len(children)-1].index + 1
 		currentBottom := children[len(children)-1].row + children[len(children)-1].height
 		for {
-			item := l.builder(nextIndex, l.cursor)
+			item := l.builder(nextIndex)
 			if item == nil {
 				break
 			}
@@ -575,7 +575,7 @@ rebuild:
 	}
 
 	last := children[len(children)-1]
-	if !endReached && l.builder(last.index+1, l.cursor) == nil {
+	if !endReached && l.builder(last.index+1) == nil {
 		endReached = true
 	}
 	l.atEnd = endReached && last.row+last.height <= height
@@ -629,7 +629,7 @@ func (l *Model) totalContentHeight(width int) int {
 	}
 	total := 0
 	for i := 0; ; i++ {
-		item := l.builder(i, l.cursor)
+		item := l.builder(i)
 		if item == nil {
 			break
 		}
@@ -649,7 +649,7 @@ func (l *Model) scrollBarMetrics(width int, viewport int, children []drawnItem) 
 
 	first := children[0]
 	for i := range first.index {
-		item := l.builder(i, l.cursor)
+		item := l.builder(i)
 		if item == nil {
 			break
 		}
@@ -685,7 +685,7 @@ func (l *Model) insertChildren(children *[]drawnItem, width int, ah int) {
 		if l.gap > 0 {
 			ah -= l.gap
 		}
-		item := l.builder(l.scroll.top, l.cursor)
+		item := l.builder(l.scroll.top)
 		if item == nil {
 			break
 		}
@@ -736,7 +736,7 @@ func (l *Model) centerScrollState(width int, height int) (int, int, bool) {
 	if l.builder == nil || l.cursor < 0 || width <= 0 || height <= 0 {
 		return 0, 0, false
 	}
-	cursorItem := l.builder(l.cursor, l.cursor)
+	cursorItem := l.builder(l.cursor)
 	if cursorItem == nil {
 		return 0, 0, false
 	}
@@ -751,7 +751,7 @@ func (l *Model) centerScrollState(width int, height int) (int, int, bool) {
 	remaining := desiredBefore
 	for remaining > 0 && top > 0 {
 		prevIndex := top - 1
-		prevItem := l.builder(prevIndex, l.cursor)
+		prevItem := l.builder(prevIndex)
 		if prevItem == nil {
 			break
 		}
@@ -785,7 +785,7 @@ func (l *Model) centerScrollState(width int, height int) (int, int, bool) {
 	// Verify there is enough content below to keep the viewport filled.
 	ah := -offset
 	for i := top; ; i++ {
-		item := l.builder(i, l.cursor)
+		item := l.builder(i)
 		if item == nil {
 			return 0, 0, false
 		}
@@ -809,7 +809,7 @@ func (l *Model) scrollByItems(delta int, count int, width int, height int) {
 	if delta > 0 {
 		// Step the top index downward without going past the end.
 		for range count {
-			if l.builder(l.scroll.top+1, l.cursor) == nil {
+			if l.builder(l.scroll.top+1) == nil {
 				break
 			}
 			l.scroll.top++
@@ -836,7 +836,7 @@ func (l *Model) visibleItemCount(width int, height int) int {
 	total := 0
 	count := 0
 	for idx := l.scroll.top; ; idx++ {
-		item := l.builder(idx, l.cursor)
+		item := l.builder(idx)
 		if item == nil {
 			break
 		}
@@ -863,12 +863,12 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 	}
 	start := max(l.scroll.top, 0)
 	// If the current top is past the end, restart from the beginning.
-	if l.builder(start, l.cursor) == nil && start != 0 {
+	if l.builder(start) == nil && start != 0 {
 		start = 0
 	}
 	last := start
 	for {
-		if l.builder(last, l.cursor) == nil {
+		if l.builder(last) == nil {
 			last--
 			break
 		}
@@ -881,7 +881,7 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 	// Walk upward from the last item until we fill a viewport.
 	total := 0
 	for i := last; i >= 0; i-- {
-		item := l.builder(i, l.cursor)
+		item := l.builder(i)
 		if item == nil {
 			continue
 		}
@@ -911,7 +911,7 @@ func (l *Model) Update(msg tview.Msg) tview.Cmd {
 		case keybind.Matches(msg, l.keybinds.SelectUp):
 			l.PrevItem()
 		case keybind.Matches(msg, l.keybinds.SelectTop):
-			if l.builder != nil && l.builder(0, l.cursor) != nil {
+			if l.builder != nil && l.builder(0) != nil {
 				l.SetCursor(0)
 			}
 		case keybind.Matches(msg, l.keybinds.SelectBottom):
@@ -1019,7 +1019,7 @@ func (l *Model) lastIndex() int {
 	}
 	last := -1
 	for i := 0; ; i++ {
-		if l.builder(i, l.cursor) == nil {
+		if l.builder(i) == nil {
 			break
 		}
 		last = i

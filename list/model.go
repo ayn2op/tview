@@ -37,6 +37,9 @@ type Model struct {
 
 	changed func(index int)
 
+	// selectedStyle is merged into the cursor item's cell styles at draw time, so selection highlighting needs no separately styled render of that item.
+	selectedStyle tcell.Style
+
 	lastDraw []drawnItem
 	lastRect rect
 
@@ -341,6 +344,16 @@ func (l *Model) SetChangedFunc(handler func(index int)) *Model {
 	return l
 }
 
+// SetSelectedStyle sets a style merged into the cursor item's cells when it is drawn.
+// This lets callers highlight the selected item without the builder rendering it differently from the others.
+// The zero style disables the overlay.
+func (l *Model) SetSelectedStyle(style tcell.Style) *Model {
+	if l.selectedStyle != style {
+		l.selectedStyle = style
+	}
+	return l
+}
+
 func (l *Model) setLastDraw(children []drawnItem) {
 	l.lastDraw = children
 }
@@ -571,9 +584,15 @@ rebuild:
 	l.lastRect = rect{x: x, y: y, width: width, height: height}
 
 	clipped := newClippedScreen(screen, x, y, width, height)
+	highlight := l.selectedStyle != tcell.StyleDefault
 	for _, child := range children {
 		child.item.SetRect(x, y+child.row, usableWidth, child.height)
-		child.item.View(clipped)
+		// Draw the cursor item through a style overlay so selection highlighting costs nothing extra to render: the item is the same one the builder returns for any other index.
+		if highlight && child.index == l.cursor {
+			child.item.View(newStyledScreen(clipped, l.selectedStyle))
+		} else {
+			child.item.View(clipped)
+		}
 	}
 
 	if drawScrollBar {
@@ -1312,6 +1331,56 @@ func (s *clippedScreen) ShowCursor(x int, y int) {
 		return
 	}
 	s.Screen.ShowCursor(x, y)
+}
+
+// styledScreen merges a style into every cell drawn through it.
+// The list wraps the cursor item's screen with it so the selected item can be highlighted without rendering it differently from the rest.
+type styledScreen struct {
+	tcell.Screen
+	style tcell.Style
+}
+
+func newStyledScreen(screen tcell.Screen, style tcell.Style) *styledScreen {
+	return &styledScreen{Screen: screen, style: style}
+}
+
+func (s *styledScreen) SetContent(x int, y int, primary rune, combining []rune, style tcell.Style) {
+	s.Screen.SetContent(x, y, primary, combining, mergeStyle(s.style, style))
+}
+
+func (s *styledScreen) Put(x int, y int, str string, style tcell.Style) (string, int) {
+	return s.Screen.Put(x, y, str, mergeStyle(s.style, style))
+}
+
+func (s *styledScreen) PutStr(x int, y int, str string) {
+	s.PutStrStyled(x, y, str, tcell.StyleDefault)
+}
+
+func (s *styledScreen) PutStrStyled(x int, y int, str string, style tcell.Style) {
+	s.Screen.PutStrStyled(x, y, str, mergeStyle(s.style, style))
+}
+
+// mergeStyle layers overlay on top of base: an explicitly set overlay color
+// wins, otherwise base's color is kept, and boolean attributes are unioned.
+func mergeStyle(base, overlay tcell.Style) tcell.Style {
+	fg := overlay.GetForeground()
+	if fg == tcell.ColorDefault {
+		fg = base.GetForeground()
+	}
+	bg := overlay.GetBackground()
+	if bg == tcell.ColorDefault {
+		bg = base.GetBackground()
+	}
+
+	style := base.Foreground(fg).Background(bg)
+	style = style.Bold(base.HasBold() || overlay.HasBold())
+	style = style.Dim(base.HasDim() || overlay.HasDim())
+	style = style.Italic(base.HasItalic() || overlay.HasItalic())
+	style = style.Blink(base.HasBlink() || overlay.HasBlink())
+	style = style.Reverse(base.HasReverse() || overlay.HasReverse())
+	style = style.StrikeThrough(base.HasStrikeThrough() || overlay.HasStrikeThrough())
+	style = style.Underline(base.HasUnderline() || overlay.HasUnderline())
+	return style
 }
 
 func (l *Model) trimToFullItems(children []drawnItem, height int) []drawnItem {

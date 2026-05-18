@@ -349,27 +349,29 @@ func shortItemSegments(key, desc string, keyStyle, descStyle tcell.Style) []segm
 	}
 }
 
+// compactModifierReplacer rewrites modifier names to their compact forms. It is
+// immutable, so it is built once at package scope rather than per formatKey call.
+var compactModifierReplacer = strings.NewReplacer(
+	"Ctrl+", "^",
+	"ctrl+", "^",
+	"Control+", "^",
+	"control+", "^",
+
+	"Shift+", "S-",
+	"shift+", "S-",
+
+	"Alt+", "A-",
+	"alt+", "A-",
+
+	"Meta+", "M-",
+	"meta+", "M-",
+)
+
 func (m *Model) formatKey(key string) string {
 	if !m.compactModifiers {
 		return key
 	}
-
-	replacer := strings.NewReplacer(
-		"Ctrl+", "^",
-		"ctrl+", "^",
-		"Control+", "^",
-		"control+", "^",
-
-		"Shift+", "S-",
-		"shift+", "S-",
-
-		"Alt+", "A-",
-		"alt+", "A-",
-
-		"Meta+", "M-",
-		"meta+", "M-",
-	)
-	return replacer.Replace(key)
+	return compactModifierReplacer.Replace(key)
 }
 
 func segmentsWidth(segments []segment) int {

@@ -612,6 +612,33 @@ func (t *TextArea) GetTextLength() int {
 	return t.length
 }
 
+// LineCount returns the number of visual lines, honoring the current wrap settings and last drawn width.
+// Returns at least 1.
+//
+// If limit > 0, scanning stops once more than limit lines are found and the result is capped at limit+1 (so the caller can detect overflow in O(limit) work).
+// Pass limit <= 0 for the exact count.
+//
+// If the text area hasn't been drawn yet (no known width), only explicit newlines are counted.
+func (t *TextArea) LineCount(limit int) int {
+	if t.length == 0 {
+		return 1
+	}
+	if t.lastWidth <= 0 {
+		// No layout info yet; fall back to newline count (+1 for the line after the last \n).
+		return strings.Count(t.GetText(), "\n") + 1
+	}
+	maxHeight := limit
+	if maxHeight <= 0 {
+		maxHeight = math.MaxInt // unbounded; scan all lines
+	}
+	t.extendLines(t.lastWidth, maxHeight)
+	n := len(t.lineStarts)
+	if limit > 0 && n > limit+1 {
+		return limit + 1 // overflow sentinel: caller only knows "more than limit"
+	}
+	return n
+}
+
 // Replace replaces a section of the text with new text. The start and end
 // positions refer to index positions within the entire text string (as a
 // half-open interval). They may be the same, in which case text is inserted at
@@ -919,6 +946,19 @@ func (t *TextArea) SetOffset(row, column int) *TextArea {
 		t.rowOffset, t.columnOffset = row, column
 	}
 	return t
+}
+
+// SetVisibleSize sets the inner width and/or height used for cursor clamping and scroll math before the next draw.
+// Pass 0 (or negative) for a dimension to leave it unchanged.
+//
+// Needed when the caller resizes the text area externally on a text change (e.g. an auto-growing input): otherwise scroll updates on the same keystroke would use stale dimensions.
+func (t *TextArea) SetVisibleSize(width, height int) {
+	if width > 0 {
+		t.lastWidth = width
+	}
+	if height > 0 {
+		t.lastHeight = height
+	}
 }
 
 // SetClipboard allows you to implement your own clipboard by providing a
@@ -1353,13 +1393,13 @@ func (t *TextArea) reset() {
 }
 
 // extendLines traverses the current text and extends [TextArea.lineStarts] such
-// that it describes at least maxLines+1 lines (or less if the text is shorter).
+// that it describes at least maxHeight+1 lines (or less if the text is shorter).
 // Text is laid out for the given width while respecting the wrapping settings.
 // It is assumed that if [TextArea.lineStarts] already has entries, they obey
 // the same rules.
 //
 // If width is 0, nothing happens.
-func (t *TextArea) extendLines(width, maxLines int) {
+func (t *TextArea) extendLines(width, maxHeight int) {
 	if width <= 0 {
 		return
 	}
@@ -1400,7 +1440,7 @@ func (t *TextArea) extendLines(width, maxLines int) {
 				lastGraphemeBreak = [3]int{}
 				lastLineBreak = [3]int{}
 				widthSinceLineBreak = 0
-				if len(t.lineStarts) > maxLines {
+				if len(t.lineStarts) > maxHeight {
 					break // We have enough lines, we can stop.
 				}
 				continue
@@ -1435,7 +1475,7 @@ func (t *TextArea) extendLines(width, maxLines int) {
 		lastGraphemeBreak = pos
 
 		// Can we stop?
-		if len(t.lineStarts) > maxLines {
+		if len(t.lineStarts) > maxHeight {
 			break
 		}
 	}

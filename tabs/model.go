@@ -141,7 +141,7 @@ func (m *Model) View(screen tcell.Screen) {
 	}
 
 	x, y, width, height := m.InnerRect()
-	tmpX := x
+	tmpX := x + m.stripOffset(width)
 	var content tview.Model
 	for i, tab := range m.tabs {
 		labelStyle := m.labelStyle
@@ -151,7 +151,7 @@ func (m *Model) View(screen tcell.Screen) {
 		}
 
 		label := tab.Label()
-		tview.PrintWithStyle(screen, label, tmpX, y, width, m.labelAlignment, labelStyle)
+		tview.PrintWithStyle(screen, label, tmpX, y, len(label), tview.AlignmentLeft, labelStyle)
 		tmpX += len(label) + 1
 	}
 
@@ -177,21 +177,33 @@ func (m *Model) tabAt(x, y int) (int, bool) {
 		return 0, false
 	}
 
-	tmpX := innerX
+	tmpX := innerX + m.stripOffset(width)
 	for i, tab := range m.tabs {
 		labelWidth := len(tab.Label())
-		labelX := tmpX
-		switch m.labelAlignment {
-		case tview.AlignmentCenter:
-			labelX = tmpX + width/2 - labelWidth/2
-		case tview.AlignmentRight:
-			labelX = tmpX + width - labelWidth
-		}
-		if x >= labelX && x < labelX+labelWidth {
+		if x >= tmpX && x < tmpX+labelWidth {
 			return i, true
 		}
 		tmpX += labelWidth + 1
 	}
 
 	return 0, false
+}
+
+// stripOffset returns the horizontal offset at which the tab strip starts so
+// that the labels, laid out left to right and separated by a single space, are
+// aligned as a group within the given width.
+func (m *Model) stripOffset(width int) int {
+	stripWidth := -1 // no trailing space after the last label
+	for _, tab := range m.tabs {
+		stripWidth += len(tab.Label()) + 1
+	}
+
+	switch m.labelAlignment {
+	case tview.AlignmentCenter:
+		return max((width-stripWidth)/2, 0)
+	case tview.AlignmentRight:
+		return max(width-stripWidth, 0)
+	default:
+		return 0
+	}
 }

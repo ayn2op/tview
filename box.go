@@ -214,7 +214,7 @@ func (b *Box) View(screen tcell.Screen) {
 
 	// Draw title.
 	if b.title != "" && b.width >= 4 {
-		start, end, _ := printWithStyle(screen, b.title, b.x+1, b.y, 0, b.width-2, b.titleAlignment, b.titleStyle, true)
+		start, end, _ := PrintStyled(screen, b.title, b.x+1, b.y, 0, b.width-2, b.titleAlignment, b.titleStyle, true)
 		printed := end - start
 		if len(b.title)-printed > 0 && printed > 0 {
 			xEllipsis := b.x + b.width - 2
@@ -229,7 +229,7 @@ func (b *Box) View(screen tcell.Screen) {
 
 	// Draw footer.
 	if b.footer != "" && b.width >= 4 {
-		start, end, _ := printWithStyle(screen, b.footer, b.x+1, b.y+b.height-1, 0, b.width-2, b.footerAlignment, b.footerStyle, true)
+		start, end, _ := PrintStyled(screen, b.footer, b.x+1, b.y+b.height-1, 0, b.width-2, b.footerAlignment, b.footerStyle, true)
 		printed := end - start
 		if len(b.footer)-printed > 0 && printed > 0 {
 			xEllipsis := b.x + b.width - 2

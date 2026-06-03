@@ -284,11 +284,11 @@ func (c *Checkbox) View(screen tcell.Screen) {
 	labelBg := c.labelStyle.GetBackground()
 	if c.labelWidth > 0 {
 		labelWidth := min(c.labelWidth, width)
-		printWithStyle(screen, c.label, x, y, 0, labelWidth, AlignmentLeft, c.labelStyle, labelBg == tcell.ColorDefault)
+		PrintStyled(screen, c.label, x, y, 0, labelWidth, AlignmentLeft, c.labelStyle, labelBg == tcell.ColorDefault)
 		x += labelWidth
 		width -= labelWidth
 	} else {
-		_, _, drawnWidth := printWithStyle(screen, c.label, x, y, 0, width, AlignmentLeft, c.labelStyle, labelBg == tcell.ColorDefault)
+		_, _, drawnWidth := PrintStyled(screen, c.label, x, y, 0, width, AlignmentLeft, c.labelStyle, labelBg == tcell.ColorDefault)
 		x += drawnWidth
 		width -= drawnWidth
 	}
@@ -306,7 +306,7 @@ func (c *Checkbox) View(screen tcell.Screen) {
 	if c.HasFocus() {
 		style = c.focusStyle
 	}
-	printWithStyle(screen, str, x, y, 0, width, AlignmentLeft, style, c.disabled)
+	PrintStyled(screen, str, x, y, 0, width, AlignmentLeft, style, c.disabled)
 }
 
 // Update handles input events for this model.

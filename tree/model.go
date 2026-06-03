@@ -1,14 +1,9 @@
-package tview
+package tree
 
 import (
-	"slices"
-
+	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
 )
-
-type TreeViewSelectedMsg struct {
-	Node *TreeNode
-}
 
 // Tree navigation events.
 const (
@@ -21,273 +16,20 @@ const (
 	treeScroll // Move without changing the cursor, even when off screen.
 )
 
-// TreeNode represents one node in a tree view.
-type TreeNode struct {
-	// The reference object.
-	reference any
-
-	// This node's child nodes.
-	children []*TreeNode
-
-	// The item's text.
-	line Line
-
-	// The style of selected text.
-	selectedTextStyle tcell.Style
-
-	// Whether or not this node can be selected.
-	selectable bool
-
-	// Whether or not this node's children should be displayed.
-	expanded bool
-
-	// Whether or not this node can be expanded, even if children are not loaded yet.
-	expandable bool
-
-	// The additional horizontal indent of this node's text.
-	indent int
-
-	// The hierarchy level (0 for the root, 1 for its children, and so on). This
-	// is only up to date immediately after a call to process() (e.g. via
-	// Draw()).
-	level int
-
-	// Temporary member variables.
-	parent    *TreeNode // The parent node (nil for the root).
-	graphicsX int       // The x-coordinate of the left-most graphics rune.
-	textX     int       // The x-coordinate of the first rune of the text.
+// Markers are glyphs drawn before node text.
+type Markers struct {
+	Expanded  string
+	Collapsed string
+	Leaf      string
 }
 
-// NewTreeNode returns a new tree node.
-func NewTreeNode(text string) *TreeNode {
-	textStyle := tcell.StyleDefault.Foreground(Styles.PrimaryTextColor).Background(Styles.PrimitiveBackgroundColor)
-	return &TreeNode{
-		line:              NewLine(NewSegment(text, textStyle)),
-		selectedTextStyle: tcell.StyleDefault.Reverse(true),
-		indent:            2,
-		expanded:          true,
-		expandable:        false,
-		selectable:        true,
-	}
-}
-
-// Walk traverses this node's subtree in depth-first, pre-order (NLR) order and
-// calls the provided callback function on each traversed node (which includes
-// this node) with the traversed node and its parent node (nil for this node).
-// The callback returns whether traversal should continue with the traversed
-// node's child nodes (true) or not recurse any deeper (false).
-func (n *TreeNode) Walk(callback func(node, parent *TreeNode) bool) *TreeNode {
-	n.parent = nil
-	nodes := []*TreeNode{n}
-	for len(nodes) > 0 {
-		// Pop the top node and process it.
-		node := nodes[len(nodes)-1]
-		nodes = nodes[:len(nodes)-1]
-		if !callback(node, node.parent) {
-			// Don't add any children.
-			continue
-		}
-
-		// Add children in reverse order.
-		for index := len(node.children) - 1; index >= 0; index-- {
-			node.children[index].parent = node
-			nodes = append(nodes, node.children[index])
-		}
-	}
-
-	return n
-}
-
-// SetReference allows you to store a reference of any type in this node. This
-// will allow you to establish a mapping between the TreeView hierarchy and your
-// internal tree structure.
-func (n *TreeNode) SetReference(reference any) *TreeNode {
-	n.reference = reference
-
-	return n
-}
-
-// GetReference returns this node's reference object.
-func (n *TreeNode) GetReference() any {
-	return n.reference
-}
-
-// SetChildren sets this node's child nodes.
-func (n *TreeNode) SetChildren(childNodes []*TreeNode) *TreeNode {
-	changed := len(n.children) != len(childNodes)
-	if !changed {
-		for index := range childNodes {
-			if n.children[index] != childNodes[index] {
-				changed = true
-				break
-			}
-		}
-	}
-	if changed {
-		n.children = childNodes
-	}
-	return n
-}
-
-// SetLine sets the node's styled text line.
-func (n *TreeNode) SetLine(line Line) *TreeNode {
-	n.line = line.Clone()
-
-	return n
-}
-
-// GetLine returns the node's styled text line.
-func (n *TreeNode) GetLine() Line {
-	return n.line.Clone()
-}
-
-// GetChildren returns this node's children.
-func (n *TreeNode) GetChildren() []*TreeNode {
-	return n.children
-}
-
-// ClearChildren removes all child nodes from this node.
-func (n *TreeNode) ClearChildren() *TreeNode {
-	if len(n.children) > 0 {
-		n.children = nil
-	}
-	return n
-}
-
-// AddChild adds a new child node to this node.
-func (n *TreeNode) AddChild(node *TreeNode) *TreeNode {
-	n.children = append(n.children, node)
-
-	return n
-}
-
-// RemoveChild removes a child node from this node. If the child node cannot be
-// found, nothing happens.
-func (n *TreeNode) RemoveChild(node *TreeNode) *TreeNode {
-	for index, child := range n.children {
-		if child == node {
-			n.children = slices.Delete(n.children, index, index+1)
-
-			break
-		}
-	}
-	return n
-}
-
-// SetSelectable sets a flag indicating whether this node can be selected by
-// the user.
-func (n *TreeNode) SetSelectable(selectable bool) *TreeNode {
-	if n.selectable != selectable {
-		n.selectable = selectable
-	}
-	return n
-}
-
-// SetExpanded sets whether or not this node's child nodes should be displayed.
-func (n *TreeNode) SetExpanded(expanded bool) *TreeNode {
-	if n.expanded != expanded {
-		n.expanded = expanded
-	}
-	return n
-}
-
-// SetExpandable sets whether this node can be expanded even when there are no
-// loaded child nodes yet.
-func (n *TreeNode) SetExpandable(expandable bool) *TreeNode {
-	if n.expandable != expandable {
-		n.expandable = expandable
-	}
-	return n
-}
-
-// IsExpandable returns whether this node can be expanded even when there are
-// no loaded child nodes yet.
-func (n *TreeNode) IsExpandable() bool {
-	return n.expandable
-}
-
-// Expand makes the child nodes of this node appear.
-func (n *TreeNode) Expand() *TreeNode {
-	if !n.expanded {
-		n.expanded = true
-	}
-	return n
-}
-
-// Collapse makes the child nodes of this node disappear.
-func (n *TreeNode) Collapse() *TreeNode {
-	if n.expanded {
-		n.expanded = false
-	}
-	return n
-}
-
-// ExpandAll expands this node and all descendent nodes.
-func (n *TreeNode) ExpandAll() *TreeNode {
-	n.Walk(func(node, parent *TreeNode) bool {
-		if !node.expanded {
-			node.expanded = true
-		}
-		return true
-	})
-	return n
-}
-
-// CollapseAll collapses this node and all descendent nodes.
-func (n *TreeNode) CollapseAll() *TreeNode {
-	n.Walk(func(node, parent *TreeNode) bool {
-		if node.expanded {
-			node.expanded = false
-		}
-		return true
-	})
-	return n
-}
-
-// IsExpanded returns whether the child nodes of this node are visible.
-func (n *TreeNode) IsExpanded() bool {
-	return n.expanded
-}
-
-// SetSelectedTextStyle sets the text style for this node when it is selected.
-func (n *TreeNode) SetSelectedTextStyle(style tcell.Style) *TreeNode {
-	if n.selectedTextStyle != style {
-		n.selectedTextStyle = style
-	}
-	return n
-}
-
-// GetSelectedTextStyle returns the text style for this node when it is
-// selected.
-func (n *TreeNode) GetSelectedTextStyle() tcell.Style {
-	return n.selectedTextStyle
-}
-
-// SetIndent sets an additional indentation for this node's text. A value of 0
-// keeps the text as far left as possible with a minimum of line graphics. Any
-// value greater than that moves the text to the right.
-func (n *TreeNode) SetIndent(indent int) *TreeNode {
-	if n.indent != indent {
-		n.indent = indent
-	}
-	return n
-}
-
-// GetLevel returns the node's level within the hierarchy, where 0 corresponds
-// to the root node, 1 corresponds to its children, and so on. This is only
-// guaranteed to be up to date immediately after the tree that contains this
-// node is drawn.
-func (n *TreeNode) GetLevel() int {
-	return n.level
-}
-
-// TreeView displays tree structures. A tree consists of nodes (TreeNode
+// Model displays tree structures. A tree consists of nodes (Node
 // objects) where each node has zero or more child nodes and exactly one parent
 // node (except for the root node which has no parent node).
 //
 // The SetRoot() function is used to specify the root of the tree. Other nodes
 // are added locally to the root node or any of its descendents. See the
-// TreeNode documentation for details on node attributes. (You can use
+// Node documentation for details on node attributes. (You can use
 // SetReference() to store a reference to nodes of your own tree structure.)
 //
 // Nodes can be selected by calling SetCurrentNode(). The user can navigate the
@@ -302,7 +44,7 @@ func (n *TreeNode) GetLevel() int {
 //   - Ctrl-F, page down: Move (the cursor) down by one page.
 //   - Ctrl-B, page up: Move (the cursor) up by one page.
 //
-// Selected nodes emit [TreeViewSelectedMsg] when the user hits Enter.
+// Selected nodes emit [SelectedMsg] when the user hits Enter.
 //
 // The root node corresponds to level 0, its children correspond to level 1,
 // their children to level 2, and so on. Per default, the first level that is
@@ -315,17 +57,17 @@ func (n *TreeNode) GetLevel() int {
 // bullet point lists.
 //
 // See https://github.com/ayn2op/tview/wiki/TreeView for an example.
-type TreeView struct {
-	*Box
+type Model struct {
+	*tview.Box
 
 	// The root node.
-	root *TreeNode
+	root *Node
 
 	// The currently selected node or nil if no node is selected.
-	currentNode *TreeNode
+	currentNode *Node
 
 	// The last note that was selected or nil of there is no such node.
-	lastNode *TreeNode
+	lastNode *Node
 
 	// The movement to be performed during the call to Draw(), one of the
 	// constants defined above.
@@ -343,7 +85,7 @@ type TreeView struct {
 	prefixes []string
 
 	// Markers drawn before the node text depending on expansion state.
-	markers TreeMarkers
+	markers Markers
 
 	// Vertical scroll offset.
 	offsetY int
@@ -361,7 +103,7 @@ type TreeView struct {
 	graphicsColor tcell.Color
 
 	// The visible nodes, top-down, as set by process().
-	nodes []*TreeNode
+	nodes []*Node
 
 	// Temporarily set to true while we know that the tree has not changed and
 	// therefore does not need to be reprocessed.
@@ -371,21 +113,14 @@ type TreeView struct {
 	lastMouseY int
 }
 
-// TreeMarkers are glyphs drawn before node text.
-type TreeMarkers struct {
-	Expanded  string
-	Collapsed string
-	Leaf      string
-}
-
-// NewTreeView returns a new tree view.
-func NewTreeView() *TreeView {
-	return &TreeView{
-		Box:           NewBox(),
+// NewModel returns a new tree view.
+func NewModel() *Model {
+	return &Model{
+		Box:           tview.NewBox(),
 		centerCursor:  true,
 		graphics:      true,
-		graphicsColor: Styles.GraphicsColor,
-		markers: TreeMarkers{
+		graphicsColor: tview.Styles.GraphicsColor,
+		markers: Markers{
 			Expanded:  "▾ ",
 			Collapsed: "▸ ",
 			Leaf:      "",
@@ -395,7 +130,7 @@ func NewTreeView() *TreeView {
 }
 
 // SetRoot sets the root node of the tree.
-func (t *TreeView) SetRoot(root *TreeNode) *TreeView {
+func (t *Model) SetRoot(root *Node) *Model {
 	if t.root != root {
 		t.root = root
 	}
@@ -404,7 +139,7 @@ func (t *TreeView) SetRoot(root *TreeNode) *TreeView {
 
 // GetRoot returns the root node of the tree. If no such node was previously
 // set, nil is returned.
-func (t *TreeView) GetRoot() *TreeNode {
+func (t *Model) GetRoot() *Node {
 	return t.root
 }
 
@@ -414,8 +149,8 @@ func (t *TreeView) GetRoot() *TreeNode {
 //
 // This function does NOT trigger the "changed" callback because the actual node
 // that will be selected is not known until the tree is drawn. Triggering the
-// "changed" callback is thus deferred until the next call to [TreeView.View].
-func (t *TreeView) SetCurrentNode(node *TreeNode) *TreeView {
+// "changed" callback is thus deferred until the next call to [Model.View].
+func (t *Model) SetCurrentNode(node *Node) *Model {
 	if t.currentNode != node {
 		t.currentNode = node
 	}
@@ -424,7 +159,7 @@ func (t *TreeView) SetCurrentNode(node *TreeNode) *TreeView {
 
 // GetCurrentNode returns the currently selected node or nil of no node is
 // currently selected.
-func (t *TreeView) GetCurrentNode() *TreeNode {
+func (t *Model) GetCurrentNode() *Node {
 	return t.currentNode
 }
 
@@ -432,19 +167,19 @@ func (t *TreeView) GetCurrentNode() *TreeNode {
 // node, including the root and the node itself. If there is no root node, nil
 // is returned. If there are multiple paths to the node, a random one is chosen
 // and returned.
-func (t *TreeView) GetPath(node *TreeNode) []*TreeNode {
+func (t *Model) GetPath(node *Node) []*Node {
 	if t.root == nil {
 		return nil
 	}
 
-	var f func(current *TreeNode, path []*TreeNode) []*TreeNode
-	f = func(current *TreeNode, path []*TreeNode) []*TreeNode {
+	var f func(current *Node, path []*Node) []*Node
+	f = func(current *Node, path []*Node) []*Node {
 		if current == node {
 			return path
 		}
 
 		for _, child := range current.children {
-			newPath := make([]*TreeNode, len(path), len(path)+1)
+			newPath := make([]*Node, len(path), len(path)+1)
 			copy(newPath, path)
 			if p := f(child, append(newPath, child)); p != nil {
 				return p
@@ -454,13 +189,13 @@ func (t *TreeView) GetPath(node *TreeNode) []*TreeNode {
 		return nil
 	}
 
-	return f(t.root, []*TreeNode{t.root})
+	return f(t.root, []*Node{t.root})
 }
 
 // SetTopLevel sets the first tree level that is visible with 0 referring to the
 // root, 1 to the root's child nodes, and so on. Nodes above the top level are
 // not displayed.
-func (t *TreeView) SetTopLevel(topLevel int) *TreeView {
+func (t *Model) SetTopLevel(topLevel int) *Model {
 	if t.topLevel != topLevel {
 		t.topLevel = topLevel
 	}
@@ -469,7 +204,7 @@ func (t *TreeView) SetTopLevel(topLevel int) *TreeView {
 
 // SetCenterCursor controls whether the cursor is kept centered whenever
 // possible.
-func (t *TreeView) SetCenterCursor(center bool) *TreeView {
+func (t *Model) SetCenterCursor(center bool) *Model {
 	if t.centerCursor != center {
 		t.centerCursor = center
 	}
@@ -487,7 +222,7 @@ func (t *TreeView) SetCenterCursor(center bool) *TreeView {
 //	  SetPrefixes([]string{"* ", "- ", "x "})
 //
 // Deeper levels will cycle through the prefixes.
-func (t *TreeView) SetPrefixes(prefixes []string) *TreeView {
+func (t *Model) SetPrefixes(prefixes []string) *Model {
 	changed := len(t.prefixes) != len(prefixes)
 	if !changed {
 		for index := range prefixes {
@@ -507,7 +242,7 @@ func (t *TreeView) SetPrefixes(prefixes []string) *TreeView {
 // Expanded is used for nodes with children whose children are visible,
 // Collapsed is used for nodes with children whose children are hidden, and
 // Leaf is used for nodes without children.
-func (t *TreeView) SetMarkers(markers TreeMarkers) *TreeView {
+func (t *Model) SetMarkers(markers Markers) *Model {
 	if t.markers != markers {
 		t.markers = markers
 	}
@@ -515,14 +250,14 @@ func (t *TreeView) SetMarkers(markers TreeMarkers) *TreeView {
 }
 
 // GetMarkers returns the marker strings currently used by this tree view.
-func (t *TreeView) GetMarkers() TreeMarkers {
+func (t *Model) GetMarkers() Markers {
 	return t.markers
 }
 
 // SetAlign controls the horizontal alignment of the node texts. If set to true,
 // all texts except that of top-level nodes will be placed in the same column.
 // If set to false, they will indent with the hierarchy.
-func (t *TreeView) SetAlign(align bool) *TreeView {
+func (t *Model) SetAlign(align bool) *Model {
 	if t.align != align {
 		t.align = align
 	}
@@ -531,7 +266,7 @@ func (t *TreeView) SetAlign(align bool) *TreeView {
 
 // SetGraphics sets a flag which determines whether or not line graphics are
 // drawn to illustrate the tree's hierarchy.
-func (t *TreeView) SetGraphics(showGraphics bool) *TreeView {
+func (t *Model) SetGraphics(showGraphics bool) *Model {
 	if t.graphics != showGraphics {
 		t.graphics = showGraphics
 	}
@@ -539,7 +274,7 @@ func (t *TreeView) SetGraphics(showGraphics bool) *TreeView {
 }
 
 // SetGraphicsColor sets the colors of the lines used to draw the tree structure.
-func (t *TreeView) SetGraphicsColor(color tcell.Color) *TreeView {
+func (t *Model) SetGraphicsColor(color tcell.Color) *Model {
 	if t.graphicsColor != color {
 		t.graphicsColor = color
 	}
@@ -549,7 +284,7 @@ func (t *TreeView) SetGraphicsColor(color tcell.Color) *TreeView {
 // GetScrollOffset returns the number of node rows that were skipped at the top
 // of the tree view. Note that when the user navigates the tree view, this value
 // is only updated after the tree view has been redrawn.
-func (t *TreeView) GetScrollOffset() int {
+func (t *Model) GetScrollOffset() int {
 	return t.offsetY
 }
 
@@ -557,7 +292,7 @@ func (t *TreeView) GetScrollOffset() int {
 // fall outside the tree view's box but notably does not include the children
 // of collapsed nodes. Note that this value is only up to date after the tree
 // view has been drawn.
-func (t *TreeView) GetRowCount() int {
+func (t *Model) GetRowCount() int {
 	return len(t.nodes)
 }
 
@@ -568,7 +303,7 @@ func (t *TreeView) GetRowCount() int {
 // offset refers to the number of visible nodes.
 //
 // If the offset is 0, nothing happens.
-func (t *TreeView) Move(offset int) *TreeView {
+func (t *Model) Move(offset int) *Model {
 	if offset == 0 {
 		return t
 	}
@@ -580,9 +315,9 @@ func (t *TreeView) Move(offset int) *TreeView {
 
 // process builds the visible tree, populates the "nodes" slice, and processes
 // pending movement actions. Set "drawingAfter" to true if you know that
-// [TreeView.View] will be called immediately after this function (to avoid
-// having [TreeView.View] call it again).
-func (t *TreeView) process(drawingAfter bool) {
+// [Model.View] will be called immediately after this function (to avoid
+// having [Model.View] call it again).
+func (t *Model) process(drawingAfter bool) {
 	t.stableNodes = drawingAfter
 	_, _, _, height := t.InnerRect()
 
@@ -596,7 +331,7 @@ func (t *TreeView) process(drawingAfter bool) {
 	if t.graphics {
 		graphicsOffset = 1
 	}
-	t.root.Walk(func(node, parent *TreeNode) bool {
+	t.root.Walk(func(node, parent *Node) bool {
 		// Set node attributes.
 		node.parent = parent
 		if parent == nil {
@@ -747,7 +482,7 @@ func (t *TreeView) process(drawingAfter bool) {
 }
 
 // View draws this model onto the screen.
-func (t *TreeView) View(screen tcell.Screen) {
+func (t *Model) View(screen tcell.Screen) {
 	t.Box.View(screen)
 	if t.root == nil {
 		return
@@ -787,7 +522,8 @@ func (t *TreeView) View(screen tcell.Screen) {
 
 	// Draw the tree.
 	posY := y
-	lineStyle := tcell.StyleDefault.Background(t.backgroundColor).Foreground(t.graphicsColor)
+	borderSet := t.GetBorderSet()
+	lineStyle := tcell.StyleDefault.Background(t.GetBackgroundColor()).Foreground(t.graphicsColor)
 	for index, node := range t.nodes {
 		// Skip invisible parts.
 		if posY >= y+height+1 || posY >= totalHeight {
@@ -809,10 +545,10 @@ func (t *TreeView) View(screen tcell.Screen) {
 				// Draw a branch if this ancestor is not a last child.
 				if ancestor.parent.children[len(ancestor.parent.children)-1] != ancestor {
 					if posY-1 >= y && ancestor.textX > ancestor.graphicsX {
-						PrintJoinedSemigraphics(screen, x+ancestor.graphicsX, posY-1, t.borderSet.Left, lineStyle)
+						tview.PrintJoinedSemigraphics(screen, x+ancestor.graphicsX, posY-1, borderSet.Left, lineStyle)
 					}
 					if posY < y+height {
-						screen.Put(x+ancestor.graphicsX, posY, t.borderSet.Right, lineStyle)
+						screen.Put(x+ancestor.graphicsX, posY, borderSet.Right, lineStyle)
 					}
 				}
 				ancestor = ancestor.parent
@@ -820,19 +556,19 @@ func (t *TreeView) View(screen tcell.Screen) {
 
 			if node.textX > node.graphicsX && node.graphicsX < width {
 				// BottomLeft for last child; LeftT for non-last siblings.
-				connector := t.borderSet.BottomLeft
+				connector := borderSet.BottomLeft
 				if node.parent != nil {
 					if siblings := node.parent.children; len(siblings) > 0 && siblings[len(siblings)-1] != node {
-						connector = t.borderSet.LeftT
+						connector = borderSet.LeftT
 					}
 				}
 
 				// Join this node.
 				if posY < y+height {
-					PrintJoinedSemigraphics(screen, x+node.graphicsX, posY, connector, lineStyle)
+					tview.PrintJoinedSemigraphics(screen, x+node.graphicsX, posY, connector, lineStyle)
 
 					for pos := node.graphicsX + 1; pos < node.textX && pos < width; pos++ {
-						screen.Put(x+pos, posY, t.borderSet.Top, lineStyle)
+						screen.Put(x+pos, posY, borderSet.Top, lineStyle)
 					}
 				}
 			}
@@ -856,13 +592,13 @@ func (t *TreeView) View(screen tcell.Screen) {
 				prefixStyle = node.line[0].Style
 			}
 			if len(t.prefixes) > 0 {
-				_, _, prefixWidth = printWithStyle(screen, t.prefixes[(node.level-t.topLevel)%len(t.prefixes)], x+node.textX, posY, 0, width-node.textX, AlignmentLeft, prefixStyle, true)
+				_, _, prefixWidth = tview.PrintStyled(screen, t.prefixes[(node.level-t.topLevel)%len(t.prefixes)], x+node.textX, posY, 0, width-node.textX, tview.AlignmentLeft, prefixStyle, true)
 			}
 
 			// Marker.
 			markerWidth := 0
 			if marker != "" && node.textX+prefixWidth < width {
-				_, _, markerWidth = printWithStyle(screen, marker, x+node.textX+prefixWidth, posY, 0, width-node.textX-prefixWidth, AlignmentLeft, prefixStyle, true)
+				_, _, markerWidth = tview.PrintStyled(screen, marker, x+node.textX+prefixWidth, posY, 0, width-node.textX-prefixWidth, tview.AlignmentLeft, prefixStyle, true)
 			}
 
 			// Text.
@@ -874,14 +610,14 @@ func (t *TreeView) View(screen tcell.Screen) {
 							break
 						}
 						style := mergeStyle(segment.Style, node.selectedTextStyle)
-						_, _, segmentWidth := printWithStyle(
+						_, _, segmentWidth := tview.PrintStyled(
 							screen,
 							segment.Text,
 							x+node.textX+prefixWidth+markerWidth+posX,
 							posY,
 							0,
 							width-node.textX-prefixWidth-markerWidth-posX,
-							AlignmentLeft,
+							tview.AlignmentLeft,
 							style,
 							false,
 						)
@@ -893,14 +629,14 @@ func (t *TreeView) View(screen tcell.Screen) {
 						if posX >= width-node.textX-prefixWidth-markerWidth {
 							break
 						}
-						_, _, segmentWidth := printWithStyle(
+						_, _, segmentWidth := tview.PrintStyled(
 							screen,
 							segment.Text,
 							x+node.textX+prefixWidth+markerWidth+posX,
 							posY,
 							0,
 							width-node.textX-prefixWidth-markerWidth-posX,
-							AlignmentLeft,
+							tview.AlignmentLeft,
 							segment.Style,
 							false,
 						)
@@ -948,21 +684,21 @@ func mergeStyle(base, overlay tcell.Style) tcell.Style {
 	return base
 }
 
-func (t *TreeView) selectCurrentNode() Cmd {
+func (t *Model) selectCurrentNode() tview.Cmd {
 	node := t.currentNode
 	if node == nil {
 		return nil
 	}
 	selectedNode := node
-	return func() Msg {
-		return TreeViewSelectedMsg{Node: selectedNode}
+	return func() tview.Msg {
+		return SelectedMsg{Node: selectedNode}
 	}
 }
 
-func (t *TreeView) handleKeyMsg(msg KeyMsg) Cmd {
+func (t *Model) handleKeyMsg(msg tview.KeyMsg) tview.Cmd {
 	// Because the tree is flattened into a list only at drawing time, we also
 	// postpone the (cursor) movement to drawing time.
-	var selectCmd Cmd
+	var selectCmd tview.Cmd
 	switch key := msg.Key(); key {
 	case tcell.KeyDown, tcell.KeyRight:
 		t.movement = treeMove
@@ -1009,24 +745,24 @@ func (t *TreeView) handleKeyMsg(msg KeyMsg) Cmd {
 	return selectCmd
 }
 
-func (t *TreeView) handleMouseMsg(msg MouseMsg) Cmd {
+func (t *Model) handleMouseMsg(msg tview.MouseMsg) tview.Cmd {
 	x, y := msg.Position()
 	if !t.InRect(x, y) {
 		return nil
 	}
 
 	switch msg.Action {
-	case MouseLeftDown:
+	case tview.MouseLeftDown:
 		t.lastMouseY = y
-	case MouseMove:
+	case tview.MouseMove:
 		if msg.Buttons()&tcell.Button1 != 0 && t.lastMouseY != -1 {
 			t.movement = treeScroll
 			t.step = t.lastMouseY - y
 			t.lastMouseY = y
 		}
-	case MouseLeftUp:
+	case tview.MouseLeftUp:
 		t.lastMouseY = -1
-	case MouseLeftClick:
+	case tview.MouseLeftClick:
 		_, rectY, _, _ := t.InnerRect()
 		y += t.offsetY - rectY
 		if t.lastMouseY != -1 {
@@ -1038,16 +774,16 @@ func (t *TreeView) handleMouseMsg(msg MouseMsg) Cmd {
 			node := t.nodes[y]
 			if node.selectable {
 				t.currentNode = node
-				return Sequence(SetFocus(t), func() Msg {
-					return TreeViewSelectedMsg{Node: node}
+				return tview.Sequence(tview.SetFocus(t), func() tview.Msg {
+					return SelectedMsg{Node: node}
 				})
 			}
 		}
-		return SetFocus(t)
-	case MouseScrollUp:
+		return tview.SetFocus(t)
+	case tview.MouseScrollUp:
 		t.movement = treeScroll
 		t.step = -1
-	case MouseScrollDown:
+	case tview.MouseScrollDown:
 		t.movement = treeScroll
 		t.step = 1
 	}
@@ -1055,11 +791,11 @@ func (t *TreeView) handleMouseMsg(msg MouseMsg) Cmd {
 }
 
 // Update handles input events for this model.
-func (t *TreeView) Update(msg Msg) Cmd {
+func (t *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case KeyMsg:
+	case tview.KeyMsg:
 		return t.handleKeyMsg(msg)
-	case MouseMsg:
+	case tview.MouseMsg:
 		return t.handleMouseMsg(msg)
 	}
 	return nil

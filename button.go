@@ -151,7 +151,7 @@ func (b *Button) View(screen tcell.Screen) {
 	x, y, width, height := b.InnerRect()
 	if width > 0 && height > 0 {
 		y = y + height/2
-		printWithStyle(screen, b.text, x, y, 0, width, AlignmentCenter, style, true)
+		PrintStyled(screen, b.text, x, y, 0, width, AlignmentCenter, style, true)
 	}
 }
 

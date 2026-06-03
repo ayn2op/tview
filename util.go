@@ -20,7 +20,7 @@ const (
 // Returns the number of actual bytes of the text printed and the actual width
 // used for the printed runes.
 func Print(screen tcell.Screen, text string, x, y, maxWidth int, alignment Alignment, color tcell.Color) (int, int) {
-	start, end, width := printWithStyle(screen, text, x, y, 0, maxWidth, alignment, tcell.StyleDefault.Foreground(color), true)
+	start, end, width := PrintStyled(screen, text, x, y, 0, maxWidth, alignment, tcell.StyleDefault.Foreground(color), true)
 	return end - start, width
 }
 
@@ -30,17 +30,17 @@ func Print(screen tcell.Screen, text string, x, y, maxWidth int, alignment Align
 // Returns the number of actual bytes of the text printed and the actual width
 // used for the printed runes.
 func PrintWithStyle(screen tcell.Screen, text string, x, y, maxWidth int, alignment Alignment, style tcell.Style) (int, int) {
-	start, end, width := printWithStyle(screen, text, x, y, 0, maxWidth, alignment, style, false)
+	start, end, width := PrintStyled(screen, text, x, y, 0, maxWidth, alignment, style, false)
 	return end - start, width
 }
 
-// printWithStyle works like [Print] but it takes a style instead of just a
+// PrintStyled works like [Print] but it takes a style instead of just a
 // foreground color. The skipWidth parameter specifies the number of cells
 // skipped at the beginning of the text. It returns the start index, end index
 // (exclusively), and screen width of the text actually printed. If
 // maintainBackground is "true", the existing screen background is not changed
 // (i.e. the style's background color is ignored).
-func printWithStyle(screen tcell.Screen, text string, x, y, skipWidth, maxWidth int, alignment Alignment, style tcell.Style, maintainBackground bool) (start, end, printedWidth int) {
+func PrintStyled(screen tcell.Screen, text string, x, y, skipWidth, maxWidth int, alignment Alignment, style tcell.Style, maintainBackground bool) (start, end, printedWidth int) {
 	totalWidth, totalHeight := screen.Size()
 	if maxWidth <= 0 || len(text) == 0 || y < 0 || y >= totalHeight {
 		return 0, 0, 0

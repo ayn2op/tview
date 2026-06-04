@@ -57,10 +57,7 @@ type Model struct {
 	// The currently selected node or nil if no node is selected.
 	currentNode *Node
 
-	// The last note that was selected or nil of there is no such node.
-	lastNode *Node
-
-	// The movement to be performed during the call to Draw(), one of the
+	// The movement to be performed during the call to View(), one of the
 	// constants defined above.
 	movement int
 
@@ -139,11 +136,8 @@ func (t *Model) GetRoot() *Node {
 
 // SetCurrentNode sets the currently selected node. Provide nil to clear all
 // cursors. Selected nodes must be visible and selectable, or else the cursor
-// will be changed to the top-most selectable and visible node.
-//
-// This function does NOT trigger the "changed" callback because the actual node
-// that will be selected is not known until the tree is drawn. Triggering the
-// "changed" callback is thus deferred until the next call to [Model.View].
+// will be changed to the top-most selectable and visible node when the tree is
+// next drawn.
 func (t *Model) SetCurrentNode(node *Node) *Model {
 	if t.currentNode != node {
 		t.currentNode = node
@@ -451,7 +445,7 @@ func (t *Model) process(drawingAfter bool) {
 				}
 			}
 			if t.movement != treeHome && t.movement != treeEnd {
-				// treeScroll, treeHome, and treeEnd are handled by Draw().
+				// treeScroll, treeHome, and treeEnd are handled by View().
 				t.movement = treeNone
 				t.step = 0
 			}
@@ -471,8 +465,6 @@ func (t *Model) process(drawingAfter bool) {
 			t.currentNode = nil
 		}
 	}
-
-	t.lastNode = t.currentNode
 }
 
 // View draws this model onto the screen.

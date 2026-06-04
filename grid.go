@@ -27,7 +27,7 @@ type gridItem struct {
 // and "l" keys) while the grid has focus and none of its contained models
 // do.
 //
-// See https://github.com/rivo/tview/wiki/Grid for an example.
+// See https://github.com/ayn2op/tview/wiki/Grid for an example.
 type Grid struct {
 	*Box
 

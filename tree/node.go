@@ -35,7 +35,7 @@ type Node struct {
 
 	// The hierarchy level (0 for the root, 1 for its children, and so on). This
 	// is only up to date immediately after a call to process() (e.g. via
-	// Draw()).
+	// View()).
 	level int
 
 	// Temporary member variables.

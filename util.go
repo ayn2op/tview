@@ -1,8 +1,6 @@
 package tview
 
 import (
-	"math"
-
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -130,11 +128,6 @@ func PrintStyled(screen tcell.Screen, text string, x, y, skipWidth, maxWidth int
 	}
 
 	return start, end, printedWidth
-}
-
-// PrintSimple prints white text to the screen at the given position.
-func PrintSimple(screen tcell.Screen, text string, x, y int) {
-	Print(screen, text, x, y, math.MaxInt32, AlignmentLeft, Styles.PrimaryTextColor)
 }
 
 // ModelInRect reports whether x,y is inside m's rectangle.

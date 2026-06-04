@@ -46,8 +46,6 @@ type Markers struct {
 // hierarchy. Alternative (or additionally), you can set different prefixes
 // using SetPrefixes() for different levels, for example to display hierarchical
 // bullet point lists.
-//
-// See https://github.com/ayn2op/tview/wiki/TreeView for an example.
 type Model struct {
 	*tview.Box
 

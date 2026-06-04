@@ -33,8 +33,6 @@ type item struct {
 // models are arranged horizontally or vertically. The way they are
 // distributed along that dimension depends on their layout settings, which is
 // either a fixed length or a proportional length. See AddItem() for details.
-//
-// See https://github.com/ayn2op/tview/wiki/Flex for an example.
 type Model struct {
 	*tview.Box
 

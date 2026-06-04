@@ -59,8 +59,6 @@ type FormItem interface {
 // or horizontal layout. Form elements include types such as InputField or
 // Checkbox. These elements can be optionally followed by one or more buttons
 // for which you can define form-wide actions (e.g. Save, Clear, Cancel).
-//
-// See https://github.com/ayn2op/tview/wiki/Form for an example.
 type Form struct {
 	*Box
 

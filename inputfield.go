@@ -20,8 +20,6 @@ import (
 // is possible to paste such characters into the input field, possibly resulting
 // in multi-line input. You can use [InputField.SetAcceptanceFunc] to prevent
 // this.
-//
-// See https://github.com/ayn2op/tview/wiki/InputField for an example.
 type InputField struct {
 	*Box
 

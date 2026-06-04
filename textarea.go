@@ -2396,7 +2396,7 @@ func (t *TextArea) handleMouseMsg(msg MouseMsg) Cmd {
 	// Turn mouse coordinates into text coordinates.
 	labelWidth := t.labelWidth
 	if labelWidth == 0 && t.label != "" {
-		labelWidth = TaggedStringWidth(t.label)
+		labelWidth = uniseg.StringWidth(t.label)
 	}
 	column := x - rectX - labelWidth
 	row := y - rectY

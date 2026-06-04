@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
 )
 
 var (
@@ -470,7 +471,7 @@ func (f *Form) View(screen tcell.Screen) {
 	// Find the longest label.
 	var maxLabelWidth int
 	for _, item := range f.items {
-		labelWidth := TaggedStringWidth(item.GetLabel())
+		labelWidth := uniseg.StringWidth(item.GetLabel())
 		if labelWidth > maxLabelWidth {
 			maxLabelWidth = labelWidth
 		}
@@ -486,7 +487,7 @@ func (f *Form) View(screen tcell.Screen) {
 	)
 	for index, item := range f.items {
 		// Calculate the space needed.
-		labelWidth := TaggedStringWidth(item.GetLabel())
+		labelWidth := uniseg.StringWidth(item.GetLabel())
 		var itemWidth int
 		if f.horizontal {
 			fieldWidth := item.GetFieldWidth()
@@ -552,7 +553,7 @@ func (f *Form) View(screen tcell.Screen) {
 	buttonWidths := make([]int, len(f.buttons))
 	buttonsWidth := 0
 	for index, button := range f.buttons {
-		w := TaggedStringWidth(button.GetLabel()) + 4
+		w := uniseg.StringWidth(button.GetLabel()) + 4
 		buttonWidths[index] = w
 		buttonsWidth += w + 1
 	}

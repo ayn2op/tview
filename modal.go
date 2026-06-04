@@ -2,6 +2,7 @@ package tview
 
 import (
 	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
 )
 
 // Modal is a centered message window used to inform the user or prompt them
@@ -128,7 +129,7 @@ func (m *Modal) View(screen tcell.Screen) {
 	// Calculate the width of this modal.
 	buttonsWidth := 0
 	for _, button := range m.form.buttons {
-		buttonsWidth += TaggedStringWidth(button.text) + 4 + 2
+		buttonsWidth += uniseg.StringWidth(button.text) + 4 + 2
 	}
 	buttonsWidth -= 2
 	screenWidth, screenHeight := screen.Size()

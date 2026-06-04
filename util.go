@@ -53,23 +53,21 @@ func PrintStyled(screen tcell.Screen, text string, x, y, skipWidth, maxWidth int
 
 	// Skip beginning and measure width.
 	var textWidth int
-	state := &stepState{
-		unisegState: -1,
-	}
-	newState := *state
+	state := stepState{unisegState: -1}
+	newState := state
 	str := text
 	for len(str) > 0 {
 		_, str, state = step(str, state)
 		if skipWidth > 0 {
 			skipWidth -= state.Width()
 			text = str
-			newState = *state
+			newState = state
 			start += state.GrossLength()
 		} else {
 			textWidth += state.Width()
 		}
 	}
-	state = &newState
+	state = newState
 
 	// Reduce all alignments to AlignLeft.
 	switch alignment {

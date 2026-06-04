@@ -258,7 +258,7 @@ func (i *InputField) View(screen tcell.Screen) {
 	// Resize text area.
 	labelWidth := i.textArea.GetLabelWidth()
 	if labelWidth == 0 {
-		labelWidth = TaggedStringWidth(i.textArea.GetLabel())
+		labelWidth = uniseg.StringWidth(i.textArea.GetLabel())
 	}
 	fieldWidth := i.fieldWidth
 	if fieldWidth == 0 {

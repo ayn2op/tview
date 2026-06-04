@@ -2,6 +2,7 @@ package tview
 
 import (
 	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
 )
 
 type ButtonSelectedMsg struct {
@@ -40,7 +41,7 @@ type Button struct {
 // NewButton returns a new input field.
 func NewButton(label string) *Button {
 	box := NewBox()
-	box.SetRect(0, 0, TaggedStringWidth(label)+4, 1)
+	box.SetRect(0, 0, uniseg.StringWidth(label)+4, 1)
 	return &Button{
 		Box:            box,
 		text:           label,

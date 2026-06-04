@@ -160,38 +160,22 @@ func (s *stepState) GrossLength() int {
 	return s.grossLength
 }
 
-// step iterates over grapheme clusters of a string.
-func step(str string, state *stepState) (cluster, rest string, newState *stepState) {
-	if state == nil {
-		state = &stepState{
-			unisegState: -1,
-		}
-	}
+// step iterates over grapheme clusters of a string. The state flows by value so
+// that callers (text measuring and printing, all hot paths) avoid a per-call
+// heap allocation. The first call must receive a zero-value state with
+// unisegState set to -1.
+func step(str string, state stepState) (cluster, rest string, newState stepState) {
 	if len(str) == 0 {
-		newState = state
-		return
+		return "", "", state
 	}
 
-	preState := state.unisegState
-	cluster, rest, state.boundaries, state.unisegState = uniseg.StepString(str, preState)
+	cluster, rest, state.boundaries, state.unisegState = uniseg.StepString(str, state.unisegState)
 	state.grossLength = len(cluster)
 	if rest == "" && !uniseg.HasTrailingLineBreakInString(cluster) {
 		state.boundaries &^= uniseg.MaskLine
 	}
 
-	newState = state
-	return
-}
-
-// TaggedStringWidth returns the width of the given string needed to print it on
-// screen.
-func TaggedStringWidth(text string) (width int) {
-	var state *stepState
-	for len(text) > 0 {
-		_, text, state = step(text, state)
-		width += state.Width()
-	}
-	return
+	return cluster, rest, state
 }
 
 // WordWrap splits a text such that each resulting line does not exceed the
@@ -203,7 +187,7 @@ func WordWrap(text string, width int) []string {
 	}
 
 	var (
-		state                                              *stepState
+		state                                              = stepState{unisegState: -1}
 		lineWidth, lineLength, lastOption, lastOptionWidth int
 	)
 	str := text

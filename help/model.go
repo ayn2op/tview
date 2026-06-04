@@ -6,6 +6,7 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
 )
 
 type KeyMap interface {
@@ -190,7 +191,7 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 			}
 			keyText := m.formatKey(hp.Key)
 			col.entries = append(col.entries, entry{key: keyText, desc: hp.Desc})
-			kw := tview.TaggedStringWidth(keyText)
+			kw := uniseg.StringWidth(keyText)
 			if kw > col.keyW {
 				col.keyW = kw
 			}
@@ -204,7 +205,7 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 			if e.key != "" && e.desc != "" {
 				w += 1
 			}
-			w += tview.TaggedStringWidth(e.desc)
+			w += uniseg.StringWidth(e.desc)
 			if w > col.colW {
 				col.colW = w
 			}
@@ -220,7 +221,7 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 	if sepText == "" {
 		sepText = " "
 	}
-	sepW := tview.TaggedStringWidth(sepText)
+	sepW := uniseg.StringWidth(sepText)
 
 	included := 0
 	totalW := 0
@@ -267,7 +268,7 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 			}
 
 			e := c.entries[row]
-			keyPad := c.keyW - tview.TaggedStringWidth(e.key)
+			keyPad := c.keyW - uniseg.StringWidth(e.key)
 			if e.key != "" {
 				cell = append(cell, segment{text: e.key, style: m.styles.FullKey})
 			}
@@ -376,7 +377,7 @@ func (m *Model) formatKey(key string) string {
 func segmentsWidth(segments []segment) int {
 	width := 0
 	for _, segment := range segments {
-		width += tview.TaggedStringWidth(segment.text)
+		width += uniseg.StringWidth(segment.text)
 	}
 	return width
 }

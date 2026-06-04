@@ -2,6 +2,7 @@ package tree
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -33,18 +34,8 @@ type Markers struct {
 // SetReference() to store a reference to nodes of your own tree structure.)
 //
 // Nodes can be selected by calling SetCurrentNode(). The user can navigate the
-// cursor or the tree by using the following keys:
-//
-//   - j, down arrow, right arrow: Move (the cursor) down by one node.
-//   - k, up arrow, left arrow: Move (the cursor) up by one node.
-//   - g, home: Move (the cursor) to the top.
-//   - G, end: Move (the cursor) to the bottom.
-//   - J: Move (the cursor) up one level (if that node is selectable).
-//   - K: Move (the cursor) to the last node one level down (if any).
-//   - Ctrl-F, page down: Move (the cursor) down by one page.
-//   - Ctrl-B, page up: Move (the cursor) up by one page.
-//
-// Selected nodes emit [SelectedMsg] when the user hits Enter.
+// cursor or the tree using the configured [Keybinds]. Selected nodes emit
+// [SelectedMsg].
 //
 // The root node corresponds to level 0, its children correspond to level 1,
 // their children to level 2, and so on. Per default, the first level that is
@@ -111,6 +102,8 @@ type Model struct {
 
 	// Internal mouse track data.
 	lastMouseY int
+
+	keybinds Keybinds
 }
 
 // NewModel returns a new tree view.
@@ -126,6 +119,7 @@ func NewModel() *Model {
 			Leaf:      "",
 		},
 		lastMouseY: -1,
+		keybinds:   DefaultKeybinds(),
 	}
 }
 
@@ -699,45 +693,30 @@ func (t *Model) handleKeyMsg(msg tview.KeyMsg) tview.Cmd {
 	// Because the tree is flattened into a list only at drawing time, we also
 	// postpone the (cursor) movement to drawing time.
 	var selectCmd tview.Cmd
-	switch key := msg.Key(); key {
-	case tcell.KeyDown, tcell.KeyRight:
+	switch {
+	case keybind.Matches(msg, t.keybinds.Down):
 		t.movement = treeMove
 		t.step = 1
-	case tcell.KeyUp, tcell.KeyLeft:
+	case keybind.Matches(msg, t.keybinds.Up):
 		t.movement = treeMove
 		t.step = -1
-	case tcell.KeyHome:
+	case keybind.Matches(msg, t.keybinds.Top):
 		t.movement = treeHome
-	case tcell.KeyEnd:
+	case keybind.Matches(msg, t.keybinds.Bottom):
 		t.movement = treeEnd
-	case tcell.KeyPgDn, tcell.KeyCtrlF:
+	case keybind.Matches(msg, t.keybinds.MoveToLastChild):
+		t.movement = treeChild
+	case keybind.Matches(msg, t.keybinds.MoveToParent):
+		t.movement = treeParent
+	case keybind.Matches(msg, t.keybinds.PageDown):
 		_, _, _, height := t.InnerRect()
 		t.movement = treeMove
 		t.step = height
-	case tcell.KeyPgUp, tcell.KeyCtrlB:
+	case keybind.Matches(msg, t.keybinds.PageUp):
 		_, _, _, height := t.InnerRect()
 		t.movement = treeMove
 		t.step = -height
-	case tcell.KeyRune:
-		switch msg.Str() {
-		case "g":
-			t.movement = treeHome
-		case "G":
-			t.movement = treeEnd
-		case "j":
-			t.movement = treeMove
-			t.step = 1
-		case "J":
-			t.movement = treeChild
-		case "k":
-			t.movement = treeMove
-			t.step = -1
-		case "K":
-			t.movement = treeParent
-		case " ":
-			selectCmd = t.selectCurrentNode()
-		}
-	case tcell.KeyEnter:
+	case keybind.Matches(msg, t.keybinds.Select):
 		selectCmd = t.selectCurrentNode()
 	}
 

@@ -1345,11 +1345,11 @@ func newStyledScreen(screen tcell.Screen, style tcell.Style) *styledScreen {
 }
 
 func (s *styledScreen) SetContent(x int, y int, primary rune, combining []rune, style tcell.Style) {
-	s.Screen.SetContent(x, y, primary, combining, mergeStyle(s.style, style))
+	s.Screen.SetContent(x, y, primary, combining, tview.MergeStyle(s.style, style))
 }
 
 func (s *styledScreen) Put(x int, y int, str string, style tcell.Style) (string, int) {
-	return s.Screen.Put(x, y, str, mergeStyle(s.style, style))
+	return s.Screen.Put(x, y, str, tview.MergeStyle(s.style, style))
 }
 
 func (s *styledScreen) PutStr(x int, y int, str string) {
@@ -1357,30 +1357,7 @@ func (s *styledScreen) PutStr(x int, y int, str string) {
 }
 
 func (s *styledScreen) PutStrStyled(x int, y int, str string, style tcell.Style) {
-	s.Screen.PutStrStyled(x, y, str, mergeStyle(s.style, style))
-}
-
-// mergeStyle layers overlay on top of base: an explicitly set overlay color
-// wins, otherwise base's color is kept, and boolean attributes are unioned.
-func mergeStyle(base, overlay tcell.Style) tcell.Style {
-	fg := overlay.GetForeground()
-	if fg == tcell.ColorDefault {
-		fg = base.GetForeground()
-	}
-	bg := overlay.GetBackground()
-	if bg == tcell.ColorDefault {
-		bg = base.GetBackground()
-	}
-
-	style := base.Foreground(fg).Background(bg)
-	style = style.Bold(base.HasBold() || overlay.HasBold())
-	style = style.Dim(base.HasDim() || overlay.HasDim())
-	style = style.Italic(base.HasItalic() || overlay.HasItalic())
-	style = style.Blink(base.HasBlink() || overlay.HasBlink())
-	style = style.Reverse(base.HasReverse() || overlay.HasReverse())
-	style = style.StrikeThrough(base.HasStrikeThrough() || overlay.HasStrikeThrough())
-	style = style.Underline(base.HasUnderline() || overlay.HasUnderline())
-	return style
+	s.Screen.PutStrStyled(x, y, str, tview.MergeStyle(s.style, style))
 }
 
 func (l *Model) trimToFullItems(children []drawnItem, height int) []drawnItem {

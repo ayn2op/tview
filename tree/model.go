@@ -593,7 +593,7 @@ func (t *Model) View(screen tcell.Screen) {
 						if posX >= width-node.textX-prefixWidth-markerWidth {
 							break
 						}
-						style := mergeStyle(segment.Style, node.selectedTextStyle)
+						style := tview.MergeStyle(segment.Style, node.selectedTextStyle)
 						_, _, segmentWidth := tview.PrintStyled(
 							screen,
 							segment.Text,
@@ -633,39 +633,6 @@ func (t *Model) View(screen tcell.Screen) {
 		// Advance.
 		posY++
 	}
-}
-
-func mergeStyle(base, overlay tcell.Style) tcell.Style {
-	if fg := overlay.GetForeground(); fg != tcell.ColorDefault {
-		base = base.Foreground(fg)
-	}
-	if bg := overlay.GetBackground(); bg != tcell.ColorDefault {
-		base = base.Background(bg)
-	}
-
-	if overlay.HasBold() {
-		base = base.Bold(true)
-	}
-	if overlay.HasBlink() {
-		base = base.Blink(true)
-	}
-	if overlay.HasDim() {
-		base = base.Dim(true)
-	}
-	if overlay.HasItalic() {
-		base = base.Italic(true)
-	}
-	if overlay.HasReverse() {
-		base = base.Reverse(true)
-	}
-	if overlay.HasStrikeThrough() {
-		base = base.StrikeThrough(true)
-	}
-	if overlay.HasUnderline() {
-		base = base.Underline(true)
-	}
-
-	return base
 }
 
 func (t *Model) selectCurrentNode() tview.Cmd {

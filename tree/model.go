@@ -120,9 +120,7 @@ func NewModel() *Model {
 
 // SetRoot sets the root node of the tree.
 func (t *Model) SetRoot(root *Node) *Model {
-	if t.root != root {
-		t.root = root
-	}
+	t.root = root
 	return t
 }
 
@@ -137,9 +135,7 @@ func (t *Model) GetRoot() *Node {
 // will be changed to the top-most selectable and visible node when the tree is
 // next drawn.
 func (t *Model) SetCurrentNode(node *Node) *Model {
-	if t.currentNode != node {
-		t.currentNode = node
-	}
+	t.currentNode = node
 	return t
 }
 
@@ -182,18 +178,14 @@ func (t *Model) GetPath(node *Node) []*Node {
 // root, 1 to the root's child nodes, and so on. Nodes above the top level are
 // not displayed.
 func (t *Model) SetTopLevel(topLevel int) *Model {
-	if t.topLevel != topLevel {
-		t.topLevel = topLevel
-	}
+	t.topLevel = topLevel
 	return t
 }
 
 // SetCenterCursor controls whether the cursor is kept centered whenever
 // possible.
 func (t *Model) SetCenterCursor(center bool) *Model {
-	if t.centerCursor != center {
-		t.centerCursor = center
-	}
+	t.centerCursor = center
 	return t
 }
 
@@ -209,18 +201,7 @@ func (t *Model) SetCenterCursor(center bool) *Model {
 //
 // Deeper levels will cycle through the prefixes.
 func (t *Model) SetPrefixes(prefixes []string) *Model {
-	changed := len(t.prefixes) != len(prefixes)
-	if !changed {
-		for index := range prefixes {
-			if t.prefixes[index] != prefixes[index] {
-				changed = true
-				break
-			}
-		}
-	}
-	if changed {
-		t.prefixes = prefixes
-	}
+	t.prefixes = prefixes
 	return t
 }
 
@@ -229,9 +210,7 @@ func (t *Model) SetPrefixes(prefixes []string) *Model {
 // Collapsed is used for nodes with children whose children are hidden, and
 // Leaf is used for nodes without children.
 func (t *Model) SetMarkers(markers Markers) *Model {
-	if t.markers != markers {
-		t.markers = markers
-	}
+	t.markers = markers
 	return t
 }
 
@@ -244,26 +223,20 @@ func (t *Model) GetMarkers() Markers {
 // all texts except that of top-level nodes will be placed in the same column.
 // If set to false, they will indent with the hierarchy.
 func (t *Model) SetAlign(align bool) *Model {
-	if t.align != align {
-		t.align = align
-	}
+	t.align = align
 	return t
 }
 
 // SetGraphics sets a flag which determines whether or not line graphics are
 // drawn to illustrate the tree's hierarchy.
 func (t *Model) SetGraphics(showGraphics bool) *Model {
-	if t.graphics != showGraphics {
-		t.graphics = showGraphics
-	}
+	t.graphics = showGraphics
 	return t
 }
 
 // SetGraphicsColor sets the colors of the lines used to draw the tree structure.
 func (t *Model) SetGraphicsColor(color tcell.Color) *Model {
-	if t.graphicsColor != color {
-		t.graphicsColor = color
-	}
+	t.graphicsColor = color
 	return t
 }
 

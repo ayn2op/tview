@@ -260,9 +260,7 @@ func (b *Box) InInnerRect(x, y int) bool {
 
 // SetDontClear sets whether drawing should skip clearing the background.
 func (b *Box) SetDontClear(dontClear bool) *Box {
-	if b.dontClear != dontClear {
-		b.dontClear = dontClear
-	}
+	b.dontClear = dontClear
 	return b
 }
 
@@ -291,9 +289,7 @@ func (b *Box) SetBorders(flag Borders) *Box {
 
 // SetBorderSet sets the border set.
 func (b *Box) SetBorderSet(borderSet BorderSet) *Box {
-	if b.borderSet != borderSet {
-		b.borderSet = borderSet
-	}
+	b.borderSet = borderSet
 	return b
 }
 
@@ -304,9 +300,7 @@ func (b *Box) GetBorderSet() BorderSet {
 
 // SetBorderStyle sets the box's border style.
 func (b *Box) SetBorderStyle(style tcell.Style) *Box {
-	if b.borderStyle != style {
-		b.borderStyle = style
-	}
+	b.borderStyle = style
 	return b
 }
 
@@ -331,17 +325,13 @@ func (b *Box) SetTitle(title string) *Box {
 
 // SetTitleStyle sets the style of the title.
 func (b *Box) SetTitleStyle(style tcell.Style) *Box {
-	if b.titleStyle != style {
-		b.titleStyle = style
-	}
+	b.titleStyle = style
 	return b
 }
 
 // SetTitleAlignment sets the alignment of the title.
 func (b *Box) SetTitleAlignment(alignment Alignment) *Box {
-	if b.titleAlignment != alignment {
-		b.titleAlignment = alignment
-	}
+	b.titleAlignment = alignment
 	return b
 }
 
@@ -361,17 +351,13 @@ func (b *Box) SetFooter(footer string) *Box {
 
 // SetFooterStyle sets the style of the footer.
 func (b *Box) SetFooterStyle(style tcell.Style) *Box {
-	if b.footerStyle != style {
-		b.footerStyle = style
-	}
+	b.footerStyle = style
 	return b
 }
 
 // SetFooterAlignment sets the alignment of the footer.
 func (b *Box) SetFooterAlignment(alignment Alignment) *Box {
-	if b.footerAlignment != alignment {
-		b.footerAlignment = alignment
-	}
+	b.footerAlignment = alignment
 	return b
 }
 

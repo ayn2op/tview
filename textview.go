@@ -156,9 +156,7 @@ func NewTextView() *TextView {
 
 // SetLabel sets the text to be displayed before the text view.
 func (t *TextView) SetLabel(label string) *TextView {
-	if t.label != label {
-		t.label = label
-	}
+	t.label = label
 	return t
 }
 
@@ -170,9 +168,7 @@ func (t *TextView) GetLabel() string {
 // SetLabelWidth sets the screen width of the label. A value of 0 will cause the
 // model to use the width of the label string.
 func (t *TextView) SetLabelWidth(width int) *TextView {
-	if t.labelWidth != width {
-		t.labelWidth = width
-	}
+	t.labelWidth = width
 	return t
 }
 
@@ -241,9 +237,7 @@ func (t *TextView) SetWordWrap(wrapOnWords bool) *TextView {
 
 // SetMaxLines sets the maximum number of logical lines for this text view.
 func (t *TextView) SetMaxLines(maxLines int) *TextView {
-	if t.maxLines != maxLines {
-		t.maxLines = maxLines
-	}
+	t.maxLines = maxLines
 	return t
 }
 
@@ -266,9 +260,7 @@ func (t *TextView) SetBackgroundColor(color tcell.Color) *Box {
 
 // SetTextStyle sets the default style for newly written text.
 func (t *TextView) SetTextStyle(style tcell.Style) *TextView {
-	if t.textStyle != style {
-		t.textStyle = style
-	}
+	t.textStyle = style
 	return t
 }
 
@@ -433,20 +425,12 @@ func (t *TextView) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
 
 // SetFormAttributes sets attributes shared by all form items.
 func (t *TextView) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
-	if t.labelWidth != labelWidth {
-		t.labelWidth = labelWidth
-	}
-	if t.backgroundColor != bgColor {
-		t.backgroundColor = bgColor
-	}
+	t.labelWidth = labelWidth
+	t.backgroundColor = bgColor
 	labelStyle := t.labelStyle.Foreground(labelColor)
-	if t.labelStyle != labelStyle {
-		t.labelStyle = labelStyle
-	}
+	t.labelStyle = labelStyle
 	textStyle := tcell.StyleDefault.Foreground(fieldTextColor).Background(bgColor)
-	if t.textStyle != textStyle {
-		t.textStyle = textStyle
-	}
+	t.textStyle = textStyle
 	return t
 }
 

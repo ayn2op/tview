@@ -150,17 +150,13 @@ func (s *ScrollBar) SetGlyphSet(g GlyphSet) *ScrollBar {
 
 // SetArrows sets which arrow endcaps are rendered.
 func (s *ScrollBar) SetArrows(arrows ScrollBarArrows) *ScrollBar {
-	if s.arrows != arrows {
-		s.arrows = arrows
-	}
+	s.arrows = arrows
 	return s
 }
 
 // SetTrackClickBehavior sets behavior used for track clicks.
 func (s *ScrollBar) SetTrackClickBehavior(behavior TrackClickBehavior) *ScrollBar {
-	if s.trackClickBehavior != behavior {
-		s.trackClickBehavior = behavior
-	}
+	s.trackClickBehavior = behavior
 	return s
 }
 
@@ -169,9 +165,7 @@ func (s *ScrollBar) SetScrollStep(step int) *ScrollBar {
 	if step < 1 {
 		step = 1
 	}
-	if s.scrollStep != step {
-		s.scrollStep = step
-	}
+	s.scrollStep = step
 	return s
 }
 
@@ -202,9 +196,7 @@ func (s *ScrollBar) TrackLengthExcludingArrowHeads(length int) int {
 
 // SetAutoHide controls whether the scrollBar is hidden when there is nothing to scroll.
 func (s *ScrollBar) SetAutoHide(autoHide bool) *ScrollBar {
-	if s.autoHide != autoHide {
-		s.autoHide = autoHide
-	}
+	s.autoHide = autoHide
 	return s
 }
 
@@ -219,9 +211,7 @@ func (s *ScrollBar) SetThumbGlyph(glyph string) *ScrollBar {
 
 // SetThumbStyle sets the thumb style.
 func (s *ScrollBar) SetThumbStyle(style tcell.Style) *ScrollBar {
-	if s.thumbStyle != style {
-		s.thumbStyle = style
-	}
+	s.thumbStyle = style
 	return s
 }
 
@@ -234,17 +224,13 @@ func (s *ScrollBar) SetTrackGlyph(glyph string, visible bool) *ScrollBar {
 
 // SetTrackStyle sets the track style.
 func (s *ScrollBar) SetTrackStyle(style tcell.Style) *ScrollBar {
-	if s.trackStyle != style {
-		s.trackStyle = style
-	}
+	s.trackStyle = style
 	return s
 }
 
 // SetArrowStyle sets the arrow endcap style.
 func (s *ScrollBar) SetArrowStyle(style tcell.Style) *ScrollBar {
-	if s.arrowStyle != style {
-		s.arrowStyle = style
-	}
+	s.arrowStyle = style
 	return s
 }
 

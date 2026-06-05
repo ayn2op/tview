@@ -148,17 +148,13 @@ func NewModel() *Model {
 
 // SetScrollBarVisibility sets when the list scrollBar is rendered.
 func (l *Model) SetScrollBarVisibility(visibility ScrollBarVisibility) *Model {
-	if l.scrollBarVisibility != visibility {
-		l.scrollBarVisibility = visibility
-	}
+	l.scrollBarVisibility = visibility
 	return l
 }
 
 // SetScrollBar sets the tview.ScrollBar model used by this list.
 func (l *Model) SetScrollBar(scrollBar *tview.ScrollBar) *Model {
-	if l.scrollBar != scrollBar {
-		l.scrollBar = scrollBar
-	}
+	l.scrollBar = scrollBar
 	return l
 }
 
@@ -192,34 +188,26 @@ func (l *Model) SetGap(gap int) *Model {
 	if gap < 0 {
 		gap = 0
 	}
-	if l.gap != gap {
-		l.gap = gap
-	}
+	l.gap = gap
 	return l
 }
 
 // SetSnapToItems toggles snapping so only fully visible items are shown.
 func (l *Model) SetSnapToItems(snap bool) *Model {
-	if l.snapToItems != snap {
-		l.snapToItems = snap
-	}
+	l.snapToItems = snap
 	return l
 }
 
 // SetCenterCursor controls whether the cursor is kept centered whenever
 // possible.
 func (l *Model) SetCenterCursor(center bool) *Model {
-	if l.centerCursor != center {
-		l.centerCursor = center
-	}
+	l.centerCursor = center
 	return l
 }
 
 // SetTrackEnd toggles auto-scrolling when the view is already at the end.
 func (l *Model) SetTrackEnd(track bool) *Model {
-	if l.trackEnd != track {
-		l.trackEnd = track
-	}
+	l.trackEnd = track
 	return l
 }
 
@@ -274,9 +262,7 @@ func (l *Model) Cursor() int {
 // SetPendingScroll sets a pending scroll amount, in lines. Positive numbers
 // scroll down.
 func (l *Model) SetPendingScroll(lines int) *Model {
-	if l.scroll.pending != lines {
-		l.scroll.pending = lines
-	}
+	l.scroll.pending = lines
 	return l
 }
 
@@ -348,9 +334,7 @@ func (l *Model) SetChangedFunc(handler func(index int)) *Model {
 // This lets callers highlight the selected item without the builder rendering it differently from the others.
 // The zero style disables the overlay.
 func (l *Model) SetSelectedStyle(style tcell.Style) *Model {
-	if l.selectedStyle != style {
-		l.selectedStyle = style
-	}
+	l.selectedStyle = style
 	return l
 }
 

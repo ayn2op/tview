@@ -104,18 +104,7 @@ func NewGrid() *Grid {
 // The resulting widths would be: 30, 15, 15, 15, 20, 15, and 15 cells, a total
 // of 125 cells, 25 cells wider than the available grid width.
 func (g *Grid) SetColumns(columns ...int) *Grid {
-	changed := len(g.columns) != len(columns)
-	if !changed {
-		for index := range columns {
-			if g.columns[index] != columns[index] {
-				changed = true
-				break
-			}
-		}
-	}
-	if changed {
-		g.columns = columns
-	}
+	g.columns = columns
 	return g
 }
 
@@ -126,18 +115,7 @@ func (g *Grid) SetColumns(columns ...int) *Grid {
 // The provided values correspond to row heights, the first value defining
 // the height of the topmost row.
 func (g *Grid) SetRows(rows ...int) *Grid {
-	changed := len(g.rows) != len(rows)
-	if !changed {
-		for index := range rows {
-			if g.rows[index] != rows[index] {
-				changed = true
-				break
-			}
-		}
-	}
-	if changed {
-		g.rows = rows
-	}
+	g.rows = rows
 	return g
 }
 
@@ -154,27 +132,8 @@ func (g *Grid) SetSize(numRows, numColumns, rowSize, columnSize int) *Grid {
 		columns[index] = columnSize
 	}
 
-	changed := len(g.rows) != len(rows) || len(g.columns) != len(columns)
-	if !changed {
-		for index := range rows {
-			if g.rows[index] != rows[index] {
-				changed = true
-				break
-			}
-		}
-	}
-	if !changed {
-		for index := range columns {
-			if g.columns[index] != columns[index] {
-				changed = true
-				break
-			}
-		}
-	}
-	if changed {
-		g.rows = rows
-		g.columns = columns
-	}
+	g.rows = rows
+	g.columns = columns
 	return g
 }
 
@@ -184,9 +143,7 @@ func (g *Grid) SetMinSize(row, column int) *Grid {
 	if row < 0 || column < 0 {
 		panic("Invalid minimum row/column size")
 	}
-	if g.minHeight != row || g.minWidth != column {
-		g.minHeight, g.minWidth = row, column
-	}
+	g.minHeight, g.minWidth = row, column
 	return g
 }
 
@@ -197,9 +154,7 @@ func (g *Grid) SetGap(row, column int) *Grid {
 	if row < 0 || column < 0 {
 		panic("Invalid gap size")
 	}
-	if g.gapRows != row || g.gapColumns != column {
-		g.gapRows, g.gapColumns = row, column
-	}
+	g.gapRows, g.gapColumns = row, column
 	return g
 }
 
@@ -207,17 +162,13 @@ func (g *Grid) SetGap(row, column int) *Grid {
 // this value to true will cause the gap values (see SetGap()) to be ignored and
 // automatically assumed to be 1 where the border graphics are drawn.
 func (g *Grid) SetBorders(borders bool) *Grid {
-	if g.borders != borders {
-		g.borders = borders
-	}
+	g.borders = borders
 	return g
 }
 
 // SetBordersColor sets the color of the item borders.
 func (g *Grid) SetBordersColor(color tcell.Color) *Grid {
-	if g.bordersColor != color {
-		g.bordersColor = color
-	}
+	g.bordersColor = color
 	return g
 }
 

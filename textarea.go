@@ -813,9 +813,7 @@ func (t *TextArea) SetPlaceholder(placeholder Line) *TextArea {
 
 // SetLabel sets the text to be displayed before the text area.
 func (t *TextArea) SetLabel(label string) *TextArea {
-	if t.label != label {
-		t.label = label
-	}
+	t.label = label
 	return t
 }
 
@@ -827,9 +825,7 @@ func (t *TextArea) GetLabel() string {
 // SetLabelWidth sets the screen width of the label. A value of 0 will cause the
 // model to use the width of the label string.
 func (t *TextArea) SetLabelWidth(width int) *TextArea {
-	if t.labelWidth != width {
-		t.labelWidth = width
-	}
+	t.labelWidth = width
 	return t
 }
 
@@ -843,10 +839,8 @@ func (t *TextArea) GetLabelWidth() int {
 // top left corner. If any of the values are 0 or larger than the available
 // space, the available space will be used.
 func (t *TextArea) SetSize(rows, columns int) *TextArea {
-	if t.width != columns || t.height != rows {
-		t.width = columns
-		t.height = rows
-	}
+	t.width = columns
+	t.height = rows
 	return t
 }
 
@@ -862,9 +856,7 @@ func (t *TextArea) GetFieldHeight() int {
 
 // SetDisabled sets whether or not the item is disabled / read-only.
 func (t *TextArea) SetDisabled(disabled bool) FormItem {
-	if t.disabled != disabled {
-		t.disabled = disabled
-	}
+	t.disabled = disabled
 	if t.finished != nil {
 		t.finished(-1)
 	}
@@ -880,27 +872,21 @@ func (t *TextArea) GetDisabled() bool {
 // value of 0 means there is no limit. If the text area currently contains more
 // bytes than this, it may violate this constraint.
 func (t *TextArea) SetMaxLength(maxLength int) *TextArea {
-	if t.maxLength != maxLength {
-		t.maxLength = maxLength
-	}
+	t.maxLength = maxLength
 	return t
 }
 
 // setMinCursorPadding sets a minimum width to be reserved left and right of the
 // cursor. This is ignored if wrapping is enabled.
 func (t *TextArea) setMinCursorPadding(prefix, suffix int) *TextArea {
-	if t.minCursorPrefix != prefix || t.minCursorSuffix != suffix {
-		t.minCursorPrefix = prefix
-		t.minCursorSuffix = suffix
-	}
+	t.minCursorPrefix = prefix
+	t.minCursorSuffix = suffix
 	return t
 }
 
 // SetLabelStyle sets the style of the label.
 func (t *TextArea) SetLabelStyle(style tcell.Style) *TextArea {
-	if t.labelStyle != style {
-		t.labelStyle = style
-	}
+	t.labelStyle = style
 	return t
 }
 
@@ -911,9 +897,7 @@ func (t *TextArea) GetLabelStyle() tcell.Style {
 
 // SetTextStyle sets the style of the text.
 func (t *TextArea) SetTextStyle(style tcell.Style) *TextArea {
-	if t.textStyle != style {
-		t.textStyle = style
-	}
+	t.textStyle = style
 	return t
 }
 
@@ -924,9 +908,7 @@ func (t *TextArea) GetTextStyle() tcell.Style {
 
 // SetSelectedStyle sets the style of the selected text.
 func (t *TextArea) SetSelectedStyle(style tcell.Style) *TextArea {
-	if t.selectedStyle != style {
-		t.selectedStyle = style
-	}
+	t.selectedStyle = style
 	return t
 }
 
@@ -942,9 +924,7 @@ func (t *TextArea) GetOffset() (row, column int) {
 // is enabled, the column offset is ignored. These values may get adjusted
 // automatically to ensure that some text is always visible.
 func (t *TextArea) SetOffset(row, column int) *TextArea {
-	if t.rowOffset != row || t.columnOffset != column {
-		t.rowOffset, t.columnOffset = row, column
-	}
+	t.rowOffset, t.columnOffset = row, column
 	return t
 }
 
@@ -1027,20 +1007,12 @@ func (t *TextArea) Focus(delegate func(m Model)) {
 
 // SetFormAttributes sets attributes shared by all form items.
 func (t *TextArea) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
-	if t.labelWidth != labelWidth {
-		t.labelWidth = labelWidth
-	}
-	if t.backgroundColor != bgColor {
-		t.backgroundColor = bgColor
-	}
+	t.labelWidth = labelWidth
+	t.backgroundColor = bgColor
 	labelStyle := t.labelStyle.Foreground(labelColor)
-	if t.labelStyle != labelStyle {
-		t.labelStyle = labelStyle
-	}
+	t.labelStyle = labelStyle
 	textStyle := tcell.StyleDefault.Foreground(fieldTextColor).Background(fieldBgColor)
-	if t.textStyle != textStyle {
-		t.textStyle = textStyle
-	}
+	t.textStyle = textStyle
 	return t
 }
 

@@ -61,9 +61,7 @@ func (m *Modal) SetBackgroundColor(color tcell.Color) *Modal {
 
 // SetTextColor sets the color of the message text.
 func (m *Modal) SetTextColor(color tcell.Color) *Modal {
-	if m.textColor != color {
-		m.textColor = color
-	}
+	m.textColor = color
 	return m
 }
 
@@ -83,9 +81,7 @@ func (m *Modal) SetButtonActivatedStyle(style tcell.Style) *Modal {
 // breaks. Note that words are wrapped, too, based on the final size of the
 // window.
 func (m *Modal) SetText(text string) *Modal {
-	if m.text != text {
-		m.text = text
-	}
+	m.text = text
 	return m
 }
 

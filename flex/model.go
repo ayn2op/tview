@@ -71,18 +71,14 @@ func NewModel() *Model {
 // these are the opposite of what you would expect coming from CSS. You may also
 // use DirectionColumnCSS or DirectionRowCSS, to remain in line with the CSS definition.
 func (m *Model) SetDirection(direction Direction) *Model {
-	if m.direction != direction {
-		m.direction = direction
-	}
+	m.direction = direction
 	return m
 }
 
 // SetFullScreen sets the flag which, when true, causes the flex layout to use
 // the entire screen space instead of whatever size it is currently assigned to.
 func (m *Model) SetFullScreen(fullScreen bool) *Model {
-	if m.fullScreen != fullScreen {
-		m.fullScreen = fullScreen
-	}
+	m.fullScreen = fullScreen
 	return m
 }
 

@@ -149,9 +149,7 @@ func NewForm() *Form {
 // layouts. In vertical layouts, there is always at least one empty line between
 // the last item and the buttons, if any.
 func (f *Form) SetItemPadding(padding int) *Form {
-	if f.itemPadding != padding {
-		f.itemPadding = padding
-	}
+	f.itemPadding = padding
 	return f
 }
 
@@ -160,57 +158,43 @@ func (f *Form) SetItemPadding(padding int) *Form {
 // positioned from left to right, moving into the next row if there is not
 // enough space.
 func (f *Form) SetHorizontal(horizontal bool) *Form {
-	if f.horizontal != horizontal {
-		f.horizontal = horizontal
-	}
+	f.horizontal = horizontal
 	return f
 }
 
 // SetLabelColor sets the color of the labels.
 func (f *Form) SetLabelColor(color tcell.Color) *Form {
-	if f.labelColor != color {
-		f.labelColor = color
-	}
+	f.labelColor = color
 	return f
 }
 
 // SetFieldStyle sets the style of the input areas.
 func (f *Form) SetFieldStyle(style tcell.Style) *Form {
-	if f.fieldStyle != style {
-		f.fieldStyle = style
-	}
+	f.fieldStyle = style
 	return f
 }
 
 // SetButtonsAlignment sets how the buttons align horizontally.
 func (f *Form) SetButtonsAlignment(alignment Alignment) *Form {
-	if f.buttonsAlignment != alignment {
-		f.buttonsAlignment = alignment
-	}
+	f.buttonsAlignment = alignment
 	return f
 }
 
 // SetButtonStyle sets the style of the buttons when they are not focused.
 func (f *Form) SetButtonStyle(style tcell.Style) *Form {
-	if f.buttonStyle != style {
-		f.buttonStyle = style
-	}
+	f.buttonStyle = style
 	return f
 }
 
 // SetButtonActivatedStyle sets the style of the buttons when they are focused.
 func (f *Form) SetButtonActivatedStyle(style tcell.Style) *Form {
-	if f.buttonActivatedStyle != style {
-		f.buttonActivatedStyle = style
-	}
+	f.buttonActivatedStyle = style
 	return f
 }
 
 // SetButtonDisabledStyle sets the style of the buttons when they are disabled.
 func (f *Form) SetButtonDisabledStyle(style tcell.Style) *Form {
-	if f.buttonDisabledStyle != style {
-		f.buttonDisabledStyle = style
-	}
+	f.buttonDisabledStyle = style
 	return f
 }
 
@@ -220,9 +204,7 @@ func (f *Form) SetButtonDisabledStyle(style tcell.Style) *Form {
 // focus, the given element will be focused once. Set to a negative value to
 // focus the first (enabled) element.
 func (f *Form) SetFocus(index int) *Form {
-	if f.requestedFocus != index {
-		f.requestedFocus = index
-	}
+	f.requestedFocus = index
 	return f
 }
 

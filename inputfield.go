@@ -147,9 +147,7 @@ func (i *InputField) SetFormAttributes(labelWidth int, labelColor, bgColor, fiel
 // SetFieldWidth sets the screen width of the input area. A value of 0 means
 // extend as much as possible.
 func (i *InputField) SetFieldWidth(width int) *InputField {
-	if i.fieldWidth != width {
-		i.fieldWidth = width
-	}
+	i.fieldWidth = width
 	return i
 }
 

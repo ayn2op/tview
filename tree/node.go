@@ -100,18 +100,7 @@ func (n *Node) GetReference() any {
 
 // SetChildren sets this node's child nodes.
 func (n *Node) SetChildren(childNodes []*Node) *Node {
-	changed := len(n.children) != len(childNodes)
-	if !changed {
-		for index := range childNodes {
-			if n.children[index] != childNodes[index] {
-				changed = true
-				break
-			}
-		}
-	}
-	if changed {
-		n.children = childNodes
-	}
+	n.children = childNodes
 	return n
 }
 
@@ -163,26 +152,20 @@ func (n *Node) RemoveChild(node *Node) *Node {
 // SetSelectable sets a flag indicating whether this node can be selected by
 // the user.
 func (n *Node) SetSelectable(selectable bool) *Node {
-	if n.selectable != selectable {
-		n.selectable = selectable
-	}
+	n.selectable = selectable
 	return n
 }
 
 // SetExpanded sets whether or not this node's child nodes should be displayed.
 func (n *Node) SetExpanded(expanded bool) *Node {
-	if n.expanded != expanded {
-		n.expanded = expanded
-	}
+	n.expanded = expanded
 	return n
 }
 
 // SetExpandable sets whether this node can be expanded even when there are no
 // loaded child nodes yet.
 func (n *Node) SetExpandable(expandable bool) *Node {
-	if n.expandable != expandable {
-		n.expandable = expandable
-	}
+	n.expandable = expandable
 	return n
 }
 
@@ -237,9 +220,7 @@ func (n *Node) IsExpanded() bool {
 
 // SetSelectedTextStyle sets the text style for this node when it is selected.
 func (n *Node) SetSelectedTextStyle(style tcell.Style) *Node {
-	if n.selectedTextStyle != style {
-		n.selectedTextStyle = style
-	}
+	n.selectedTextStyle = style
 	return n
 }
 
@@ -253,9 +234,7 @@ func (n *Node) GetSelectedTextStyle() tcell.Style {
 // keeps the text as far left as possible with a minimum of line graphics. Any
 // value greater than that moves the text to the right.
 func (n *Node) SetIndent(indent int) *Node {
-	if n.indent != indent {
-		n.indent = indent
-	}
+	n.indent = indent
 	return n
 }
 

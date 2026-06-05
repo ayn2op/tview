@@ -51,9 +51,7 @@ func NewButton(label string) *Button {
 
 // SetLabel sets the button text.
 func (b *Button) SetLabel(label string) *Button {
-	if b.text != label {
-		b.text = label
-	}
+	b.text = label
 	return b
 }
 
@@ -65,17 +63,13 @@ func (b *Button) GetLabel() string {
 // SetLabelColor sets the color of the button text.
 func (b *Button) SetLabelColor(color tcell.Color) *Button {
 	style := b.style.Foreground(color)
-	if b.style != style {
-		b.style = style
-	}
+	b.style = style
 	return b
 }
 
 // SetStyle sets the style of the button used when it is not focused.
 func (b *Button) SetStyle(style tcell.Style) *Button {
-	if b.style != style {
-		b.style = style
-	}
+	b.style = style
 	return b
 }
 
@@ -83,9 +77,7 @@ func (b *Button) SetStyle(style tcell.Style) *Button {
 // in focus.
 func (b *Button) SetLabelColorActivated(color tcell.Color) *Button {
 	style := b.activatedStyle.Foreground(color)
-	if b.activatedStyle != style {
-		b.activatedStyle = style
-	}
+	b.activatedStyle = style
 	return b
 }
 
@@ -93,25 +85,19 @@ func (b *Button) SetLabelColorActivated(color tcell.Color) *Button {
 // the button is in focus.
 func (b *Button) SetBackgroundColorActivated(color tcell.Color) *Button {
 	style := b.activatedStyle.Background(color)
-	if b.activatedStyle != style {
-		b.activatedStyle = style
-	}
+	b.activatedStyle = style
 	return b
 }
 
 // SetActivatedStyle sets the style of the button used when it is focused.
 func (b *Button) SetActivatedStyle(style tcell.Style) *Button {
-	if b.activatedStyle != style {
-		b.activatedStyle = style
-	}
+	b.activatedStyle = style
 	return b
 }
 
 // SetDisabledStyle sets the style of the button used when it is disabled.
 func (b *Button) SetDisabledStyle(style tcell.Style) *Button {
-	if b.disabledStyle != style {
-		b.disabledStyle = style
-	}
+	b.disabledStyle = style
 	return b
 }
 
@@ -121,9 +107,7 @@ func (b *Button) SetDisabledStyle(style tcell.Style) *Button {
 // If the button is part of a form, you should set focus to the form itself
 // after calling this function to set focus to the next non-disabled form item.
 func (b *Button) SetDisabled(disabled bool) *Button {
-	if b.disabled != disabled {
-		b.disabled = disabled
-	}
+	b.disabled = disabled
 	return b
 }
 

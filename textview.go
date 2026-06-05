@@ -596,7 +596,14 @@ func (t *TextView) appendSegment(lineIndex int, seg Segment) {
 func (t *TextView) rebuildCells() {
 	for i := range t.lines {
 		line := &t.lines[i]
-		cells := make([]textViewCell, 0)
+		// A grapheme cluster is at least one byte, so the segments' total byte
+		// length is a safe upper bound on the cell count. Pre-size to it to
+		// avoid repeated slice growth while appending.
+		estimate := 0
+		for _, seg := range line.segments {
+			estimate += len(seg.Text)
+		}
+		cells := make([]textViewCell, 0, estimate)
 		width := 0
 		for _, seg := range line.segments {
 			state := -1

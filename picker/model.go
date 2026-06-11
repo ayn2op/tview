@@ -104,7 +104,7 @@ func (m *Model) ClearList() {
 
 func (m *Model) ClearItems() {
 	m.items = nil
-	m.filtered = nil
+	m.setFilteredItems(nil)
 }
 
 func (m *Model) AddItem(item Item) {

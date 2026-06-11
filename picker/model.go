@@ -60,13 +60,7 @@ func (m *Model) setFilteredItems(filtered Items) {
 
 	items := make([]list.Item, len(filtered))
 	for i, item := range filtered {
-		style := tcell.StyleDefault
-		items[i] = tview.NewTextView().
-			SetScrollable(false).
-			SetWrap(false).
-			SetWordWrap(false).
-			SetTextStyle(style).
-			SetLines([]tview.Line{{{Text: item.Text, Style: style}}})
+		items[i] = newRow(tview.Line{{Text: item.Text, Style: tcell.StyleDefault}})
 	}
 
 	m.list.SetBuilder(func(index int) list.Item {

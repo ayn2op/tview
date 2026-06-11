@@ -117,8 +117,13 @@ func (m *Model) SetItems(items Items) {
 }
 
 func (m *Model) Refresh() {
-	m.ClearInput()
-	m.onInputChanged("")
+	// Clearing a non-empty input already re-filters via the changed callback;
+	// only filter directly when SetText would be a no-op.
+	if m.input.GetText() == "" {
+		m.onInputChanged("")
+	} else {
+		m.input.SetText("")
+	}
 }
 
 func (m *Model) onInputChanged(text string) {

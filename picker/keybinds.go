@@ -24,12 +24,7 @@ func (m *Model) Keybinds() Keybinds {
 }
 
 func (m *Model) SetKeybinds(keybinds Keybinds) *Model {
-	listKeybinds := m.list.Keybinds()
-	listKeybinds.SelectUp = keybinds.SelectUp
-	listKeybinds.SelectDown = keybinds.SelectDown
-	listKeybinds.SelectTop = keybinds.SelectTop
-	listKeybinds.SelectBottom = keybinds.SelectBottom
-	m.list.SetKeybinds(listKeybinds)
+	m.list.SetKeybinds(keybinds.Keybinds)
 	m.keybinds = keybinds
 	return m
 }

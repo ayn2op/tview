@@ -143,28 +143,21 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
 	case tview.KeyMsg:
 		switch {
-		case keybind.Matches(msg, m.keybinds.SelectUp):
-			return m.list.Update(msg)
-		case keybind.Matches(msg, m.keybinds.SelectDown):
-			return m.list.Update(msg)
-		case keybind.Matches(msg, m.keybinds.SelectTop):
-			if len(m.filtered) > 0 {
-				m.list.SetCursor(0)
-			}
-			return nil
-		case keybind.Matches(msg, m.keybinds.SelectBottom):
-			if len(m.filtered) > 0 {
-				m.list.SetCursor(len(m.filtered) - 1)
-			}
-			return nil
-
 		case keybind.Matches(msg, m.keybinds.Select):
 			return m.selectItem()
 		case keybind.Matches(msg, m.keybinds.Cancel):
 			return cancel()
-		}
 
-		return m.Model.Update(msg)
+		case keybind.Matches(msg, m.keybinds.SelectUp),
+			keybind.Matches(msg, m.keybinds.SelectDown),
+			keybind.Matches(msg, m.keybinds.SelectTop),
+			keybind.Matches(msg, m.keybinds.SelectBottom),
+			keybind.Matches(msg, m.keybinds.ScrollUp),
+			keybind.Matches(msg, m.keybinds.ScrollDown),
+			keybind.Matches(msg, m.keybinds.ScrollTop),
+			keybind.Matches(msg, m.keybinds.ScrollBottom):
+			return m.list.Update(msg)
+		}
 	}
 	return m.Model.Update(msg)
 }

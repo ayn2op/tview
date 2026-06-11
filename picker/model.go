@@ -58,17 +58,22 @@ func NewModel() *Model {
 func (m *Model) setFilteredItems(filtered Items) {
 	m.filtered = filtered
 
-	m.list.SetBuilder(func(index int) list.Item {
-		if index < 0 || index >= len(m.filtered) {
-			return nil
-		}
+	items := make([]list.Item, len(filtered))
+	for i, item := range filtered {
 		style := tcell.StyleDefault
-		return tview.NewTextView().
+		items[i] = tview.NewTextView().
 			SetScrollable(false).
 			SetWrap(false).
 			SetWordWrap(false).
 			SetTextStyle(style).
-			SetLines([]tview.Line{{{Text: m.filtered[index].Text, Style: style}}})
+			SetLines([]tview.Line{{{Text: item.Text, Style: style}}})
+	}
+
+	m.list.SetBuilder(func(index int) list.Item {
+		if index < 0 || index >= len(items) {
+			return nil
+		}
+		return items[index]
 	})
 
 	if len(filtered) == 0 {

@@ -571,9 +571,16 @@ rebuild:
 	highlight := l.selectedStyle != tcell.StyleDefault
 	for _, child := range children {
 		child.item.SetRect(x, y+child.row, usableWidth, child.height)
-		// Draw the cursor item through a style overlay so selection highlighting costs nothing extra to render: the item is the same one the builder returns for any other index.
+		// The cursor item draws through a style overlay so it needn't render differently from any other index.
+		// We also blank the row's full width through that overlay first, so the selection spans the whole line even when the item paints less than the full width.
 		if highlight && child.index == l.cursor {
-			child.item.View(newStyledScreen(clipped, l.selectedStyle))
+			styled := newStyledScreen(clipped, l.selectedStyle)
+			for row := 0; row < child.height; row++ {
+				for col := 0; col < usableWidth; col++ {
+					styled.SetContent(x+col, y+child.row+row, ' ', nil, tcell.StyleDefault)
+				}
+			}
+			child.item.View(styled)
 		} else {
 			child.item.View(clipped)
 		}

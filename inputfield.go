@@ -5,11 +5,17 @@ import (
 	"github.com/rivo/uniseg"
 )
 
+// InputFieldChangedMsg is emitted by an [InputField] when its text changes in
+// response to user input.
+type InputFieldChangedMsg struct {
+	// Text is the field's text after the change.
+	Text string
+}
+
 // InputField is a one-line box into which the user can enter text. Use
-// [InputField.SetAcceptanceFunc] to accept or reject input,
-// [InputField.SetChangedFunc] to listen for changes, and
+// [InputField.SetAcceptanceFunc] to accept or reject input and
 // [InputField.SetMaskCharacter] to hide input from onlookers (e.g. for password
-// input).
+// input). Handle [InputFieldChangedMsg] to react to text changes.
 //
 // Navigation and editing is the same as for a [TextArea], with the following
 // exceptions:
@@ -30,9 +36,6 @@ type InputField struct {
 	// possible.
 	fieldWidth int
 
-	// An optional function which is called when the input has changed.
-	changed func(text string)
-
 	// An optional function which is called when the user indicated that they
 	// are done entering text. The key which was pressed is provided (tab,
 	// shift-tab, enter, or escape).
@@ -51,25 +54,25 @@ func NewInputField() *InputField {
 	}
 	i.textArea.SetChangedFunc(func() {
 		if i.changed != nil {
-			i.changed(i.textArea.GetText())
+			i.changed(i.textArea.Text())
 		}
 	})
 	i.textArea.textStyle = tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.PrimaryTextColor)
 	return i
 }
 
+// Text returns the current text of the input field.
+func (i *InputField) Text() string {
+	return i.textArea.Text()
+}
+
 // SetText sets the current text of the input field. This can be undone by the
 // user. Calling this function will also trigger a "changed" event.
 func (i *InputField) SetText(text string) *InputField {
-	if i.textArea.GetText() != text {
+	if i.textArea.Text() != text {
 		i.textArea.Replace(0, i.textArea.GetTextLength(), text)
 	}
 	return i
-}
-
-// GetText returns the current text of the input field.
-func (i *InputField) GetText() string {
-	return i.textArea.GetText()
 }
 
 // SetLabel sets the text to be displayed before the input area.

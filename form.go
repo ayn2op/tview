@@ -231,7 +231,7 @@ func (f *Form) AddTextArea(label, text string, fieldWidth, fieldHeight, maxLengt
 	}
 	if changed != nil {
 		textArea.SetChangedFunc(func() {
-			changed(textArea.GetText())
+			changed(textArea.Text())
 		})
 	}
 	textArea.SetFinishedFunc(f.finished)

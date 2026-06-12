@@ -431,9 +431,9 @@ func (t *TextArea) SetText(text string, cursorAtTheEnd bool) *TextArea {
 	return t
 }
 
-// GetText returns the entire text of the text area. Note that this will newly
+// Text returns the entire text of the text area. Note that this will newly
 // allocate the entire text.
-func (t *TextArea) GetText() string {
+func (t *TextArea) Text() string {
 	if t.length == 0 {
 		return ""
 	}
@@ -625,7 +625,7 @@ func (t *TextArea) LineCount(limit int) int {
 	}
 	if t.lastWidth <= 0 {
 		// No layout info yet; fall back to newline count (+1 for the line after the last \n).
-		return strings.Count(t.GetText(), "\n") + 1
+		return strings.Count(t.Text(), "\n") + 1
 	}
 	maxHeight := limit
 	if maxHeight <= 0 {

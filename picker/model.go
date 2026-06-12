@@ -87,22 +87,9 @@ func (m *Model) SetScrollBar(scrollBar *tview.ScrollBar) {
 	m.list.SetScrollBar(scrollBar)
 }
 
-func (m *Model) ClearInput() {
-	m.input.SetText("")
-}
-
-func (m *Model) ClearList() {
-	m.filtered = nil
-	m.list.Clear()
-}
-
 func (m *Model) ClearItems() {
 	m.items = nil
 	m.setFilteredItems(nil)
-}
-
-func (m *Model) AddItem(item Item) {
-	m.items = append(m.items, item)
 }
 
 func (m *Model) SetItems(items Items) {

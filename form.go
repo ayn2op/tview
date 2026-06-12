@@ -259,15 +259,13 @@ func (f *Form) AddTextView(label, text string, fieldWidth, fieldHeight int, scro
 }
 
 // AddInputField adds an input field to the form. It has a label, an optional
-// initial value, a field width (a value of 0 extends it as far as possible),
-// and an (optional) callback function which is invoked when the input field's
-// text has changed.
-func (f *Form) AddInputField(label, value string, fieldWidth int, changed func(text string)) *Form {
+// initial value, and a field width (a value of 0 extends it as far as
+// possible). Handle [InputFieldChangedMsg] to react to text changes.
+func (f *Form) AddInputField(label, value string, fieldWidth int) *Form {
 	inputField := NewInputField().
 		SetLabel(label).
 		SetText(value).
-		SetFieldWidth(fieldWidth).
-		SetChangedFunc(changed)
+		SetFieldWidth(fieldWidth)
 	inputField.SetFinishedFunc(f.finished)
 	f.items = append(f.items, inputField)
 	return f
@@ -276,10 +274,9 @@ func (f *Form) AddInputField(label, value string, fieldWidth int, changed func(t
 // AddPasswordField adds a password field to the form. This is similar to an
 // input field except that the user's input not shown. Instead, a "mask"
 // character is displayed. The password field has a label, an optional initial
-// value, a field width (a value of 0 extends it as far as possible), and an
-// (optional) callback function which is invoked when the input field's text has
-// changed.
-func (f *Form) AddPasswordField(label, value string, fieldWidth int, mask rune, changed func(text string)) *Form {
+// value, a field width (a value of 0 extends it as far as possible), and a mask
+// character. Handle [InputFieldChangedMsg] to react to text changes.
+func (f *Form) AddPasswordField(label, value string, fieldWidth int, mask rune) *Form {
 	if mask == 0 {
 		mask = '*'
 	}
@@ -287,8 +284,7 @@ func (f *Form) AddPasswordField(label, value string, fieldWidth int, mask rune, 
 		SetLabel(label).
 		SetText(value).
 		SetFieldWidth(fieldWidth).
-		SetMaskCharacter(mask).
-		SetChangedFunc(changed)
+		SetMaskCharacter(mask)
 	password.SetFinishedFunc(f.finished)
 	f.items = append(f.items, password)
 	return f

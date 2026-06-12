@@ -52,11 +52,6 @@ func NewInputField() *InputField {
 		Box:      NewBox(),
 		textArea: NewTextArea().SetWrap(false),
 	}
-	i.textArea.SetChangedFunc(func() {
-		if i.changed != nil {
-			i.changed(i.textArea.Text())
-		}
-	})
 	i.textArea.textStyle = tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.PrimaryTextColor)
 	return i
 }
@@ -67,7 +62,7 @@ func (i *InputField) Text() string {
 }
 
 // SetText sets the current text of the input field. This can be undone by the
-// user. Calling this function will also trigger a "changed" event.
+// user. It does not emit [InputFieldChangedMsg]; only user edits do.
 func (i *InputField) SetText(text string) *InputField {
 	if i.textArea.Text() != text {
 		i.textArea.Replace(0, i.textArea.GetTextLength(), text)
@@ -195,13 +190,6 @@ func (i *InputField) SetMaskCharacter(mask rune) *InputField {
 	return i
 }
 
-// SetChangedFunc sets a handler which is called whenever the text of the input
-// field has changed. It receives the current text (after the change).
-func (i *InputField) SetChangedFunc(handler func(text string)) *InputField {
-	i.changed = handler
-	return i
-}
-
 // SetDoneFunc sets a handler which is called when the user is done entering
 // text. The callback function is provided with the key that was pressed, which
 // is one of the following:
@@ -296,7 +284,7 @@ func (i *InputField) Update(msg Msg) Cmd {
 			return nil
 		default:
 			// Forward other key events to the text area.
-			return i.textArea.Update(msg)
+			return i.forward(msg)
 		}
 	case MouseMsg:
 		// Is mouse event within the input field?
@@ -315,7 +303,24 @@ func (i *InputField) Update(msg Msg) Cmd {
 		return cmd
 	case PasteMsg:
 		// Forward the pasted text to the text area.
-		return i.textArea.Update(msg)
+		return i.forward(msg)
 	}
 	return nil
+}
+
+// forward passes msg to the text area and, when the text changed as a result,
+// emits an [InputFieldChangedMsg] alongside whatever command the text area returned.
+func (i *InputField) forward(msg Msg) Cmd {
+	before := i.textArea.Text()
+	cmd := i.textArea.Update(msg)
+	text := i.textArea.Text()
+	if text == before {
+		return cmd
+	}
+
+	changed := func() Msg { return InputFieldChangedMsg{Text: text} }
+	if cmd == nil {
+		return changed
+	}
+	return Batch(cmd, changed)
 }

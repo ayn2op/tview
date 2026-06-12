@@ -39,7 +39,6 @@ func NewModel() *Model {
 	borderSet.BottomRight = borderSet.Bottom
 
 	m.input.
-		SetChangedFunc(m.onInputChanged).
 		SetLabel("> ").
 		SetBorders(tview.BordersBottom).
 		SetBorderSet(borderSet).
@@ -98,16 +97,11 @@ func (m *Model) SetItems(items Items) {
 }
 
 func (m *Model) Refresh() {
-	// Clearing a non-empty input already re-filters via the changed callback;
-	// only filter directly when SetText would be a no-op.
-	if m.input.Text() == "" {
-		m.onInputChanged("")
-	} else {
-		m.input.SetText("")
-	}
+	m.input.SetText("")
+	m.filter("")
 }
 
-func (m *Model) onInputChanged(text string) {
+func (m *Model) filter(text string) {
 	var fuzzied Items
 	if text == "" {
 		fuzzied = append(fuzzied, m.items...)
@@ -122,6 +116,9 @@ func (m *Model) onInputChanged(text string) {
 
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
+	case tview.InputFieldChangedMsg:
+		m.filter(msg.Text)
+		return nil
 	case tview.KeyMsg:
 		switch {
 		case keybind.Matches(msg, m.keybinds.Select):

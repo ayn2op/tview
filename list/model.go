@@ -355,17 +355,24 @@ func (l *Model) View(screen tcell.Screen) {
 	usableWidth := width
 	scrollBarX := x + width - 1
 	drawScrollBar := false
+	contentHeight := 0
 	if width > 1 {
 		switch l.scrollBarVisibility {
 		case ScrollBarVisibilityAlways:
 			drawScrollBar = true
 		case ScrollBarVisibilityAutomatic:
-			drawScrollBar = l.totalContentHeight(width) > height
+			candidateWidth, candidateX := l.scrollBarLayout(x, width)
+			contentHeight = l.totalContentHeight(candidateWidth)
+			drawScrollBar = contentHeight > height
+			if drawScrollBar {
+				usableWidth, scrollBarX = candidateWidth, candidateX
+			}
 		case ScrollBarVisibilityNever:
 			drawScrollBar = false
 		}
-		if drawScrollBar {
+		if drawScrollBar && l.scrollBarVisibility != ScrollBarVisibilityAutomatic {
 			usableWidth, scrollBarX = l.scrollBarLayout(x, width)
+			contentHeight = l.totalContentHeight(usableWidth)
 		}
 	}
 	if usableWidth <= 0 {
@@ -591,7 +598,7 @@ rebuild:
 			l.scrollBar = tview.NewScrollBar().
 				SetArrows(tview.ScrollBarArrowsNone)
 		}
-		scrollBarState, ok := l.computeScrollBarState(usableWidth, height, children)
+		scrollBarState, ok := l.computeScrollBarState(usableWidth, height, children, contentHeight)
 		if !ok {
 			return
 		}
@@ -632,8 +639,7 @@ func (l *Model) totalContentHeight(width int) int {
 	return total
 }
 
-func (l *Model) scrollBarMetrics(width int, viewport int, children []drawnItem) (position int, contentLength int, viewportContentLength int) {
-	content := l.totalContentHeight(width)
+func (l *Model) scrollBarMetrics(width int, viewport int, children []drawnItem, content int) (position int, contentLength int, viewportContentLength int) {
 	if len(children) == 0 || content <= 0 || viewport <= 0 {
 		return 0, 0, max(viewport, 0)
 	}
@@ -1186,7 +1192,8 @@ func (l *Model) currentScrollBarState(height int, contentWidth int) (listScrollB
 		state.metrics.trackCells > 0 {
 		return state, true
 	}
-	state, ok := l.computeScrollBarState(contentWidth, height, l.lastDraw)
+	contentHeight := l.totalContentHeight(contentWidth)
+	state, ok := l.computeScrollBarState(contentWidth, height, l.lastDraw, contentHeight)
 	if ok {
 		l.scrollBarInteraction.state = state
 	}
@@ -1205,7 +1212,7 @@ func (l *Model) scrollBarLayout(innerX int, innerWidth int) (contentWidth int, s
 	return contentWidth, scrollBarX
 }
 
-func (l *Model) computeScrollBarState(contentWidth int, viewportHeight int, children []drawnItem) (listScrollBarState, bool) {
+func (l *Model) computeScrollBarState(contentWidth int, viewportHeight int, children []drawnItem, contentHeight int) (listScrollBarState, bool) {
 	state := listScrollBarState{
 		contentWidth:   contentWidth,
 		viewportHeight: viewportHeight,
@@ -1213,7 +1220,7 @@ func (l *Model) computeScrollBarState(contentWidth int, viewportHeight int, chil
 	if l.scrollBar == nil || contentWidth <= 0 || viewportHeight <= 0 {
 		return state, false
 	}
-	position, contentLength, viewportLength := l.scrollBarMetrics(contentWidth, viewportHeight, children)
+	position, contentLength, viewportLength := l.scrollBarMetrics(contentWidth, viewportHeight, children, contentHeight)
 	if contentLength <= 0 || viewportLength <= 0 {
 		return state, false
 	}

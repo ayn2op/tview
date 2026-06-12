@@ -50,6 +50,11 @@ func NewFrame(primitive Model) *Frame {
 	return f
 }
 
+// GetPrimitive returns the model contained in this frame.
+func (f *Frame) GetPrimitive() Model {
+	return f.primitive
+}
+
 // SetPrimitive replaces the contained model with the given one. To remove
 // a model, set it to nil.
 func (f *Frame) SetPrimitive(m Model) *Frame {
@@ -65,11 +70,6 @@ func (f *Frame) SetPrimitive(m Model) *Frame {
 		f.setFocus(m) // Restore focus.
 	}
 	return f
-}
-
-// GetPrimitive returns the model contained in this frame.
-func (f *Frame) GetPrimitive() Model {
-	return f.primitive
 }
 
 // AddText adds text to the frame. Set "header" to true if the text is to appear

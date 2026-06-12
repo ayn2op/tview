@@ -118,16 +118,22 @@ func NewModel() *Model {
 	}
 }
 
+// GetRoot returns the root node of the tree. If no such node was previously
+// set, nil is returned.
+func (t *Model) GetRoot() *Node {
+	return t.root
+}
+
 // SetRoot sets the root node of the tree.
 func (t *Model) SetRoot(root *Node) *Model {
 	t.root = root
 	return t
 }
 
-// GetRoot returns the root node of the tree. If no such node was previously
-// set, nil is returned.
-func (t *Model) GetRoot() *Node {
-	return t.root
+// GetCurrentNode returns the currently selected node or nil of no node is
+// currently selected.
+func (t *Model) GetCurrentNode() *Node {
+	return t.currentNode
 }
 
 // SetCurrentNode sets the currently selected node. Provide nil to clear all
@@ -137,12 +143,6 @@ func (t *Model) GetRoot() *Node {
 func (t *Model) SetCurrentNode(node *Node) *Model {
 	t.currentNode = node
 	return t
-}
-
-// GetCurrentNode returns the currently selected node or nil of no node is
-// currently selected.
-func (t *Model) GetCurrentNode() *Node {
-	return t.currentNode
 }
 
 // GetPath returns all nodes located on the path from the root to the given
@@ -205,6 +205,11 @@ func (t *Model) SetPrefixes(prefixes []string) *Model {
 	return t
 }
 
+// GetMarkers returns the marker strings currently used by this tree view.
+func (t *Model) GetMarkers() Markers {
+	return t.markers
+}
+
 // SetMarkers sets the strings drawn before node text depending on node state.
 // Expanded is used for nodes with children whose children are visible,
 // Collapsed is used for nodes with children whose children are hidden, and
@@ -212,11 +217,6 @@ func (t *Model) SetPrefixes(prefixes []string) *Model {
 func (t *Model) SetMarkers(markers Markers) *Model {
 	t.markers = markers
 	return t
-}
-
-// GetMarkers returns the marker strings currently used by this tree view.
-func (t *Model) GetMarkers() Markers {
-	return t.markers
 }
 
 // SetAlign controls the horizontal alignment of the node texts. If set to true,

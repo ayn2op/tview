@@ -232,6 +232,12 @@ func (g *Grid) Clear() *Grid {
 	return g
 }
 
+// GetOffset returns the current row and column offset (see SetOffset() for
+// details).
+func (g *Grid) GetOffset() (rows, columns int) {
+	return g.rowOffset, g.columnOffset
+}
+
 // SetOffset sets the number of rows and columns which are skipped before
 // drawing the first grid cell in the top-left corner. As the grid will never
 // completely move off the screen, these values may be adjusted the next time
@@ -242,12 +248,6 @@ func (g *Grid) SetOffset(rows, columns int) *Grid {
 		g.rowOffset, g.columnOffset = rows, columns
 	}
 	return g
-}
-
-// GetOffset returns the current row and column offset (see SetOffset() for
-// details).
-func (g *Grid) GetOffset() (rows, columns int) {
-	return g.rowOffset, g.columnOffset
 }
 
 // Focus is called when this model receives focus.

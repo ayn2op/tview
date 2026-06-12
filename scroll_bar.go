@@ -154,10 +154,20 @@ func (s *ScrollBar) SetArrows(arrows ScrollBarArrows) *ScrollBar {
 	return s
 }
 
+// TrackClickBehavior returns behavior used for track clicks.
+func (s *ScrollBar) TrackClickBehavior() TrackClickBehavior {
+	return s.trackClickBehavior
+}
+
 // SetTrackClickBehavior sets behavior used for track clicks.
 func (s *ScrollBar) SetTrackClickBehavior(behavior TrackClickBehavior) *ScrollBar {
 	s.trackClickBehavior = behavior
 	return s
+}
+
+// ScrollStep returns scroll step used by wheel and arrow interactions.
+func (s *ScrollBar) ScrollStep() int {
+	return s.scrollStep
 }
 
 // SetScrollStep sets scroll step used by wheel and arrow interactions.
@@ -167,16 +177,6 @@ func (s *ScrollBar) SetScrollStep(step int) *ScrollBar {
 	}
 	s.scrollStep = step
 	return s
-}
-
-// ScrollStep returns scroll step used by wheel and arrow interactions.
-func (s *ScrollBar) ScrollStep() int {
-	return s.scrollStep
-}
-
-// TrackClickBehavior returns behavior used for track clicks.
-func (s *ScrollBar) TrackClickBehavior() TrackClickBehavior {
-	return s.trackClickBehavior
 }
 
 // HasStartArrow reports whether a start arrow is rendered.

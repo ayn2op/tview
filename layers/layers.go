@@ -272,6 +272,16 @@ func (l *Layers) GetLayer(name string) tview.Model {
 	return nil
 }
 
+// GetLayerEnabled returns whether the layer with the given name is enabled.
+func (l *Layers) GetLayerEnabled(name string) bool {
+	for _, layer := range l.layers {
+		if layer.name == name {
+			return layer.enabled
+		}
+	}
+	return false
+}
+
 // SetLayerEnabled enables or disables a layer. Disabled layers are still drawn
 // (if visible) but do not receive focus or input.
 func (l *Layers) SetLayerEnabled(name string, enabled bool) *Layers {
@@ -290,16 +300,6 @@ func (l *Layers) SetLayerEnabled(name string, enabled bool) *Layers {
 	}
 	l.refocusIfNeeded(hasFocus)
 	return l
-}
-
-// GetLayerEnabled returns whether the layer with the given name is enabled.
-func (l *Layers) GetLayerEnabled(name string) bool {
-	for _, layer := range l.layers {
-		if layer.name == name {
-			return layer.enabled
-		}
-	}
-	return false
 }
 
 // ClearLayerOverlay disables overlay styling for the given layer.

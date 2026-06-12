@@ -67,6 +67,11 @@ func NewCheckbox() *Checkbox {
 	}
 }
 
+// IsChecked returns whether or not the box is checked.
+func (c *Checkbox) IsChecked() bool {
+	return c.checked
+}
+
 // SetChecked sets the state of the checkbox. This also triggers the "changed"
 // callback if the state changes with this call.
 func (c *Checkbox) SetChecked(checked bool) *Checkbox {
@@ -79,20 +84,15 @@ func (c *Checkbox) SetChecked(checked bool) *Checkbox {
 	return c
 }
 
-// IsChecked returns whether or not the box is checked.
-func (c *Checkbox) IsChecked() bool {
-	return c.checked
+// GetLabel returns the text to be displayed before the input area.
+func (c *Checkbox) GetLabel() string {
+	return c.label
 }
 
 // SetLabel sets the text to be displayed before the input area.
 func (c *Checkbox) SetLabel(label string) *Checkbox {
 	c.label = label
 	return c
-}
-
-// GetLabel returns the text to be displayed before the input area.
-func (c *Checkbox) GetLabel() string {
-	return c.label
 }
 
 // SetLabelWidth sets the screen width of the label. A value of 0 will cause the
@@ -194,6 +194,11 @@ func (c *Checkbox) GetFieldHeight() int {
 	return 1
 }
 
+// GetDisabled returns whether or not the item is disabled / read-only.
+func (c *Checkbox) GetDisabled() bool {
+	return c.disabled
+}
+
 // SetDisabled sets whether or not the item is disabled / read-only.
 func (c *Checkbox) SetDisabled(disabled bool) FormItem {
 	c.disabled = disabled
@@ -201,11 +206,6 @@ func (c *Checkbox) SetDisabled(disabled bool) FormItem {
 		c.finished(-1)
 	}
 	return c
-}
-
-// GetDisabled returns whether or not the item is disabled / read-only.
-func (c *Checkbox) GetDisabled() bool {
-	return c.disabled
 }
 
 // SetChangedFunc sets a handler which is called when the checked state of this

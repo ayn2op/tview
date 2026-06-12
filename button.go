@@ -49,15 +49,15 @@ func NewButton(label string) *Button {
 	}
 }
 
+// GetLabel returns the button text.
+func (b *Button) GetLabel() string {
+	return b.text
+}
+
 // SetLabel sets the button text.
 func (b *Button) SetLabel(label string) *Button {
 	b.text = label
 	return b
-}
-
-// GetLabel returns the button text.
-func (b *Button) GetLabel() string {
-	return b.text
 }
 
 // SetLabelColor sets the color of the button text.
@@ -101,6 +101,11 @@ func (b *Button) SetDisabledStyle(style tcell.Style) *Button {
 	return b
 }
 
+// GetDisabled returns whether or not the button is disabled.
+func (b *Button) GetDisabled() bool {
+	return b.disabled
+}
+
 // SetDisabled sets whether or not the button is disabled. Disabled buttons
 // cannot be activated.
 //
@@ -109,11 +114,6 @@ func (b *Button) SetDisabledStyle(style tcell.Style) *Button {
 func (b *Button) SetDisabled(disabled bool) *Button {
 	b.disabled = disabled
 	return b
-}
-
-// GetDisabled returns whether or not the button is disabled.
-func (b *Button) GetDisabled() bool {
-	return b.disabled
 }
 
 // View draws this model onto the screen.

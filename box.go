@@ -70,6 +70,11 @@ func NewBox() *Box {
 	return b
 }
 
+// BorderPadding returns the configured border padding.
+func (b *Box) BorderPadding() (top, bottom, left, right int) {
+	return b.paddingTop, b.paddingBottom, b.paddingLeft, b.paddingRight
+}
+
 // SetBorderPadding sets the size of the borders around the box content.
 func (b *Box) SetBorderPadding(top, bottom, left, right int) *Box {
 	if b.paddingTop != top || b.paddingBottom != bottom || b.paddingLeft != left || b.paddingRight != right {
@@ -79,15 +84,25 @@ func (b *Box) SetBorderPadding(top, bottom, left, right int) *Box {
 	return b
 }
 
-// BorderPadding returns the configured border padding.
-func (b *Box) BorderPadding() (top, bottom, left, right int) {
-	return b.paddingTop, b.paddingBottom, b.paddingLeft, b.paddingRight
-}
-
 // Rect returns the current position of the rectangle, x, y, width, and
 // height.
 func (b *Box) Rect() (int, int, int, int) {
 	return b.x, b.y, b.width, b.height
+}
+
+// SetRect sets a new position of the model. Note that this has no effect
+// if this model is part of a layout (e.g. Flex, Grid) or if it was added
+// like this:
+//
+//	application.SetRoot(p, true)
+func (b *Box) SetRect(x, y, width, height int) {
+	if b.x != x || b.y != y || b.width != width || b.height != height {
+		b.x = x
+		b.y = y
+		b.width = width
+		b.height = height
+		b.innerX = -1 // Mark inner rect as uninitialized.
+	}
 }
 
 // InnerRect returns the position of the inner rectangle (x, y, width,
@@ -130,21 +145,6 @@ func (b *Box) InnerRect() (int, int, int, int) {
 	}
 
 	return x, y, width, height
-}
-
-// SetRect sets a new position of the model. Note that this has no effect
-// if this model is part of a layout (e.g. Flex, Grid) or if it was added
-// like this:
-//
-//	application.SetRoot(p, true)
-func (b *Box) SetRect(x, y, width, height int) {
-	if b.x != x || b.y != y || b.width != width || b.height != height {
-		b.x = x
-		b.y = y
-		b.width = width
-		b.height = height
-		b.innerX = -1 // Mark inner rect as uninitialized.
-	}
 }
 
 var _ Model = (*Box)(nil)
@@ -264,6 +264,11 @@ func (b *Box) SetDontClear(dontClear bool) *Box {
 	return b
 }
 
+// GetBackgroundColor returns the box's background color.
+func (b *Box) GetBackgroundColor() tcell.Color {
+	return b.backgroundColor
+}
+
 // SetBackgroundColor sets the box's background color.
 func (b *Box) SetBackgroundColor(color tcell.Color) *Box {
 	if b.backgroundColor != color {
@@ -287,26 +292,21 @@ func (b *Box) SetBorders(flag Borders) *Box {
 	return b
 }
 
+// GetBorderSet returns the border set.
+func (b *Box) GetBorderSet() BorderSet {
+	return b.borderSet
+}
+
 // SetBorderSet sets the border set.
 func (b *Box) SetBorderSet(borderSet BorderSet) *Box {
 	b.borderSet = borderSet
 	return b
 }
 
-// GetBorderSet returns the border set.
-func (b *Box) GetBorderSet() BorderSet {
-	return b.borderSet
-}
-
 // SetBorderStyle sets the box's border style.
 func (b *Box) SetBorderStyle(style tcell.Style) *Box {
 	b.borderStyle = style
 	return b
-}
-
-// GetBackgroundColor returns the box's background color.
-func (b *Box) GetBackgroundColor() tcell.Color {
-	return b.backgroundColor
 }
 
 // Title returns the box's current title.

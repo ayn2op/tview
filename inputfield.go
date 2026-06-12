@@ -70,17 +70,17 @@ func (i *InputField) SetText(text string) *InputField {
 	return i
 }
 
+// GetLabel returns the text to be displayed before the input area.
+func (i *InputField) GetLabel() string {
+	return i.textArea.GetLabel()
+}
+
 // SetLabel sets the text to be displayed before the input area.
 func (i *InputField) SetLabel(label string) *InputField {
 	if i.textArea.GetLabel() != label {
 		i.textArea.SetLabel(label)
 	}
 	return i
-}
-
-// GetLabel returns the text to be displayed before the input area.
-func (i *InputField) GetLabel() string {
-	return i.textArea.GetLabel()
 }
 
 // SetLabelWidth sets the screen width of the label.
@@ -108,6 +108,11 @@ func (i *InputField) SetLabelColor(color tcell.Color) *InputField {
 	return i
 }
 
+// GetLabelStyle returns the style of the label.
+func (i *InputField) GetLabelStyle() tcell.Style {
+	return i.textArea.GetLabelStyle()
+}
+
 // SetLabelStyle sets the style of the label.
 func (i *InputField) SetLabelStyle(style tcell.Style) *InputField {
 	if i.textArea.GetLabelStyle() != style {
@@ -116,9 +121,10 @@ func (i *InputField) SetLabelStyle(style tcell.Style) *InputField {
 	return i
 }
 
-// GetLabelStyle returns the style of the label.
-func (i *InputField) GetLabelStyle() tcell.Style {
-	return i.textArea.GetLabelStyle()
+// GetFieldStyle returns the style of the input area (when no placeholder is
+// shown).
+func (i *InputField) GetFieldStyle() tcell.Style {
+	return i.textArea.GetTextStyle()
 }
 
 // SetFieldStyle sets the style of the input area (when no placeholder is
@@ -130,16 +136,15 @@ func (i *InputField) SetFieldStyle(style tcell.Style) *InputField {
 	return i
 }
 
-// GetFieldStyle returns the style of the input area (when no placeholder is
-// shown).
-func (i *InputField) GetFieldStyle() tcell.Style {
-	return i.textArea.GetTextStyle()
-}
-
 // SetFormAttributes sets attributes shared by all form items.
 func (i *InputField) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
 	i.textArea.SetFormAttributes(labelWidth, labelColor, bgColor, fieldTextColor, fieldBgColor)
 	return i
+}
+
+// GetFieldWidth returns this model's field width.
+func (i *InputField) GetFieldWidth() int {
+	return i.fieldWidth
 }
 
 // SetFieldWidth sets the screen width of the input area. A value of 0 means
@@ -149,14 +154,14 @@ func (i *InputField) SetFieldWidth(width int) *InputField {
 	return i
 }
 
-// GetFieldWidth returns this model's field width.
-func (i *InputField) GetFieldWidth() int {
-	return i.fieldWidth
-}
-
 // GetFieldHeight returns this model's field height.
 func (i *InputField) GetFieldHeight() int {
 	return 1
+}
+
+// GetDisabled returns whether or not the item is disabled / read-only.
+func (i *InputField) GetDisabled() bool {
+	return i.textArea.GetDisabled()
 }
 
 // SetDisabled sets whether or not the item is disabled / read-only.
@@ -168,11 +173,6 @@ func (i *InputField) SetDisabled(disabled bool) FormItem {
 		i.finished(-1)
 	}
 	return i
-}
-
-// GetDisabled returns whether or not the item is disabled / read-only.
-func (i *InputField) GetDisabled() bool {
-	return i.textArea.GetDisabled()
 }
 
 // SetMaskCharacter sets a character that masks user input on a screen. A value

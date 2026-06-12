@@ -158,17 +158,17 @@ func (l *Model) SetScrollBar(scrollBar *tview.ScrollBar) *Model {
 	return l
 }
 
+// Builder returns the current item builder.
+func (l *Model) Builder() Builder {
+	return l.builder
+}
+
 // SetBuilder sets the builder used to create list items on demand.
 func (l *Model) SetBuilder(builder Builder) *Model {
 	if l.builder != nil || builder != nil {
 		l.builder = builder
 	}
 	return l
-}
-
-// Builder returns the current item builder.
-func (l *Model) Builder() Builder {
-	return l.builder
 }
 
 // Clear removes all items from the list by clearing the builder and resetting
@@ -238,6 +238,11 @@ func (l *Model) ScrollBottom() *Model {
 	return l
 }
 
+// Cursor returns the current cursor index.
+func (l *Model) Cursor() int {
+	return l.cursor
+}
+
 // SetCursor sets the currently selected item index.
 func (l *Model) SetCursor(index int) *Model {
 	if index < -1 {
@@ -252,11 +257,6 @@ func (l *Model) SetCursor(index int) *Model {
 		}
 	}
 	return l
-}
-
-// Cursor returns the current cursor index.
-func (l *Model) Cursor() int {
-	return l.cursor
 }
 
 // SetPendingScroll sets a pending scroll amount, in lines. Positive numbers

@@ -370,6 +370,29 @@ func NewTextArea() *TextArea {
 	return t
 }
 
+// Text returns the entire text of the text area. Note that this will newly
+// allocate the entire text.
+func (t *TextArea) Text() string {
+	if t.length == 0 {
+		return ""
+	}
+
+	var text strings.Builder
+	text.Grow(t.length)
+	spanIndex := t.spans[0].next
+	for spanIndex != 1 {
+		span := &t.spans[spanIndex]
+		if span.length < 0 {
+			text.WriteString(t.initialText[span.offset : span.offset-span.length])
+		} else {
+			text.WriteString(t.editText.String()[span.offset : span.offset+span.length])
+		}
+		spanIndex = t.spans[spanIndex].next
+	}
+
+	return text.String()
+}
+
 // SetText sets the text of the text area. All existing text is deleted and
 // replaced with the new text. Any edits are discarded, no undos are available.
 // This function is typically only used to initialize the text area with a text
@@ -429,29 +452,6 @@ func (t *TextArea) SetText(text string, cursorAtTheEnd bool) *TextArea {
 	}
 
 	return t
-}
-
-// Text returns the entire text of the text area. Note that this will newly
-// allocate the entire text.
-func (t *TextArea) Text() string {
-	if t.length == 0 {
-		return ""
-	}
-
-	var text strings.Builder
-	text.Grow(t.length)
-	spanIndex := t.spans[0].next
-	for spanIndex != 1 {
-		span := &t.spans[spanIndex]
-		if span.length < 0 {
-			text.WriteString(t.initialText[span.offset : span.offset-span.length])
-		} else {
-			text.WriteString(t.editText.String()[span.offset : span.offset+span.length])
-		}
-		spanIndex = t.spans[spanIndex].next
-	}
-
-	return text.String()
 }
 
 // HasSelection returns whether the selected text is non-empty.
@@ -811,15 +811,20 @@ func (t *TextArea) SetPlaceholder(placeholder Line) *TextArea {
 	return t
 }
 
+// GetLabel returns the text to be displayed before the text area.
+func (t *TextArea) GetLabel() string {
+	return t.label
+}
+
 // SetLabel sets the text to be displayed before the text area.
 func (t *TextArea) SetLabel(label string) *TextArea {
 	t.label = label
 	return t
 }
 
-// GetLabel returns the text to be displayed before the text area.
-func (t *TextArea) GetLabel() string {
-	return t.label
+// GetLabelWidth returns the screen width of the label.
+func (t *TextArea) GetLabelWidth() int {
+	return t.labelWidth
 }
 
 // SetLabelWidth sets the screen width of the label. A value of 0 will cause the
@@ -827,11 +832,6 @@ func (t *TextArea) GetLabel() string {
 func (t *TextArea) SetLabelWidth(width int) *TextArea {
 	t.labelWidth = width
 	return t
-}
-
-// GetLabelWidth returns the screen width of the label.
-func (t *TextArea) GetLabelWidth() int {
-	return t.labelWidth
 }
 
 // SetSize sets the screen size of the input element of the text area. The input
@@ -854,6 +854,11 @@ func (t *TextArea) GetFieldHeight() int {
 	return t.height
 }
 
+// GetDisabled returns whether or not the item is disabled / read-only.
+func (t *TextArea) GetDisabled() bool {
+	return t.disabled
+}
+
 // SetDisabled sets whether or not the item is disabled / read-only.
 func (t *TextArea) SetDisabled(disabled bool) FormItem {
 	t.disabled = disabled
@@ -861,11 +866,6 @@ func (t *TextArea) SetDisabled(disabled bool) FormItem {
 		t.finished(-1)
 	}
 	return t
-}
-
-// GetDisabled returns whether or not the item is disabled / read-only.
-func (t *TextArea) GetDisabled() bool {
-	return t.disabled
 }
 
 // SetMaxLength sets the maximum number of bytes allowed in the text area. A
@@ -884,26 +884,26 @@ func (t *TextArea) setMinCursorPadding(prefix, suffix int) *TextArea {
 	return t
 }
 
+// GetLabelStyle returns the style of the label.
+func (t *TextArea) GetLabelStyle() tcell.Style {
+	return t.labelStyle
+}
+
 // SetLabelStyle sets the style of the label.
 func (t *TextArea) SetLabelStyle(style tcell.Style) *TextArea {
 	t.labelStyle = style
 	return t
 }
 
-// GetLabelStyle returns the style of the label.
-func (t *TextArea) GetLabelStyle() tcell.Style {
-	return t.labelStyle
+// GetTextStyle returns the style of the text.
+func (t *TextArea) GetTextStyle() tcell.Style {
+	return t.textStyle
 }
 
 // SetTextStyle sets the style of the text.
 func (t *TextArea) SetTextStyle(style tcell.Style) *TextArea {
 	t.textStyle = style
 	return t
-}
-
-// GetTextStyle returns the style of the text.
-func (t *TextArea) GetTextStyle() tcell.Style {
-	return t.textStyle
 }
 
 // SetSelectedStyle sets the style of the selected text.

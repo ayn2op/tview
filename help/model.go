@@ -37,6 +37,11 @@ func NewModel() *Model {
 	}
 }
 
+// ShowAll returns whether full help mode is enabled.
+func (m *Model) ShowAll() bool {
+	return m.showAll
+}
+
 // SetShowAll enables or disables full help mode.
 func (m *Model) SetShowAll(showAll bool) *Model {
 	m.showAll = showAll
@@ -47,11 +52,6 @@ func (m *Model) SetShowAll(showAll bool) *Model {
 func (m *Model) SetCompactModifiers(compact bool) *Model {
 	m.compactModifiers = compact
 	return m
-}
-
-// ShowAll returns whether full help mode is enabled.
-func (m *Model) ShowAll() bool {
-	return m.showAll
 }
 
 // SetShortSeparator sets the separator used in short help mode.

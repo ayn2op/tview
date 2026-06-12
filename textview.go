@@ -154,15 +154,15 @@ func NewTextView() *TextView {
 	}
 }
 
+// GetLabel returns the text to be displayed before the text view.
+func (t *TextView) GetLabel() string {
+	return t.label
+}
+
 // SetLabel sets the text to be displayed before the text view.
 func (t *TextView) SetLabel(label string) *TextView {
 	t.label = label
 	return t
-}
-
-// GetLabel returns the text to be displayed before the text view.
-func (t *TextView) GetLabel() string {
-	return t.label
 }
 
 // SetLabelWidth sets the screen width of the label. A value of 0 will cause the
@@ -191,14 +191,14 @@ func (t *TextView) GetFieldHeight() int {
 	return t.height
 }
 
-// SetDisabled sets whether or not the item is disabled / read-only.
-func (t *TextView) SetDisabled(disabled bool) FormItem {
-	return t // Text views are always read-only.
-}
-
 // GetDisabled returns whether or not the item is disabled / read-only.
 func (t *TextView) GetDisabled() bool {
 	return true // Text views are always read-only.
+}
+
+// SetDisabled sets whether or not the item is disabled / read-only.
+func (t *TextView) SetDisabled(disabled bool) FormItem {
+	return t // Text views are always read-only.
 }
 
 // SetScrollable sets the flag that decides whether or not the text view is
@@ -264,6 +264,23 @@ func (t *TextView) SetTextStyle(style tcell.Style) *TextView {
 	return t
 }
 
+// GetText returns the current plain text of this text view.
+func (t *TextView) GetText() string {
+	if len(t.lines) == 0 {
+		return ""
+	}
+	var result strings.Builder
+	for i, line := range t.lines {
+		for _, seg := range line.segments {
+			result.WriteString(seg.Text)
+		}
+		if i < len(t.lines)-1 {
+			result.WriteString("\n")
+		}
+	}
+	return result.String()
+}
+
 // SetText sets the text of this text view to the provided plain string.
 func (t *TextView) SetText(text string) *TextView {
 	t.Lock()
@@ -277,6 +294,20 @@ func (t *TextView) SetText(text string) *TextView {
 		go t.changed()
 	}
 	return t
+}
+
+// GetLines returns a copy of the styled content.
+func (t *TextView) GetLines() []Line {
+	t.Lock()
+	defer t.Unlock()
+
+	out := make([]Line, 0, len(t.lines))
+	for _, line := range t.lines {
+		copied := make(Line, len(line.segments))
+		copy(copied, line.segments)
+		out = append(out, copied)
+	}
+	return out
 }
 
 // SetLines replaces the content with styled lines.
@@ -301,20 +332,6 @@ func (t *TextView) SetLines(lines []Line) *TextView {
 		go t.changed()
 	}
 	return t
-}
-
-// GetLines returns a copy of the styled content.
-func (t *TextView) GetLines() []Line {
-	t.Lock()
-	defer t.Unlock()
-
-	out := make([]Line, 0, len(t.lines))
-	for _, line := range t.lines {
-		copied := make(Line, len(line.segments))
-		copy(copied, line.segments)
-		out = append(out, copied)
-	}
-	return out
 }
 
 // AppendSegments appends styled segments to the last line.
@@ -347,23 +364,6 @@ func (t *TextView) AppendLine(line Line) *TextView {
 		go t.changed()
 	}
 	return t
-}
-
-// GetText returns the current plain text of this text view.
-func (t *TextView) GetText() string {
-	if len(t.lines) == 0 {
-		return ""
-	}
-	var result strings.Builder
-	for i, line := range t.lines {
-		for _, seg := range line.segments {
-			result.WriteString(seg.Text)
-		}
-		if i < len(t.lines)-1 {
-			result.WriteString("\n")
-		}
-	}
-	return result.String()
 }
 
 // GetOriginalLineCount returns the number of logical lines in the current text.

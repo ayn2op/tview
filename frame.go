@@ -50,8 +50,8 @@ func NewFrame(primitive Model) *Frame {
 	return f
 }
 
-// GetPrimitive returns the model contained in this frame.
-func (f *Frame) GetPrimitive() Model {
+// Primitive returns the model contained in this frame.
+func (f *Frame) Primitive() Model {
 	return f.primitive
 }
 

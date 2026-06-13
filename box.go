@@ -264,8 +264,8 @@ func (b *Box) SetDontClear(dontClear bool) *Box {
 	return b
 }
 
-// GetBackgroundColor returns the box's background color.
-func (b *Box) GetBackgroundColor() tcell.Color {
+// BackgroundColor returns the box's background color.
+func (b *Box) BackgroundColor() tcell.Color {
 	return b.backgroundColor
 }
 
@@ -292,8 +292,8 @@ func (b *Box) SetBorders(flag Borders) *Box {
 	return b
 }
 
-// GetBorderSet returns the border set.
-func (b *Box) GetBorderSet() BorderSet {
+// BorderSet returns the border set.
+func (b *Box) BorderSet() BorderSet {
 	return b.borderSet
 }
 
@@ -335,8 +335,8 @@ func (b *Box) SetTitleAlignment(alignment Alignment) *Box {
 	return b
 }
 
-// GetFooter returns the box's current footer.
-func (b *Box) GetFooter() string {
+// Footer returns the box's current footer.
+func (b *Box) Footer() string {
 	return b.footer
 }
 

@@ -70,14 +70,14 @@ func (i *InputField) SetText(text string) *InputField {
 	return i
 }
 
-// GetLabel returns the text to be displayed before the input area.
-func (i *InputField) GetLabel() string {
-	return i.textArea.GetLabel()
+// Label returns the text to be displayed before the input area.
+func (i *InputField) Label() string {
+	return i.textArea.Label()
 }
 
 // SetLabel sets the text to be displayed before the input area.
 func (i *InputField) SetLabel(label string) *InputField {
-	if i.textArea.GetLabel() != label {
+	if i.textArea.Label() != label {
 		i.textArea.SetLabel(label)
 	}
 	return i
@@ -86,7 +86,7 @@ func (i *InputField) SetLabel(label string) *InputField {
 // SetLabelWidth sets the screen width of the label.
 // A value of 0 represents the width of the label string.
 func (i *InputField) SetLabelWidth(width int) *InputField {
-	if i.textArea.GetLabelWidth() != width {
+	if i.textArea.LabelWidth() != width {
 		i.textArea.SetLabelWidth(width)
 	}
 	return i
@@ -101,36 +101,36 @@ func (i *InputField) SetPlaceholder(line Line) *InputField {
 
 // SetLabelColor sets the text color of the label.
 func (i *InputField) SetLabelColor(color tcell.Color) *InputField {
-	style := i.textArea.GetLabelStyle().Foreground(color)
-	if i.textArea.GetLabelStyle() != style {
+	style := i.textArea.LabelStyle().Foreground(color)
+	if i.textArea.LabelStyle() != style {
 		i.textArea.SetLabelStyle(style)
 	}
 	return i
 }
 
-// GetLabelStyle returns the style of the label.
-func (i *InputField) GetLabelStyle() tcell.Style {
-	return i.textArea.GetLabelStyle()
+// LabelStyle returns the style of the label.
+func (i *InputField) LabelStyle() tcell.Style {
+	return i.textArea.LabelStyle()
 }
 
 // SetLabelStyle sets the style of the label.
 func (i *InputField) SetLabelStyle(style tcell.Style) *InputField {
-	if i.textArea.GetLabelStyle() != style {
+	if i.textArea.LabelStyle() != style {
 		i.textArea.SetLabelStyle(style)
 	}
 	return i
 }
 
-// GetFieldStyle returns the style of the input area (when no placeholder is
+// FieldStyle returns the style of the input area (when no placeholder is
 // shown).
-func (i *InputField) GetFieldStyle() tcell.Style {
-	return i.textArea.GetTextStyle()
+func (i *InputField) FieldStyle() tcell.Style {
+	return i.textArea.TextStyle()
 }
 
 // SetFieldStyle sets the style of the input area (when no placeholder is
 // shown).
 func (i *InputField) SetFieldStyle(style tcell.Style) *InputField {
-	if i.textArea.GetTextStyle() != style {
+	if i.textArea.TextStyle() != style {
 		i.textArea.SetTextStyle(style)
 	}
 	return i
@@ -142,8 +142,8 @@ func (i *InputField) SetFormAttributes(labelWidth int, labelColor, bgColor, fiel
 	return i
 }
 
-// GetFieldWidth returns this model's field width.
-func (i *InputField) GetFieldWidth() int {
+// FieldWidth returns this model's field width.
+func (i *InputField) FieldWidth() int {
 	return i.fieldWidth
 }
 
@@ -154,19 +154,24 @@ func (i *InputField) SetFieldWidth(width int) *InputField {
 	return i
 }
 
+// GetFieldWidth implements FormItem.
+func (i *InputField) GetFieldWidth() int {
+	return i.FieldWidth()
+}
+
 // GetFieldHeight returns this model's field height.
 func (i *InputField) GetFieldHeight() int {
 	return 1
 }
 
-// GetDisabled returns whether or not the item is disabled / read-only.
-func (i *InputField) GetDisabled() bool {
-	return i.textArea.GetDisabled()
+// Disabled returns whether or not the item is disabled / read-only.
+func (i *InputField) Disabled() bool {
+	return i.textArea.Disabled()
 }
 
 // SetDisabled sets whether or not the item is disabled / read-only.
 func (i *InputField) SetDisabled(disabled bool) FormItem {
-	if i.textArea.GetDisabled() != disabled {
+	if i.textArea.Disabled() != disabled {
 		i.textArea.SetDisabled(disabled)
 	}
 	if i.finished != nil {
@@ -213,7 +218,7 @@ func (i *InputField) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
 func (i *InputField) Focus(delegate func(m Model)) {
 	// If we're part of a form and this item is disabled, there's nothing the
 	// user can do here so we're finished.
-	if i.finished != nil && i.textArea.GetDisabled() {
+	if i.finished != nil && i.textArea.Disabled() {
 		i.finished(-1)
 		return
 	}
@@ -243,9 +248,9 @@ func (i *InputField) View(screen tcell.Screen) {
 	}
 
 	// Resize text area.
-	labelWidth := i.textArea.GetLabelWidth()
+	labelWidth := i.textArea.LabelWidth()
 	if labelWidth == 0 {
-		labelWidth = uniseg.StringWidth(i.textArea.GetLabel())
+		labelWidth = uniseg.StringWidth(i.textArea.Label())
 	}
 	fieldWidth := i.fieldWidth
 	if fieldWidth == 0 {
@@ -261,7 +266,7 @@ func (i *InputField) View(screen tcell.Screen) {
 
 // Update handles input events for this model.
 func (i *InputField) Update(msg Msg) Cmd {
-	if i.textArea.GetDisabled() {
+	if i.textArea.Disabled() {
 		return nil
 	}
 

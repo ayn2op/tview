@@ -118,9 +118,9 @@ func NewModel() *Model {
 	}
 }
 
-// GetRoot returns the root node of the tree. If no such node was previously
+// Root returns the root node of the tree. If no such node was previously
 // set, nil is returned.
-func (t *Model) GetRoot() *Node {
+func (t *Model) Root() *Node {
 	return t.root
 }
 
@@ -130,9 +130,9 @@ func (t *Model) SetRoot(root *Node) *Model {
 	return t
 }
 
-// GetCurrentNode returns the currently selected node or nil of no node is
+// CurrentNode returns the currently selected node or nil of no node is
 // currently selected.
-func (t *Model) GetCurrentNode() *Node {
+func (t *Model) CurrentNode() *Node {
 	return t.currentNode
 }
 
@@ -205,8 +205,8 @@ func (t *Model) SetPrefixes(prefixes []string) *Model {
 	return t
 }
 
-// GetMarkers returns the marker strings currently used by this tree view.
-func (t *Model) GetMarkers() Markers {
+// Markers returns the marker strings currently used by this tree view.
+func (t *Model) Markers() Markers {
 	return t.markers
 }
 
@@ -479,8 +479,8 @@ func (t *Model) View(screen tcell.Screen) {
 
 	// Draw the tree.
 	posY := y
-	borderSet := t.GetBorderSet()
-	lineStyle := tcell.StyleDefault.Background(t.GetBackgroundColor()).Foreground(t.graphicsColor)
+	borderSet := t.BorderSet()
+	lineStyle := tcell.StyleDefault.Background(t.BackgroundColor()).Foreground(t.graphicsColor)
 	for index, node := range t.nodes {
 		// Skip invisible parts.
 		if posY >= y+height+1 || posY >= totalHeight {

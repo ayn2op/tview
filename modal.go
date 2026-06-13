@@ -52,7 +52,7 @@ func NewModal() *Modal {
 
 // SetBackgroundColor sets the color of the modal frame background.
 func (m *Modal) SetBackgroundColor(color tcell.Color) *Modal {
-	if m.form.GetBackgroundColor() != color || m.frame.GetBackgroundColor() != color {
+	if m.form.BackgroundColor() != color || m.frame.BackgroundColor() != color {
 		m.form.SetBackgroundColor(color)
 		m.frame.SetBackgroundColor(color)
 	}

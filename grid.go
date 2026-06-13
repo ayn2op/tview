@@ -232,9 +232,9 @@ func (g *Grid) Clear() *Grid {
 	return g
 }
 
-// GetOffset returns the current row and column offset (see SetOffset() for
+// Offset returns the current row and column offset (see SetOffset() for
 // details).
-func (g *Grid) GetOffset() (rows, columns int) {
+func (g *Grid) Offset() (rows, columns int) {
 	return g.rowOffset, g.columnOffset
 }
 

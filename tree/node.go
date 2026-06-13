@@ -84,8 +84,8 @@ func (n *Node) Walk(callback func(node, parent *Node) bool) *Node {
 	return n
 }
 
-// GetReference returns this node's reference object.
-func (n *Node) GetReference() any {
+// Reference returns this node's reference object.
+func (n *Node) Reference() any {
 	return n.reference
 }
 
@@ -98,8 +98,8 @@ func (n *Node) SetReference(reference any) *Node {
 	return n
 }
 
-// GetChildren returns this node's children.
-func (n *Node) GetChildren() []*Node {
+// Children returns this node's children.
+func (n *Node) Children() []*Node {
 	return n.children
 }
 
@@ -109,8 +109,8 @@ func (n *Node) SetChildren(childNodes []*Node) *Node {
 	return n
 }
 
-// GetLine returns the node's styled text line.
-func (n *Node) GetLine() tview.Line {
+// Line returns the node's styled text line.
+func (n *Node) Line() tview.Line {
 	return n.line.Clone()
 }
 
@@ -156,8 +156,8 @@ func (n *Node) SetSelectable(selectable bool) *Node {
 	return n
 }
 
-// IsExpanded returns whether the child nodes of this node are visible.
-func (n *Node) IsExpanded() bool {
+// Expanded returns whether the child nodes of this node are visible.
+func (n *Node) Expanded() bool {
 	return n.expanded
 }
 
@@ -167,9 +167,9 @@ func (n *Node) SetExpanded(expanded bool) *Node {
 	return n
 }
 
-// IsExpandable returns whether this node can be expanded even when there are
+// Expandable returns whether this node can be expanded even when there are
 // no loaded child nodes yet.
-func (n *Node) IsExpandable() bool {
+func (n *Node) Expandable() bool {
 	return n.expandable
 }
 
@@ -218,9 +218,9 @@ func (n *Node) CollapseAll() *Node {
 	return n
 }
 
-// GetSelectedTextStyle returns the text style for this node when it is
+// SelectedTextStyle returns the text style for this node when it is
 // selected.
-func (n *Node) GetSelectedTextStyle() tcell.Style {
+func (n *Node) SelectedTextStyle() tcell.Style {
 	return n.selectedTextStyle
 }
 

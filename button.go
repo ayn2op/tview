@@ -49,8 +49,8 @@ func NewButton(label string) *Button {
 	}
 }
 
-// GetLabel returns the button text.
-func (b *Button) GetLabel() string {
+// Label returns the button text.
+func (b *Button) Label() string {
 	return b.text
 }
 
@@ -101,8 +101,8 @@ func (b *Button) SetDisabledStyle(style tcell.Style) *Button {
 	return b
 }
 
-// GetDisabled returns whether or not the button is disabled.
-func (b *Button) GetDisabled() bool {
+// Disabled returns whether or not the button is disabled.
+func (b *Button) Disabled() bool {
 	return b.disabled
 }
 
@@ -149,7 +149,7 @@ func (b *Button) Update(msg Msg) Cmd {
 		// Process key event.
 		switch key := msg.Key(); key {
 		case tcell.KeyEnter: // Selected.
-			label := b.GetLabel()
+			label := b.Label()
 			return func() Msg {
 				return newButtonSelectedMsg(label)
 			}
@@ -170,7 +170,7 @@ func (b *Button) Update(msg Msg) Cmd {
 		case MouseLeftDown:
 			return SetFocus(b)
 		case MouseLeftClick:
-			label := b.GetLabel()
+			label := b.Label()
 			return func() Msg {
 				return newButtonSelectedMsg(label)
 			}

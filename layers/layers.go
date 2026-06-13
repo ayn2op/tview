@@ -272,8 +272,8 @@ func (l *Layers) GetLayer(name string) tview.Model {
 	return nil
 }
 
-// GetLayerEnabled returns whether the layer with the given name is enabled.
-func (l *Layers) GetLayerEnabled(name string) bool {
+// LayerEnabled returns whether the layer with the given name is enabled.
+func (l *Layers) LayerEnabled(name string) bool {
 	for _, layer := range l.layers {
 		if layer.name == name {
 			return layer.enabled

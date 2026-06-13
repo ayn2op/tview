@@ -154,8 +154,8 @@ func NewTextView() *TextView {
 	}
 }
 
-// GetLabel returns the text to be displayed before the text view.
-func (t *TextView) GetLabel() string {
+// Label returns the text to be displayed before the text view.
+func (t *TextView) Label() string {
 	return t.label
 }
 
@@ -191,8 +191,8 @@ func (t *TextView) GetFieldHeight() int {
 	return t.height
 }
 
-// GetDisabled returns whether or not the item is disabled / read-only.
-func (t *TextView) GetDisabled() bool {
+// Disabled returns whether or not the item is disabled / read-only.
+func (t *TextView) Disabled() bool {
 	return true // Text views are always read-only.
 }
 
@@ -264,8 +264,8 @@ func (t *TextView) SetTextStyle(style tcell.Style) *TextView {
 	return t
 }
 
-// GetText returns the current plain text of this text view.
-func (t *TextView) GetText() string {
+// Text returns the current plain text of this text view.
+func (t *TextView) Text() string {
 	if len(t.lines) == 0 {
 		return ""
 	}
@@ -285,7 +285,7 @@ func (t *TextView) GetText() string {
 func (t *TextView) SetText(text string) *TextView {
 	t.Lock()
 	defer t.Unlock()
-	if t.GetText() == text {
+	if t.Text() == text {
 		return t
 	}
 	t.clear()
@@ -296,8 +296,8 @@ func (t *TextView) SetText(text string) *TextView {
 	return t
 }
 
-// GetLines returns a copy of the styled content.
-func (t *TextView) GetLines() []Line {
+// Lines returns a copy of the styled content.
+func (t *TextView) Lines() []Line {
 	t.Lock()
 	defer t.Unlock()
 

@@ -811,8 +811,8 @@ func (t *TextArea) SetPlaceholder(placeholder Line) *TextArea {
 	return t
 }
 
-// GetLabel returns the text to be displayed before the text area.
-func (t *TextArea) GetLabel() string {
+// Label returns the text to be displayed before the text area.
+func (t *TextArea) Label() string {
 	return t.label
 }
 
@@ -822,8 +822,8 @@ func (t *TextArea) SetLabel(label string) *TextArea {
 	return t
 }
 
-// GetLabelWidth returns the screen width of the label.
-func (t *TextArea) GetLabelWidth() int {
+// LabelWidth returns the screen width of the label.
+func (t *TextArea) LabelWidth() int {
 	return t.labelWidth
 }
 
@@ -854,8 +854,8 @@ func (t *TextArea) GetFieldHeight() int {
 	return t.height
 }
 
-// GetDisabled returns whether or not the item is disabled / read-only.
-func (t *TextArea) GetDisabled() bool {
+// Disabled returns whether or not the item is disabled / read-only.
+func (t *TextArea) Disabled() bool {
 	return t.disabled
 }
 
@@ -884,8 +884,8 @@ func (t *TextArea) setMinCursorPadding(prefix, suffix int) *TextArea {
 	return t
 }
 
-// GetLabelStyle returns the style of the label.
-func (t *TextArea) GetLabelStyle() tcell.Style {
+// LabelStyle returns the style of the label.
+func (t *TextArea) LabelStyle() tcell.Style {
 	return t.labelStyle
 }
 
@@ -895,8 +895,8 @@ func (t *TextArea) SetLabelStyle(style tcell.Style) *TextArea {
 	return t
 }
 
-// GetTextStyle returns the style of the text.
-func (t *TextArea) GetTextStyle() tcell.Style {
+// TextStyle returns the style of the text.
+func (t *TextArea) TextStyle() tcell.Style {
 	return t.textStyle
 }
 
@@ -912,10 +912,10 @@ func (t *TextArea) SetSelectedStyle(style tcell.Style) *TextArea {
 	return t
 }
 
-// GetOffset returns the text's offset, that is, the number of rows and columns
+// Offset returns the text's offset, that is, the number of rows and columns
 // skipped during drawing at the top or on the left, respectively. Note that the
 // column offset is ignored if wrapping is enabled.
-func (t *TextArea) GetOffset() (row, column int) {
+func (t *TextArea) Offset() (row, column int) {
 	return t.rowOffset, t.columnOffset
 }
 

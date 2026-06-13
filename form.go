@@ -23,8 +23,8 @@ var (
 type FormItem interface {
 	Model
 
-	// GetLabel returns the item's label text.
-	GetLabel() string
+	// Label returns the item's label text.
+	Label() string
 
 	// SetFormAttributes sets a number of item attributes at once.
 	SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem
@@ -51,8 +51,8 @@ type FormItem interface {
 	// must have at least one item that is not disabled.
 	SetDisabled(disabled bool) FormItem
 
-	// GetDisabled returns whether or not the item is disabled / read-only.
-	GetDisabled() bool
+	// Disabled returns whether or not the item is disabled / read-only.
+	Disabled() bool
 }
 
 // Form allows you to combine multiple one-line form elements into a vertical
@@ -334,7 +334,7 @@ func (f *Form) GetButtonCount() int {
 // is returned.
 func (f *Form) GetButtonIndex(label string) int {
 	for index, button := range f.buttons {
-		if button.GetLabel() == label {
+		if button.Label() == label {
 			return index
 		}
 	}
@@ -401,7 +401,7 @@ func (f *Form) RemoveFormItem(index int) *Form {
 // therefore not be returned.
 func (f *Form) GetFormItemByLabel(label string) FormItem {
 	for _, item := range f.items {
-		if item.GetLabel() == label {
+		if item.Label() == label {
 			return item
 		}
 	}
@@ -413,7 +413,7 @@ func (f *Form) GetFormItemByLabel(label string) FormItem {
 // and will therefore not be returned.
 func (f *Form) GetFormItemIndex(label string) int {
 	for index, item := range f.items {
-		if item.GetLabel() == label {
+		if item.Label() == label {
 			return index
 		}
 	}
@@ -447,7 +447,7 @@ func (f *Form) View(screen tcell.Screen) {
 	// Find the longest label.
 	var maxLabelWidth int
 	for _, item := range f.items {
-		labelWidth := uniseg.StringWidth(item.GetLabel())
+		labelWidth := uniseg.StringWidth(item.Label())
 		if labelWidth > maxLabelWidth {
 			maxLabelWidth = labelWidth
 		}
@@ -463,7 +463,7 @@ func (f *Form) View(screen tcell.Screen) {
 	)
 	for index, item := range f.items {
 		// Calculate the space needed.
-		labelWidth := uniseg.StringWidth(item.GetLabel())
+		labelWidth := uniseg.StringWidth(item.Label())
 		var itemWidth int
 		if f.horizontal {
 			fieldWidth := item.GetFieldWidth()
@@ -529,7 +529,7 @@ func (f *Form) View(screen tcell.Screen) {
 	buttonWidths := make([]int, len(f.buttons))
 	buttonsWidth := 0
 	for index, button := range f.buttons {
-		w := uniseg.StringWidth(button.GetLabel()) + 4
+		w := uniseg.StringWidth(button.Label()) + 4
 		buttonWidths[index] = w
 		buttonsWidth += w + 1
 	}
@@ -645,14 +645,14 @@ func (f *Form) Focus(delegate func(m Model)) {
 
 	// Delegate focus.
 	for index, item := range f.items {
-		if (focus < 0 || focus == index) && !item.GetDisabled() {
+		if (focus < 0 || focus == index) && !item.Disabled() {
 			f.requestedFocus = index
 			delegate(item)
 			return
 		}
 	}
 	for index, button := range f.buttons {
-		if (focus < 0 || focus == len(f.items)+index) && !button.GetDisabled() {
+		if (focus < 0 || focus == len(f.items)+index) && !button.Disabled() {
 			f.requestedFocus = len(f.items) + index
 			delegate(button)
 			return
@@ -676,12 +676,12 @@ func (f *Form) finished(key tcell.Key) {
 		for range totalCount {
 			focus = (focus + 1) % totalCount
 			if focus < len(f.items) {
-				if !f.items[focus].GetDisabled() {
+				if !f.items[focus].Disabled() {
 					f.setFocus(f.items[focus])
 					return
 				}
 			} else {
-				if !f.buttons[focus-len(f.items)].GetDisabled() {
+				if !f.buttons[focus-len(f.items)].Disabled() {
 					f.setFocus(f.buttons[focus-len(f.items)])
 					return
 				}
@@ -692,12 +692,12 @@ func (f *Form) finished(key tcell.Key) {
 		for range totalCount {
 			focus = (focus + totalCount - 1) % totalCount
 			if focus < len(f.items) {
-				if !f.items[focus].GetDisabled() {
+				if !f.items[focus].Disabled() {
 					f.setFocus(f.items[focus])
 					return
 				}
 			} else {
-				if !f.buttons[focus-len(f.items)].GetDisabled() {
+				if !f.buttons[focus-len(f.items)].Disabled() {
 					f.setFocus(f.buttons[focus-len(f.items)])
 					return
 				}
@@ -760,7 +760,7 @@ func (f *Form) Update(msg Msg) Cmd {
 		x, y := msg.Position()
 		// Determine items to pass mouse events to.
 		for _, item := range f.items {
-			if item.GetDisabled() {
+			if item.Disabled() {
 				continue
 			}
 			if ModelInRect(item, x, y) {
@@ -768,7 +768,7 @@ func (f *Form) Update(msg Msg) Cmd {
 			}
 		}
 		for index, button := range f.buttons {
-			if button.GetDisabled() {
+			if button.Disabled() {
 				continue
 			}
 			if !button.InRect(x, y) {
@@ -779,7 +779,7 @@ func (f *Form) Update(msg Msg) Cmd {
 				return SetFocus(button)
 			case MouseLeftClick:
 				buttonIndex := index
-				buttonLabel := button.GetLabel()
+				buttonLabel := button.Label()
 				return Batch(
 					func() Msg {
 						return newFormSubmitMsg(buttonIndex, buttonLabel)
@@ -808,7 +808,7 @@ func (f *Form) Update(msg Msg) Cmd {
 			}
 			if keyMsg, ok := msg.(KeyMsg); ok && keyMsg.Key() == tcell.KeyEnter {
 				buttonIndex := index
-				buttonLabel := button.GetLabel()
+				buttonLabel := button.Label()
 				return Batch(
 					func() Msg {
 						return newFormSubmitMsg(buttonIndex, buttonLabel)

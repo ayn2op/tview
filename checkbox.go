@@ -67,8 +67,8 @@ func NewCheckbox() *Checkbox {
 	}
 }
 
-// IsChecked returns whether or not the box is checked.
-func (c *Checkbox) IsChecked() bool {
+// Checked returns whether or not the box is checked.
+func (c *Checkbox) Checked() bool {
 	return c.checked
 }
 
@@ -84,8 +84,8 @@ func (c *Checkbox) SetChecked(checked bool) *Checkbox {
 	return c
 }
 
-// GetLabel returns the text to be displayed before the input area.
-func (c *Checkbox) GetLabel() string {
+// Label returns the text to be displayed before the input area.
+func (c *Checkbox) Label() string {
 	return c.label
 }
 
@@ -194,8 +194,8 @@ func (c *Checkbox) GetFieldHeight() int {
 	return 1
 }
 
-// GetDisabled returns whether or not the item is disabled / read-only.
-func (c *Checkbox) GetDisabled() bool {
+// Disabled returns whether or not the item is disabled / read-only.
+func (c *Checkbox) Disabled() bool {
 	return c.disabled
 }
 

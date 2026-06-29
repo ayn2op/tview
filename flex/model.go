@@ -160,6 +160,10 @@ func (m *Model) View(screen tcell.Screen) {
 
 	// How much space can we distribute?
 	x, y, width, height := m.InnerRect()
+	if width <= 0 || height <= 0 {
+		return
+	}
+
 	var proportionSum int
 	distSize := width
 	if m.direction == DirectionRow {
@@ -171,6 +175,9 @@ func (m *Model) View(screen tcell.Screen) {
 		} else {
 			proportionSum += item.Proportion
 		}
+	}
+	if distSize < 0 {
+		distSize = 0
 	}
 
 	// Calculate positions and draw items.
@@ -198,7 +205,7 @@ func (m *Model) View(screen tcell.Screen) {
 		}
 		pos += size
 
-		if item.Item != nil {
+		if item.Item != nil && size > 0 {
 			if item.Item.HasFocus() {
 				defer item.Item.View(screen)
 			} else {

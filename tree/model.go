@@ -495,17 +495,15 @@ func (t *Model) View(screen tcell.Screen) {
 			// Draw ancestor branches.
 			ancestor := node.parent
 			for ancestor != nil && ancestor.parent != nil && ancestor.parent.level >= t.topLevel {
-				if ancestor.graphicsX >= width {
-					continue
-				}
-
-				// Draw a branch if this ancestor is not a last child.
-				if ancestor.parent.children[len(ancestor.parent.children)-1] != ancestor {
-					if posY-1 >= y && ancestor.textX > ancestor.graphicsX {
-						tview.PrintJoinedSemigraphics(screen, x+ancestor.graphicsX, posY-1, borderSet.Left, lineStyle)
-					}
-					if posY < y+height {
-						screen.Put(x+ancestor.graphicsX, posY, borderSet.Right, lineStyle)
+				if ancestor.graphicsX < width {
+					// Draw a branch if this ancestor is not a last child.
+					if ancestor.parent.children[len(ancestor.parent.children)-1] != ancestor {
+						if posY-1 >= y && ancestor.textX > ancestor.graphicsX {
+							tview.PrintJoinedSemigraphics(screen, x+ancestor.graphicsX, posY-1, borderSet.Left, lineStyle)
+						}
+						if posY < y+height {
+							screen.Put(x+ancestor.graphicsX, posY, borderSet.Right, lineStyle)
+						}
 					}
 				}
 				ancestor = ancestor.parent

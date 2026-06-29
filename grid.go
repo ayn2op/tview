@@ -328,6 +328,9 @@ ItemLoop:
 	if rows == 0 || columns == 0 {
 		return // No content.
 	}
+	if width <= 0 || height <= 0 {
+		return
+	}
 
 	// Where are they located?
 	rowPos := make([]int, rows)
@@ -378,6 +381,12 @@ ItemLoop:
 	}
 	if columns > len(g.columns) {
 		proportionalWidth += columns - len(g.columns)
+	}
+	if remainingWidth < 0 {
+		remainingWidth = 0
+	}
+	if remainingHeight < 0 {
+		remainingHeight = 0
 	}
 
 	// Distribute proportional rows/columns.

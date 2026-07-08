@@ -5,6 +5,8 @@ import (
 	"github.com/gdamore/tcell/v3/color"
 )
 
+type Style = tcell.Style
+
 // Theme defines the colors used when models are initialized.
 type Theme struct {
 	PrimitiveBackgroundColor    tcell.Color // Main background color for models.

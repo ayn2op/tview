@@ -141,7 +141,6 @@ func (a *Application) Run() error {
 		a.draw()
 	}
 
-	// Start messages loop.
 	var (
 		pasteBuffer strings.Builder
 		pasting     bool // Set to true while we receive paste key events.

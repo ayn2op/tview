@@ -1,6 +1,7 @@
-package tview
+package frame
 
 import (
+	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -8,17 +9,17 @@ import (
 type frameText struct {
 	Text      string // The text to be displayed.
 	Header    bool   // true = place in header, false = place in footer.
-	Alignment Alignment
+	Alignment tview.Alignment
 	Color     tcell.Color // The text color.
 }
 
-// Frame is a wrapper which adds space around another model. In addition,
+// Model is a wrapper which adds space around another model. In addition,
 // the top area (header) and the bottom area (footer) may also contain text.
-type Frame struct {
-	*Box
+type Model struct {
+	*tview.Box
 
 	// The contained model. May be nil.
-	primitive Model
+	primitive tview.Model
 
 	// The lines of text to be displayed.
 	text []*frameText
@@ -27,17 +28,15 @@ type Frame struct {
 	top, bottom, header, footer, left, right int
 
 	// Keep a reference in case we need it when we change the model.
-	setFocus func(m Model)
+	setFocus func(m tview.Model)
 }
 
-// NewFrame returns a new frame around the given model. The model's
+// NewModel returns a new frame around the given model. The model's
 // size will be changed to fit within this frame. The model may be nil, in
 // which case no other model is embedded in the frame.
-func NewFrame(primitive Model) *Frame {
-	box := NewBox()
-
-	f := &Frame{
-		Box:       box,
+func NewModel(primitive tview.Model) *Model {
+	f := &Model{
+		Box:       tview.NewBox(),
 		primitive: primitive,
 		top:       1,
 		bottom:    1,
@@ -46,18 +45,17 @@ func NewFrame(primitive Model) *Frame {
 		left:      1,
 		right:     1,
 	}
-
 	return f
 }
 
 // Primitive returns the model contained in this frame.
-func (f *Frame) Primitive() Model {
+func (f *Model) Primitive() tview.Model {
 	return f.primitive
 }
 
 // SetPrimitive replaces the contained model with the given one. To remove
 // a model, set it to nil.
-func (f *Frame) SetPrimitive(m Model) *Frame {
+func (f *Model) SetPrimitive(m tview.Model) *Model {
 	if f.primitive == m {
 		return f
 	}
@@ -77,7 +75,7 @@ func (f *Frame) SetPrimitive(m Model) *Frame {
 // appear in the footer, below the contained model. Rows in the header are printed top to bottom, rows in
 // the footer are printed bottom to top. Note that long text can overlap as
 // different alignments will be placed on the same row.
-func (f *Frame) AddText(text string, header bool, alignment Alignment, color tcell.Color) *Frame {
+func (f *Model) AddText(text string, header bool, alignment tview.Alignment, color tcell.Color) *Model {
 	f.text = append(f.text, &frameText{
 		Text:      text,
 		Header:    header,
@@ -88,7 +86,7 @@ func (f *Frame) AddText(text string, header bool, alignment Alignment, color tce
 }
 
 // Clear removes all text from the frame.
-func (f *Frame) Clear() *Frame {
+func (f *Model) Clear() *Model {
 	if len(f.text) > 0 {
 		f.text = nil
 	}
@@ -98,7 +96,7 @@ func (f *Frame) Clear() *Frame {
 // SetBorders sets the width of the frame borders as well as "header" and
 // "footer", the vertical space between the header and footer text and the
 // contained model (does not apply if there is no text).
-func (f *Frame) SetBorders(top, bottom, header, footer, left, right int) *Frame {
+func (f *Model) SetBorders(top, bottom, header, footer, left, right int) *Model {
 	if f.top != top || f.bottom != bottom || f.header != header || f.footer != footer || f.left != left || f.right != right {
 		f.top, f.bottom, f.header, f.footer, f.left, f.right = top, bottom, header, footer, left, right
 	}
@@ -106,7 +104,7 @@ func (f *Frame) SetBorders(top, bottom, header, footer, left, right int) *Frame 
 }
 
 // View draws this model onto the screen.
-func (f *Frame) View(screen tcell.Screen) {
+func (f *Model) View(screen tcell.Screen) {
 	f.Box.View(screen)
 
 	// Calculate start positions.
@@ -148,7 +146,7 @@ func (f *Frame) View(screen tcell.Screen) {
 		}
 
 		// Draw text.
-		Print(screen, text.Text, x, y, width, text.Alignment, text.Color)
+		tview.Print(screen, text.Text, x, y, width, text.Alignment, text.Color)
 	}
 
 	// Set the size of the contained model.
@@ -170,7 +168,7 @@ func (f *Frame) View(screen tcell.Screen) {
 }
 
 // Focus is called when this model receives focus.
-func (f *Frame) Focus(delegate func(m Model)) {
+func (f *Model) Focus(delegate func(m tview.Model)) {
 	f.setFocus = delegate
 	if f.primitive != nil {
 		delegate(f.primitive)
@@ -180,7 +178,7 @@ func (f *Frame) Focus(delegate func(m Model)) {
 }
 
 // HasFocus returns whether or not this model has focus.
-func (f *Frame) HasFocus() bool {
+func (f *Model) HasFocus() bool {
 	if f.primitive == nil {
 		return f.Box.HasFocus()
 	}
@@ -188,24 +186,24 @@ func (f *Frame) HasFocus() bool {
 }
 
 // Update handles input events for this model.
-func (f *Frame) Update(msg Msg) Cmd {
+func (f *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case MouseMsg:
+	case tview.MouseMsg:
 		x, y := msg.Position()
 		if !f.InRect(x, y) {
 			return nil
 		}
 
 		// Pass mouse events on to contained model.
-		if f.primitive != nil && ModelInRect(f.primitive, x, y) {
+		if f.primitive != nil && tview.ModelInRect(f.primitive, x, y) {
 			return f.primitive.Update(msg)
 		}
 
 		// Clicking on the frame parts.
-		if msg.Action == MouseLeftDown {
-			return SetFocus(f)
+		if msg.Action == tview.MouseLeftDown {
+			return tview.SetFocus(f)
 		}
-	case KeyMsg, PasteMsg:
+	case tview.KeyMsg, tview.PasteMsg:
 		if f.primitive == nil {
 			return nil
 		}

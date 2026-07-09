@@ -7,6 +7,15 @@ type Msg any
 // Cmd is a side effect requested by a model during input handling.
 type Cmd func() Msg
 
+type rawMsg struct{ msg any }
+
+// Raw is a command that writes the data to the underlying TTY without any formatting.
+func Raw(r any) Cmd {
+	return func() Msg {
+		return rawMsg{msg: r}
+	}
+}
+
 type batchMsg []Cmd
 
 // Batch combines multiple commands into a single command.

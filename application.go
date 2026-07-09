@@ -156,6 +156,11 @@ func (a *Application) Run() error {
 		case *tcell.EventError:
 			return msg
 
+		case rawMsg:
+			if tty, ok := a.screen.Tty(); ok {
+				data := fmt.Append(nil, msg.msg)
+				_, _ = tty.Write(data)
+			}
 		case setFocusMsg:
 			a.setFocus(msg.target)
 		case setMouseCaptureMsg:

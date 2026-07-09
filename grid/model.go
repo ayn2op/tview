@@ -1,24 +1,26 @@
-package tview
+package grid
 
 import (
-	"github.com/gdamore/tcell/v3"
 	"math"
 	"slices"
+
+	"github.com/ayn2op/tview"
+	"github.com/gdamore/tcell/v3"
 )
 
-// gridItem represents one model and its possible position on a grid.
-type gridItem struct {
-	Item                        Model // The item to be positioned. May be nil for an empty item.
-	Row, Column                 int   // The top-left grid cell where the item is placed.
-	Width, Height               int   // The number of rows and columns the item occupies.
-	MinGridWidth, MinGridHeight int   // The minimum grid width/height for which this item is visible.
-	Focus                       bool  // Whether or not this item attracts the layout's focus.
+// item represents one model and its possible position on a grid.
+type item struct {
+	Item                        tview.Model // The item to be positioned. May be nil for an empty item.
+	Row, Column                 int         // The top-left grid cell where the item is placed.
+	Width, Height               int         // The number of rows and columns the item occupies.
+	MinGridWidth, MinGridHeight int         // The minimum grid width/height for which this item is visible.
+	Focus                       bool        // Whether or not this item attracts the layout's focus.
 
 	visible    bool // Whether or not this item was visible the last time the grid was drawn.
 	x, y, w, h int  // The last position of the item relative to the top-left corner of the grid. Undefined if visible is false.
 }
 
-// Grid is an implementation of a grid-based layout. It works by defining the
+// Model is an implementation of a grid-based layout. It works by defining the
 // size of the rows and columns, then placing models into the grid.
 //
 // Some settings can lead to the grid exceeding its available space. SetOffset()
@@ -26,14 +28,14 @@ type gridItem struct {
 // can also be controlled with the arrow keys (or the "g","G", "j", "k", "h",
 // and "l" keys) while the grid has focus and none of its contained models
 // do.
-type Grid struct {
-	*Box
+type Model struct {
+	*tview.Box
 
 	// The items to be positioned.
-	items []*gridItem
+	items []*item
 
 	// The definition of the rows and columns of the grid. See
-	// [Grid.SetRows] / [Grid.SetColumns] for details.
+	// [Model.SetRows] / [Model.SetColumns] for details.
 	rows, columns []int
 
 	// The minimum sizes for rows and columns.
@@ -56,20 +58,20 @@ type Grid struct {
 	bordersColor tcell.Color
 }
 
-// NewGrid returns a new grid-based layout container with no initial models.
+// NewModel returns a new grid-based layout container with no initial models.
 //
-// Note that Box, the superclass of Grid, will be transparent so that any grid
+// Note that Box, the superclass of Model, will be transparent so that any grid
 // areas not covered by any models will leave their background unchanged. To
-// clear a Grid's background before any items are drawn, reset its Box to one
+// clear a Model's background before any items are drawn, reset its Box to one
 // with the desired color:
 //
-//	grid.Box = NewBox()
-func NewGrid() *Grid {
-	g := &Grid{
-		bordersColor: Styles.GraphicsColor,
+//	grid.Box = tview.NewBox()
+func NewModel() *Model {
+	g := &Model{
+		bordersColor: tview.Styles.GraphicsColor,
 	}
-	g.Box = NewBox()
-	g.dontClear = true
+	g.Box = tview.NewBox()
+	g.SetDontClear(true)
 	return g
 }
 
@@ -103,26 +105,26 @@ func NewGrid() *Grid {
 //
 // The resulting widths would be: 30, 15, 15, 15, 20, 15, and 15 cells, a total
 // of 125 cells, 25 cells wider than the available grid width.
-func (g *Grid) SetColumns(columns ...int) *Grid {
-	g.columns = columns
-	return g
+func (m *Model) SetColumns(columns ...int) *Model {
+	m.columns = columns
+	return m
 }
 
 // SetRows defines how the rows of the grid are distributed. These values behave
-// the same as the column values provided with [Grid.SetColumns], see there
+// the same as the column values provided with [Model.SetColumns], see there
 // for a definition and examples.
 //
 // The provided values correspond to row heights, the first value defining
 // the height of the topmost row.
-func (g *Grid) SetRows(rows ...int) *Grid {
-	g.rows = rows
-	return g
+func (m *Model) SetRows(rows ...int) *Model {
+	m.rows = rows
+	return m
 }
 
-// SetSize is a shortcut for [Grid.SetRows] and [Grid.SetColumns] where
+// SetSize is a shortcut for [Model.SetRows] and [Model.SetColumns] where
 // all row and column values are set to the given size values. See
-// [Grid.SetColumns] for details on sizes.
-func (g *Grid) SetSize(numRows, numColumns, rowSize, columnSize int) *Grid {
+// [Model.SetColumns] for details on sizes.
+func (m *Model) SetSize(numRows, numColumns, rowSize, columnSize int) *Model {
 	rows := make([]int, numRows)
 	for index := range rows {
 		rows[index] = rowSize
@@ -132,44 +134,44 @@ func (g *Grid) SetSize(numRows, numColumns, rowSize, columnSize int) *Grid {
 		columns[index] = columnSize
 	}
 
-	g.rows = rows
-	g.columns = columns
-	return g
+	m.rows = rows
+	m.columns = columns
+	return m
 }
 
 // SetMinSize sets an absolute minimum width for rows and an absolute minimum
 // height for columns. Panics if negative values are provided.
-func (g *Grid) SetMinSize(row, column int) *Grid {
+func (m *Model) SetMinSize(row, column int) *Model {
 	if row < 0 || column < 0 {
 		panic("Invalid minimum row/column size")
 	}
-	g.minHeight, g.minWidth = row, column
-	return g
+	m.minHeight, m.minWidth = row, column
+	return m
 }
 
 // SetGap sets the size of the gaps between neighboring models on the grid.
 // If borders are drawn (see SetBorders()), these values are ignored and a gap
 // of 1 is assumed. Panics if negative values are provided.
-func (g *Grid) SetGap(row, column int) *Grid {
+func (m *Model) SetGap(row, column int) *Model {
 	if row < 0 || column < 0 {
 		panic("Invalid gap size")
 	}
-	g.gapRows, g.gapColumns = row, column
-	return g
+	m.gapRows, m.gapColumns = row, column
+	return m
 }
 
 // SetBorders sets whether or not borders are drawn around grid items. Setting
 // this value to true will cause the gap values (see SetGap()) to be ignored and
 // automatically assumed to be 1 where the border graphics are drawn.
-func (g *Grid) SetBorders(borders bool) *Grid {
-	g.borders = borders
-	return g
+func (m *Model) SetBorders(borders bool) *Model {
+	m.borders = borders
+	return m
 }
 
 // SetBordersColor sets the color of the item borders.
-func (g *Grid) SetBordersColor(color tcell.Color) *Grid {
-	g.bordersColor = color
-	return g
+func (m *Model) SetBordersColor(color tcell.Color) *Model {
+	m.bordersColor = color
+	return m
 }
 
 // AddItem adds a model and its position to the grid. The top-left corner
@@ -199,8 +201,8 @@ func (g *Grid) SetBordersColor(color tcell.Color) *Grid {
 // If the item's focus is set to true, it will receive focus when the grid
 // receives focus. If there are multiple items with a true focus flag, the last
 // visible one that was added will receive focus.
-func (g *Grid) AddItem(p Model, row, column, rowSpan, colSpan, minGridHeight, minGridWidth int, focus bool) *Grid {
-	g.items = append(g.items, &gridItem{
+func (m *Model) AddItem(p tview.Model, row, column, rowSpan, colSpan, minGridHeight, minGridWidth int, focus bool) *Model {
+	m.items = append(m.items, &item{
 		Item:          p,
 		Row:           row,
 		Column:        column,
@@ -210,12 +212,12 @@ func (g *Grid) AddItem(p Model, row, column, rowSpan, colSpan, minGridHeight, mi
 		MinGridWidth:  minGridWidth,
 		Focus:         focus,
 	})
-	return g
+	return m
 }
 
 // RemoveItem removes all items for the given model from the grid, keeping
 // the order of the remaining items intact.
-func (g *Grid) RemoveItem(m Model) *Grid {
+func (g *Model) RemoveItem(m tview.Model) *Model {
 	for index := len(g.items) - 1; index >= 0; index-- {
 		if g.items[index].Item == m {
 			g.items = slices.Delete(g.items, index, index+1)
@@ -225,17 +227,17 @@ func (g *Grid) RemoveItem(m Model) *Grid {
 }
 
 // Clear removes all items from the grid.
-func (g *Grid) Clear() *Grid {
-	if len(g.items) > 0 {
-		g.items = nil
+func (m *Model) Clear() *Model {
+	if len(m.items) > 0 {
+		m.items = nil
 	}
-	return g
+	return m
 }
 
 // Offset returns the current row and column offset (see SetOffset() for
 // details).
-func (g *Grid) Offset() (rows, columns int) {
-	return g.rowOffset, g.columnOffset
+func (m *Model) Offset() (rows, columns int) {
+	return m.rowOffset, m.columnOffset
 }
 
 // SetOffset sets the number of rows and columns which are skipped before
@@ -243,45 +245,45 @@ func (g *Grid) Offset() (rows, columns int) {
 // completely move off the screen, these values may be adjusted the next time
 // the grid is drawn. The actual position of the grid may also be adjusted such
 // that contained models that have focus remain visible.
-func (g *Grid) SetOffset(rows, columns int) *Grid {
-	if g.rowOffset != rows || g.columnOffset != columns {
-		g.rowOffset, g.columnOffset = rows, columns
+func (m *Model) SetOffset(rows, columns int) *Model {
+	if m.rowOffset != rows || m.columnOffset != columns {
+		m.rowOffset, m.columnOffset = rows, columns
 	}
-	return g
+	return m
 }
 
 // Focus is called when this model receives focus.
-func (g *Grid) Focus(delegate func(m Model)) {
-	for _, item := range g.items {
+func (m *Model) Focus(delegate func(m tview.Model)) {
+	for _, item := range m.items {
 		if item.Focus {
 			delegate(item.Item)
 			return
 		}
 	}
-	g.Box.Focus(delegate)
+	m.Box.Focus(delegate)
 }
 
 // HasFocus returns whether or not this model has focus.
-func (g *Grid) HasFocus() bool {
-	for _, item := range g.items {
+func (m *Model) HasFocus() bool {
+	for _, item := range m.items {
 		if item.visible && item.Item.HasFocus() {
 			return true
 		}
 	}
-	return g.Box.HasFocus()
+	return m.Box.HasFocus()
 }
 
 // View draws this model onto the screen.
-func (g *Grid) View(screen tcell.Screen) {
-	g.Box.View(screen)
+func (m *Model) View(screen tcell.Screen) {
+	m.Box.View(screen)
 
-	x, y, width, height := g.InnerRect()
+	x, y, width, height := m.InnerRect()
 	screenWidth, screenHeight := screen.Size()
 
 	// Make a list of items which apply.
-	items := make([]*gridItem, 0, len(g.items))
+	items := make([]*item, 0, len(m.items))
 ItemLoop:
-	for _, item := range g.items {
+	for _, item := range m.items {
 		item.visible = false
 		if item.Item == nil || item.Width <= 0 || item.Height <= 0 || width < item.MinGridWidth || height < item.MinGridHeight {
 			continue // Disqualified.
@@ -313,8 +315,8 @@ ItemLoop:
 	}
 
 	// How many rows and columns do we have?
-	rows := len(g.rows)
-	columns := len(g.columns)
+	rows := len(m.rows)
+	columns := len(m.columns)
 	for _, item := range items {
 		rowEnd := item.Row + item.Height
 		if rowEnd > rows {
@@ -343,10 +345,10 @@ ItemLoop:
 	remainingHeight := height
 	proportionalWidth := 0
 	proportionalHeight := 0
-	for index, row := range g.rows {
+	for index, row := range m.rows {
 		if row > 0 {
-			if row < g.minHeight {
-				row = g.minHeight
+			if row < m.minHeight {
+				row = m.minHeight
 			}
 			remainingHeight -= row
 			rowHeight[index] = row
@@ -356,10 +358,10 @@ ItemLoop:
 			proportionalHeight += -row
 		}
 	}
-	for index, column := range g.columns {
+	for index, column := range m.columns {
 		if column > 0 {
-			if column < g.minWidth {
-				column = g.minWidth
+			if column < m.minWidth {
+				column = m.minWidth
 			}
 			remainingWidth -= column
 			columnWidth[index] = column
@@ -369,18 +371,18 @@ ItemLoop:
 			proportionalWidth += -column
 		}
 	}
-	if g.borders {
+	if m.borders {
 		remainingHeight -= rows + 1
 		remainingWidth -= columns + 1
 	} else {
-		remainingHeight -= (rows - 1) * g.gapRows
-		remainingWidth -= (columns - 1) * g.gapColumns
+		remainingHeight -= (rows - 1) * m.gapRows
+		remainingWidth -= (columns - 1) * m.gapColumns
 	}
-	if rows > len(g.rows) {
-		proportionalHeight += rows - len(g.rows)
+	if rows > len(m.rows) {
+		proportionalHeight += rows - len(m.rows)
 	}
-	if columns > len(g.columns) {
-		proportionalWidth += columns - len(g.columns)
+	if columns > len(m.columns) {
+		proportionalWidth += columns - len(m.columns)
 	}
 	if remainingWidth < 0 {
 		remainingWidth = 0
@@ -392,8 +394,8 @@ ItemLoop:
 	// Distribute proportional rows/columns.
 	for index := range rows {
 		row := 0
-		if index < len(g.rows) {
-			row = g.rows[index]
+		if index < len(m.rows) {
+			row = m.rows[index]
 		}
 		if row > 0 {
 			continue // Not proportional. We already know the width.
@@ -405,15 +407,15 @@ ItemLoop:
 		rowAbs := row * remainingHeight / proportionalHeight
 		remainingHeight -= rowAbs
 		proportionalHeight -= row
-		if rowAbs < g.minHeight {
-			rowAbs = g.minHeight
+		if rowAbs < m.minHeight {
+			rowAbs = m.minHeight
 		}
 		rowHeight[index] = rowAbs
 	}
 	for index := range columns {
 		column := 0
-		if index < len(g.columns) {
-			column = g.columns[index]
+		if index < len(m.columns) {
+			column = m.columns[index]
 		}
 		if column > 0 {
 			continue // Not proportional. We already know the height.
@@ -425,37 +427,37 @@ ItemLoop:
 		columnAbs := column * remainingWidth / proportionalWidth
 		remainingWidth -= columnAbs
 		proportionalWidth -= column
-		if columnAbs < g.minWidth {
-			columnAbs = g.minWidth
+		if columnAbs < m.minWidth {
+			columnAbs = m.minWidth
 		}
 		columnWidth[index] = columnAbs
 	}
 
 	// Calculate row/column positions.
 	var columnX, rowY int
-	if g.borders {
+	if m.borders {
 		columnX++
 		rowY++
 	}
 	for index, row := range rowHeight {
 		rowPos[index] = rowY
-		gap := g.gapRows
-		if g.borders {
+		gap := m.gapRows
+		if m.borders {
 			gap = 1
 		}
 		rowY += row + gap
 	}
 	for index, column := range columnWidth {
 		columnPos[index] = columnX
-		gap := g.gapColumns
-		if g.borders {
+		gap := m.gapColumns
+		if m.borders {
 			gap = 1
 		}
 		columnX += column + gap
 	}
 
 	// Calculate model positions.
-	var focus *gridItem // The item which has focus.
+	var focus *item // The item which has focus.
 	for _, item := range items {
 		px := columnPos[item.Column]
 		py := rowPos[item.Row]
@@ -466,12 +468,12 @@ ItemLoop:
 		for index := range item.Width {
 			pw += columnWidth[item.Column+index]
 		}
-		if g.borders {
+		if m.borders {
 			pw += item.Width - 1
 			ph += item.Height - 1
 		} else {
-			pw += (item.Width - 1) * g.gapColumns
-			ph += (item.Height - 1) * g.gapRows
+			pw += (item.Width - 1) * m.gapColumns
+			ph += (item.Height - 1) * m.gapRows
 		}
 		item.x, item.y, item.w, item.h = px, py, pw, ph
 		item.visible = true
@@ -483,20 +485,20 @@ ItemLoop:
 	// Calculate screen offsets.
 	var offsetX, offsetY int
 	add := 1
-	if !g.borders {
-		add = g.gapRows
+	if !m.borders {
+		add = m.gapRows
 	}
 	for index, height := range rowHeight {
-		if index >= g.rowOffset {
+		if index >= m.rowOffset {
 			break
 		}
 		offsetY += height + add
 	}
-	if !g.borders {
-		add = g.gapColumns
+	if !m.borders {
+		add = m.gapColumns
 	}
 	for index, width := range columnWidth {
-		if index >= g.columnOffset {
+		if index >= m.columnOffset {
 			break
 		}
 		offsetX += width + add
@@ -528,11 +530,11 @@ ItemLoop:
 			to = index
 		}
 	}
-	if g.rowOffset < from {
-		g.rowOffset = from
+	if m.rowOffset < from {
+		m.rowOffset = from
 	}
-	if g.rowOffset > to {
-		g.rowOffset = to
+	if m.rowOffset > to {
+		m.rowOffset = to
 	}
 	from, to = 0, 0
 	for index, pos := range columnPos {
@@ -543,15 +545,15 @@ ItemLoop:
 			to = index
 		}
 	}
-	if g.columnOffset < from {
-		g.columnOffset = from
+	if m.columnOffset < from {
+		m.columnOffset = from
 	}
-	if g.columnOffset > to {
-		g.columnOffset = to
+	if m.columnOffset > to {
+		m.columnOffset = to
 	}
 
 	// Draw models and borders.
-	borderStyle := tcell.StyleDefault.Background(g.backgroundColor).Foreground(g.bordersColor)
+	borderStyle := tcell.StyleDefault.Background(m.BackgroundColor()).Foreground(m.bordersColor)
 	for _, item := range items {
 		// Final model position.
 		if !item.visible {
@@ -593,18 +595,19 @@ ItemLoop:
 		}
 
 		// Draw border around model.
-		if g.borders {
+		if m.borders {
+			borderSet := m.BorderSet()
 			for bx := item.x; bx < item.x+item.w; bx++ { // Top/bottom lines.
 				if bx < 0 || bx >= screenWidth {
 					continue
 				}
 				by := item.y - 1
 				if by >= 0 && by < screenHeight {
-					PrintJoinedSemigraphics(screen, bx, by, g.borderSet.Top, borderStyle)
+					tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.Top, borderStyle)
 				}
 				by = item.y + item.h
 				if by >= 0 && by < screenHeight {
-					PrintJoinedSemigraphics(screen, bx, by, g.borderSet.Bottom, borderStyle)
+					tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.Bottom, borderStyle)
 				}
 			}
 			for by := item.y; by < item.y+item.h; by++ { // Left/right lines.
@@ -613,56 +616,56 @@ ItemLoop:
 				}
 				bx := item.x - 1
 				if bx >= 0 && bx < screenWidth {
-					PrintJoinedSemigraphics(screen, bx, by, g.borderSet.Left, borderStyle)
+					tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.Left, borderStyle)
 				}
 				bx = item.x + item.w
 				if bx >= 0 && bx < screenWidth {
-					PrintJoinedSemigraphics(screen, bx, by, g.borderSet.Right, borderStyle)
+					tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.Right, borderStyle)
 				}
 			}
 			bx, by := item.x-1, item.y-1 // Top-left corner.
 			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				PrintJoinedSemigraphics(screen, bx, by, g.borderSet.TopLeft, borderStyle)
+				tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.TopLeft, borderStyle)
 			}
 			bx, by = item.x+item.w, item.y-1 // Top-right corner.
 			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				PrintJoinedSemigraphics(screen, bx, by, g.borderSet.TopRight, borderStyle)
+				tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.TopRight, borderStyle)
 			}
 			bx, by = item.x-1, item.y+item.h // Bottom-left corner.
 			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				PrintJoinedSemigraphics(screen, bx, by, g.borderSet.BottomLeft, borderStyle)
+				tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.BottomLeft, borderStyle)
 			}
 			bx, by = item.x+item.w, item.y+item.h // Bottom-right corner.
 			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				PrintJoinedSemigraphics(screen, bx, by, g.borderSet.BottomRight, borderStyle)
+				tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.BottomRight, borderStyle)
 			}
 		}
 	}
 }
 
 // Update handles input events for this model.
-func (g *Grid) Update(msg Msg) Cmd {
+func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case MouseMsg:
+	case tview.MouseMsg:
 		x, y := msg.Position()
-		if !g.InRect(x, y) {
+		if !m.InRect(x, y) {
 			return nil
 		}
 
 		// Pass mouse events along to the first child item that takes it.
-		for _, item := range g.items {
+		for _, item := range m.items {
 			if item.Item == nil || !item.visible {
 				continue
 			}
-			if ModelInRect(item.Item, x, y) {
+			if tview.ModelInRect(item.Item, x, y) {
 				return item.Item.Update(msg)
 			}
 		}
-	case KeyMsg:
-		previousRowOffset, previousColumnOffset := g.rowOffset, g.columnOffset
-		if !g.hasFocus {
+	case tview.KeyMsg:
+		previousRowOffset, previousColumnOffset := m.rowOffset, m.columnOffset
+		if !m.Box.HasFocus() {
 			// Pass event on to child model.
-			for _, item := range g.items {
+			for _, item := range m.items {
 				if item != nil && item.Item.HasFocus() {
 					return item.Item.Update(msg)
 				}
@@ -675,38 +678,38 @@ func (g *Grid) Update(msg Msg) Cmd {
 		case tcell.KeyRune:
 			switch msg.Str() {
 			case "g":
-				g.rowOffset, g.columnOffset = 0, 0
+				m.rowOffset, m.columnOffset = 0, 0
 			case "G":
-				g.rowOffset = math.MaxInt32
+				m.rowOffset = math.MaxInt32
 			case "j":
-				g.rowOffset++
+				m.rowOffset++
 			case "k":
-				g.rowOffset--
+				m.rowOffset--
 			case "h":
-				g.columnOffset--
+				m.columnOffset--
 			case "l":
-				g.columnOffset++
+				m.columnOffset++
 			}
 		case tcell.KeyHome:
-			g.rowOffset, g.columnOffset = 0, 0
+			m.rowOffset, m.columnOffset = 0, 0
 		case tcell.KeyEnd:
-			g.rowOffset = math.MaxInt32
+			m.rowOffset = math.MaxInt32
 		case tcell.KeyUp:
-			g.rowOffset--
+			m.rowOffset--
 		case tcell.KeyDown:
-			g.rowOffset++
+			m.rowOffset++
 		case tcell.KeyLeft:
-			g.columnOffset--
+			m.columnOffset--
 		case tcell.KeyRight:
-			g.columnOffset++
+			m.columnOffset++
 		}
-		if g.rowOffset != previousRowOffset || g.columnOffset != previousColumnOffset {
+		if m.rowOffset != previousRowOffset || m.columnOffset != previousColumnOffset {
 			return nil
 		}
 	}
 
 	// Forward events to the focused child.
-	for _, item := range g.items {
+	for _, item := range m.items {
 		if item != nil && item.Item.HasFocus() {
 			return item.Item.Update(msg)
 		}

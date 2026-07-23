@@ -353,9 +353,7 @@ func (f *Form) Clear(includeButtons bool) *Form {
 
 // ClearButtons removes all buttons from the form.
 func (f *Form) ClearButtons() *Form {
-	if len(f.buttons) > 0 {
-		f.buttons = nil
-	}
+	f.buttons = nil
 	return f
 }
 

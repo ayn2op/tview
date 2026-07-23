@@ -87,9 +87,7 @@ func (f *Model) AddText(text string, header bool, alignment tview.Alignment, col
 
 // Clear removes all text from the frame.
 func (f *Model) Clear() *Model {
-	if len(f.text) > 0 {
-		f.text = nil
-	}
+	f.text = nil
 	return f
 }
 
@@ -97,9 +95,7 @@ func (f *Model) Clear() *Model {
 // "footer", the vertical space between the header and footer text and the
 // contained model (does not apply if there is no text).
 func (f *Model) SetBorders(top, bottom, header, footer, left, right int) *Model {
-	if f.top != top || f.bottom != bottom || f.header != header || f.footer != footer || f.left != left || f.right != right {
-		f.top, f.bottom, f.header, f.footer, f.left, f.right = top, bottom, header, footer, left, right
-	}
+	f.top, f.bottom, f.header, f.footer, f.left, f.right = top, bottom, header, footer, left, right
 	return f
 }
 

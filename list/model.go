@@ -165,9 +165,7 @@ func (l *Model) Builder() Builder {
 
 // SetBuilder sets the builder used to create list items on demand.
 func (l *Model) SetBuilder(builder Builder) *Model {
-	if l.builder != nil || builder != nil {
-		l.builder = builder
-	}
+	l.builder = builder
 	return l
 }
 

@@ -126,9 +126,7 @@ func (l *Layers) GetVisible(name string) bool {
 
 // Clear removes all layers.
 func (l *Layers) Clear() *Layers {
-	if len(l.layers) > 0 {
-		l.layers = nil
-	}
+	l.layers = nil
 	return l
 }
 

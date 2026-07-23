@@ -123,9 +123,7 @@ func (n *Node) SetLine(line tview.Line) *Node {
 
 // ClearChildren removes all child nodes from this node.
 func (n *Node) ClearChildren() *Node {
-	if len(n.children) > 0 {
-		n.children = nil
-	}
+	n.children = nil
 	return n
 }
 

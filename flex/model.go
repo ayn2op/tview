@@ -127,9 +127,7 @@ func (m *Model) GetItem(index int) tview.Model {
 
 // Clear removes all items from the container.
 func (m *Model) Clear() *Model {
-	if len(m.items) > 0 {
-		m.items = nil
-	}
+	m.items = nil
 	return m
 }
 

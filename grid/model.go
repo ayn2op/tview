@@ -228,9 +228,7 @@ func (g *Model) RemoveItem(m tview.Model) *Model {
 
 // Clear removes all items from the grid.
 func (m *Model) Clear() *Model {
-	if len(m.items) > 0 {
-		m.items = nil
-	}
+	m.items = nil
 	return m
 }
 
@@ -246,9 +244,7 @@ func (m *Model) Offset() (rows, columns int) {
 // the grid is drawn. The actual position of the grid may also be adjusted such
 // that contained models that have focus remain visible.
 func (m *Model) SetOffset(rows, columns int) *Model {
-	if m.rowOffset != rows || m.columnOffset != columns {
-		m.rowOffset, m.columnOffset = rows, columns
-	}
+	m.rowOffset, m.columnOffset = rows, columns
 	return m
 }
 

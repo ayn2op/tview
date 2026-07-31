@@ -137,7 +137,11 @@ func (a *Application) Run() error {
 	a.RUnlock()
 
 	if root != nil {
-		a.queueCmd(root.Update(InitMsg{}))
+		terminalName, terminalVersion := a.screen.Terminal()
+		a.queueCmd(root.Update(InitMsg{
+			TerminalName:    terminalName,
+			TerminalVersion: terminalVersion,
+		}))
 		a.draw()
 	}
 

@@ -60,7 +60,10 @@ func compactCmds(cmds ...Cmd) []Cmd {
 	return valid
 }
 
-type InitMsg struct{}
+type InitMsg struct {
+	TerminalName    string
+	TerminalVersion string
+}
 
 type (
 	KeyMsg    = *tcell.EventKey

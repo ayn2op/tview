@@ -181,14 +181,7 @@ func (a *Application) Run() error {
 		case KeyMsg:
 			// If we are pasting, collect runes, nothing else.
 			if pasting {
-				switch msg.Key() {
-				case tcell.KeyRune:
-					pasteBuffer.WriteString(msg.Str())
-				case tcell.KeyEnter:
-					pasteBuffer.WriteRune('\n')
-				case tcell.KeyTab:
-					pasteBuffer.WriteRune('\t')
-				}
+				appendPasteKey(&pasteBuffer, msg)
 				break
 			}
 
@@ -246,6 +239,17 @@ func (a *Application) Run() error {
 		a.draw()
 	}
 	return nil
+}
+
+func appendPasteKey(buffer *strings.Builder, msg KeyMsg) {
+	switch msg.Key() {
+	case tcell.KeyRune:
+		buffer.WriteString(msg.Str())
+	case tcell.KeyEnter, tcell.KeyCtrlJ:
+		buffer.WriteRune('\n')
+	case tcell.KeyTab:
+		buffer.WriteRune('\t')
+	}
 }
 
 func (a *Application) handleEvents() {

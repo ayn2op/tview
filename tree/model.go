@@ -360,6 +360,20 @@ func (t *Model) process(drawingAfter bool) {
 	if selectedIndex >= 0 {
 		// Move the cursor.
 		switch t.movement {
+		case treeHome:
+			for index, node := range t.nodes {
+				if node.selectable {
+					selectedIndex = index
+					break
+				}
+			}
+		case treeEnd:
+			for index := len(t.nodes) - 1; index >= 0; index-- {
+				if t.nodes[index].selectable {
+					selectedIndex = index
+					break
+				}
+			}
 		case treeMove:
 			for t.step < 0 { // Going up.
 				index := selectedIndex
@@ -415,11 +429,8 @@ func (t *Model) process(drawingAfter bool) {
 					t.offsetY = selectedIndex
 				}
 			}
-			if t.movement != treeHome && t.movement != treeEnd {
-				// treeScroll, treeHome, and treeEnd are handled by View().
-				t.movement = treeNone
-				t.step = 0
-			}
+			t.movement = treeNone
+			t.step = 0
 		}
 	} else {
 		// If cursor is not visible or selectable, select the first candidate.
@@ -452,8 +463,7 @@ func (t *Model) View(screen tcell.Screen) {
 		t.stableNodes = false
 	}
 
-	// Scroll the tree, t.movement is treeNone after process() when there is a
-	// cursor, except for treeScroll, treeHome, and treeEnd.
+	// Scroll the tree when movement was not consumed by an active cursor.
 	x, y, width, height := t.InnerRect()
 	switch t.movement {
 	case treeMove:

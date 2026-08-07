@@ -32,16 +32,6 @@ type Node struct {
 
 	// The additional horizontal indent of this node's text.
 	indent int
-
-	// The hierarchy level (0 for the root, 1 for its children, and so on). This
-	// is only up to date immediately after a call to process() (e.g. via
-	// View()).
-	level int
-
-	// Temporary member variables.
-	parent    *Node // The parent node (nil for the root).
-	graphicsX int   // The x-coordinate of the left-most graphics rune.
-	textX     int   // The x-coordinate of the first rune of the text.
 }
 
 // NewNode returns a new tree node.
@@ -63,24 +53,19 @@ func NewNode(text string) *Node {
 // The callback returns whether traversal should continue with the traversed
 // node's child nodes (true) or not recurse any deeper (false).
 func (n *Node) Walk(callback func(node, parent *Node) bool) *Node {
-	n.parent = nil
-	nodes := []*Node{n}
-	for len(nodes) > 0 {
-		// Pop the top node and process it.
-		node := nodes[len(nodes)-1]
-		nodes = nodes[:len(nodes)-1]
-		if !callback(node, node.parent) {
-			// Don't add any children.
+	type entry struct{ node, parent *Node }
+	stack := []entry{{node: n}}
+	for len(stack) > 0 {
+		last := len(stack) - 1
+		current := stack[last]
+		stack = stack[:last]
+		if !callback(current.node, current.parent) {
 			continue
 		}
-
-		// Add children in reverse order.
-		for index := len(node.children) - 1; index >= 0; index-- {
-			node.children[index].parent = node
-			nodes = append(nodes, node.children[index])
+		for i := len(current.node.children) - 1; i >= 0; i-- {
+			stack = append(stack, entry{current.node.children[i], current.node})
 		}
 	}
-
 	return n
 }
 
@@ -234,12 +219,4 @@ func (n *Node) SetSelectedTextStyle(style tcell.Style) *Node {
 func (n *Node) SetIndent(indent int) *Node {
 	n.indent = indent
 	return n
-}
-
-// GetLevel returns the node's level within the hierarchy, where 0 corresponds
-// to the root node, 1 corresponds to its children, and so on. This is only
-// guaranteed to be up to date immediately after the tree that contains this
-// node is drawn.
-func (n *Node) GetLevel() int {
-	return n.level
 }

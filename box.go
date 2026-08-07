@@ -13,10 +13,6 @@ type Box struct {
 	// The position of the rect.
 	x, y, width, height int
 
-	// The inner rect reserved for the box's content. If innerX is negative,
-	// the rect is undefined and must be calculated.
-	innerX, innerY, innerWidth, innerHeight int
-
 	// Border padding.
 	paddingTop, paddingBottom, paddingLeft, paddingRight int
 
@@ -56,7 +52,6 @@ func NewBox() *Box {
 	b := &Box{
 		width:           15,
 		height:          10,
-		innerX:          -1, // Mark as uninitialized.
 		backgroundColor: Styles.PrimitiveBackgroundColor,
 
 		borderStyle: tcell.StyleDefault.Foreground(Styles.BorderColor).Background(Styles.PrimitiveBackgroundColor),
@@ -79,7 +74,6 @@ func (b *Box) BorderPadding() (top, bottom, left, right int) {
 func (b *Box) SetBorderPadding(top, bottom, left, right int) *Box {
 	if b.paddingTop != top || b.paddingBottom != bottom || b.paddingLeft != left || b.paddingRight != right {
 		b.paddingTop, b.paddingBottom, b.paddingLeft, b.paddingRight = top, bottom, left, right
-		b.innerX = -1 // Mark inner rect as uninitialized.
 	}
 	return b
 }
@@ -101,7 +95,6 @@ func (b *Box) SetRect(x, y, width, height int) {
 		b.y = y
 		b.width = width
 		b.height = height
-		b.innerX = -1 // Mark inner rect as uninitialized.
 	}
 }
 
@@ -109,10 +102,6 @@ func (b *Box) SetRect(x, y, width, height int) {
 // height), without the border and without any padding. Width and height values
 // will clamp to 0 and thus never be negative.
 func (b *Box) InnerRect() (int, int, int, int) {
-	if b.innerX >= 0 {
-		return b.innerX, b.innerY, b.innerWidth, b.innerHeight
-	}
-
 	x, y, width, height := b.Rect()
 
 	if b.title != "" || b.borders.Has(BordersTop) {
@@ -240,9 +229,6 @@ func (b *Box) View(screen tcell.Screen) {
 		}
 	}
 
-	// Remember the inner rect.
-	b.innerX = -1
-	b.innerX, b.innerY, b.innerWidth, b.innerHeight = b.InnerRect()
 }
 
 // InRect returns true if the given coordinate is within the bounds of the box's
@@ -287,7 +273,6 @@ func (b *Box) Borders() Borders {
 func (b *Box) SetBorders(flag Borders) *Box {
 	if b.borders != flag {
 		b.borders = flag
-		b.innerX = -1 // Mark inner rect as uninitialized.
 	}
 	return b
 }
@@ -318,7 +303,6 @@ func (b *Box) Title() string {
 func (b *Box) SetTitle(title string) *Box {
 	if b.title != title {
 		b.title = title
-		b.innerX = -1 // Mark inner rect as uninitialized.
 	}
 	return b
 }
@@ -344,7 +328,6 @@ func (b *Box) Footer() string {
 func (b *Box) SetFooter(footer string) *Box {
 	if b.footer != footer {
 		b.footer = footer
-		b.innerX = -1 // Mark inner rect as uninitialized.
 	}
 	return b
 }

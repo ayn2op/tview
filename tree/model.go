@@ -6,17 +6,6 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
-// Tree navigation events.
-const (
-	treeNone int = iota
-	treeHome
-	treeEnd
-	treeMove
-	treeParent
-	treeChild
-	treeScroll // Move without changing the cursor, even when off screen.
-)
-
 // Markers are glyphs drawn before node text.
 type Markers struct {
 	Expanded  string
@@ -55,15 +44,6 @@ type Model struct {
 	// The currently selected node or nil if no node is selected.
 	currentNode *Node
 
-	// The movement to be performed during the call to View(), one of the
-	// constants defined above.
-	movement int
-
-	// The number of nodes to move down or up, when movement is treeMove,
-	// excluding non-selectable nodes for cursor movement, including them for
-	// scrolling.
-	step int
-
 	// The top hierarchical level shown. (0 corresponds to the root level.)
 	topLevel int
 
@@ -88,17 +68,16 @@ type Model struct {
 	// The color of the lines.
 	graphicsColor tcell.Color
 
-	// The visible nodes, top-down, as set by process().
-	nodes []*Node
-
-	// Temporarily set to true while we know that the tree has not changed and
-	// therefore does not need to be reprocessed.
-	stableNodes bool
-
 	// Internal mouse track data.
 	lastMouseY int
 
 	keybinds Keybinds
+}
+
+type row struct {
+	node          *Node
+	parent        int
+	level, gx, tx int
 }
 
 // NewModel returns a new tree view.
@@ -137,11 +116,11 @@ func (t *Model) CurrentNode() *Node {
 }
 
 // SetCurrentNode sets the currently selected node. Provide nil to clear all
-// cursors. Selected nodes must be visible and selectable, or else the cursor
-// will be changed to the top-most selectable and visible node when the tree is
-// next drawn.
+// cursors. Invalid nodes select the first visible, selectable node.
 func (t *Model) SetCurrentNode(node *Node) *Model {
 	t.currentNode = node
+	rows := t.flatten()
+	t.selectRow(rows, t.normalize(rows))
 	return t
 }
 
@@ -240,19 +219,14 @@ func (t *Model) SetGraphicsColor(color tcell.Color) *Model {
 	return t
 }
 
-// GetScrollOffset returns the number of node rows that were skipped at the top
-// of the tree view. Note that when the user navigates the tree view, this value
-// is only updated after the tree view has been redrawn.
+// GetScrollOffset returns the number of node rows skipped at the top.
 func (t *Model) GetScrollOffset() int {
 	return t.offsetY
 }
 
-// GetRowCount returns the number of "visible" nodes. This includes nodes which
-// fall outside the tree view's box but notably does not include the children
-// of collapsed nodes. Note that this value is only up to date after the tree
-// view has been drawn.
+// GetRowCount returns the number of visible nodes, including rows off-screen.
 func (t *Model) GetRowCount() int {
-	return len(t.nodes)
+	return len(t.flatten())
 }
 
 // Move moves the cursor (if a node is currently selected) or scrolls the tree
@@ -266,273 +240,175 @@ func (t *Model) Move(offset int) *Model {
 	if offset == 0 {
 		return t
 	}
-	t.movement = treeMove
-	t.step = offset
-	t.process(false)
+	t.move(t.flatten(), offset)
 	return t
 }
 
-// process builds the visible tree, populates the "nodes" slice, and processes
-// pending movement actions. Set "drawingAfter" to true if you know that
-// [Model.View] will be called immediately after this function (to avoid
-// having [Model.View] call it again).
-func (t *Model) process(drawingAfter bool) {
-	t.stableNodes = drawingAfter
-	_, _, _, height := t.InnerRect()
+func (t *Model) flatten() (rows []row) {
+	var walk func(*Node, int, int, int)
+	walk = func(node *Node, parent, level, parentX int) {
+		gx, tx := parentX, parentX+node.indent
+		if t.graphics {
+			tx++
+		}
+		if level == t.topLevel || level == 0 || t.align && !t.graphics {
+			gx, tx = 0, 0
+		}
+		if level >= t.topLevel {
+			rows = append(rows, row{node: node, parent: parent, level: level, gx: gx, tx: tx})
+			parent = len(rows) - 1
+		}
+		if node.expanded {
+			for _, child := range node.children {
+				walk(child, parent, level+1, tx)
+			}
+		}
+	}
+	if t.root != nil {
+		walk(t.root, -1, 0, 0)
+	}
+	if t.align {
+		maxX := 0
+		for _, row := range rows {
+			maxX = max(maxX, row.tx)
+		}
+		for i := range rows {
+			if rows[i].level > t.topLevel {
+				rows[i].tx = maxX
+			}
+		}
+	}
+	return
+}
 
-	// Determine visible nodes and their placement.
-	t.nodes = nil
-	if t.root == nil {
+func (t *Model) index(rows []row) int {
+	for i, row := range rows {
+		if row.node == t.currentNode && row.node.selectable {
+			return i
+		}
+	}
+	return -1
+}
+
+func (t *Model) normalize(rows []row) int {
+	if t.currentNode == nil {
+		return -1
+	}
+	if i := t.index(rows); i >= 0 {
+		return i
+	}
+	for i, row := range rows {
+		if row.node.selectable {
+			t.currentNode = row.node
+			return i
+		}
+	}
+	t.currentNode = nil
+	return -1
+}
+
+func (t *Model) selectRow(rows []row, index int) {
+	if index < 0 || index >= len(rows) {
 		return
 	}
-	parentSelectedIndex, selectedIndex, topLevelGraphicsX := -1, -1, -1
-	var graphicsOffset, maxTextX int
-	if t.graphics {
-		graphicsOffset = 1
+	t.currentNode = rows[index].node
+	_, _, _, height := t.InnerRect()
+	if height <= 0 {
+		return
 	}
-	t.root.Walk(func(node, parent *Node) bool {
-		// Set node attributes.
-		node.parent = parent
-		if parent == nil {
-			node.level = 0
-			node.graphicsX = 0
-			node.textX = 0
-		} else {
-			node.level = parent.level + 1
-			node.graphicsX = parent.textX
-			node.textX = node.graphicsX + graphicsOffset + node.indent
-		}
-		if !t.graphics && t.align {
-			// Without graphics, we align nodes on the first column.
-			node.textX = 0
-		}
-		if node.level == t.topLevel {
-			// No graphics for top level nodes.
-			node.graphicsX = 0
-			node.textX = 0
-		}
-
-		// Add the node to the list.
-		if node.level >= t.topLevel {
-			// This node will be visible.
-			if node.textX > maxTextX {
-				maxTextX = node.textX
-			}
-			if node == t.currentNode && node.selectable {
-				selectedIndex = len(t.nodes)
-
-				// Also find parent node.
-				for index := len(t.nodes) - 1; index >= 0; index-- {
-					if t.nodes[index] == parent && t.nodes[index].selectable {
-						parentSelectedIndex = index
-						break
-					}
-				}
-			}
-
-			// Maybe we want to skip this level.
-			if t.topLevel == node.level && (topLevelGraphicsX < 0 || node.graphicsX < topLevelGraphicsX) {
-				topLevelGraphicsX = node.graphicsX
-			}
-
-			t.nodes = append(t.nodes, node)
-		}
-
-		// Recurse if desired.
-		return node.expanded
-	})
-
-	// Post-process positions.
-	for _, node := range t.nodes {
-		// If text must align, we correct the positions.
-		if t.align && node.level > t.topLevel {
-			node.textX = maxTextX
-		}
-
-		// If we skipped levels, shift to the left.
-		if topLevelGraphicsX > 0 {
-			node.graphicsX -= topLevelGraphicsX
-			node.textX -= topLevelGraphicsX
-		}
+	if t.centerCursor {
+		t.offsetY = min(max(index-height/2, 0), max(len(rows)-height, 0))
+	} else if index < t.offsetY {
+		t.offsetY = index
+	} else if index >= t.offsetY+height {
+		t.offsetY = index - height + 1
 	}
+}
 
-	// Process cursor. (Also trigger events if necessary.)
-	if selectedIndex >= 0 {
-		// Move the cursor.
-		switch t.movement {
-		case treeHome:
-			for index, node := range t.nodes {
-				if node.selectable {
-					selectedIndex = index
-					break
-				}
-			}
-		case treeEnd:
-			for index := len(t.nodes) - 1; index >= 0; index-- {
-				if t.nodes[index].selectable {
-					selectedIndex = index
-					break
-				}
-			}
-		case treeMove:
-			for t.step < 0 { // Going up.
-				index := selectedIndex
-				for index > 0 {
-					index--
-					if t.nodes[index].selectable {
-						selectedIndex = index
-						break
-					}
-				}
-				t.step++
-			}
-			for t.step > 0 { // Going down.
-				index := selectedIndex
-				for index < len(t.nodes)-1 {
-					index++
-					if t.nodes[index].selectable {
-						selectedIndex = index
-						break
-					}
-				}
-				t.step--
-			}
-		case treeParent:
-			if parentSelectedIndex >= 0 {
-				selectedIndex = parentSelectedIndex
-			}
-		case treeChild:
-			index := selectedIndex
-			for index < len(t.nodes)-1 {
-				index++
-				if t.nodes[index].selectable && t.nodes[index].parent == t.nodes[selectedIndex] {
-					selectedIndex = index
-				}
-			}
-		}
-		t.currentNode = t.nodes[selectedIndex]
-
-		// Move cursor into viewport.
-		if t.movement != treeScroll {
-			if t.centerCursor && height > 0 {
-				desired := max(selectedIndex-height/2, 0)
-				maxOffset := max(len(t.nodes)-height, 0)
-				if desired > maxOffset {
-					desired = maxOffset
-				}
-				t.offsetY = desired
-			} else {
-				if selectedIndex-t.offsetY >= height {
-					t.offsetY = selectedIndex - height + 1
-				}
-				if selectedIndex < t.offsetY {
-					t.offsetY = selectedIndex
-				}
-			}
-			t.movement = treeNone
-			t.step = 0
-		}
-	} else {
-		// If cursor is not visible or selectable, select the first candidate.
-		if t.currentNode != nil {
-			for index, node := range t.nodes {
-				if node.selectable {
-					selectedIndex = index
-					t.currentNode = node
-					break
-				}
-			}
-		}
-		if selectedIndex < 0 {
-			t.currentNode = nil
-		}
+func (t *Model) move(rows []row, delta int) {
+	index := t.normalize(rows)
+	if index < 0 {
+		t.scroll(rows, delta)
+		return
 	}
+	for delta != 0 {
+		next, step := index, 1
+		if delta < 0 {
+			step = -1
+		}
+		for next += step; next >= 0 && next < len(rows) && !rows[next].node.selectable; next += step {
+		}
+		if next < 0 || next >= len(rows) {
+			break
+		}
+		index, delta = next, delta-step
+	}
+	t.selectRow(rows, index)
+}
+
+func (t *Model) scroll(rows []row, delta int) {
+	_, _, _, height := t.InnerRect()
+	t.offsetY = min(max(t.offsetY+delta, 0), max(len(rows)-height, 0))
 }
 
 // View draws this model onto the screen.
 func (t *Model) View(screen tcell.Screen) {
 	t.Box.View(screen)
-	if t.root == nil {
+	rows := t.flatten()
+	if len(rows) == 0 {
 		return
 	}
 	_, totalHeight := screen.Size()
-
-	if !t.stableNodes {
-		t.process(false)
-	} else {
-		t.stableNodes = false
-	}
-
-	// Scroll the tree when movement was not consumed by an active cursor.
 	x, y, width, height := t.InnerRect()
-	switch t.movement {
-	case treeMove:
-		t.movement = treeNone
-		fallthrough
-	case treeScroll:
-		t.offsetY += t.step
-		t.step = 0
-	case treeHome:
-		t.offsetY = 0
-		t.movement = treeNone
-	case treeEnd:
-		t.offsetY = len(t.nodes)
-		t.movement = treeNone
-	}
-
-	if t.offsetY > len(t.nodes)-height {
-		t.offsetY = len(t.nodes) - height
-	}
-	if t.offsetY < 0 {
-		t.offsetY = 0
-	}
+	offset := min(max(t.offsetY, 0), max(len(rows)-height, 0))
 
 	// Draw the tree.
 	posY := y
 	borderSet := t.BorderSet()
 	lineStyle := tcell.StyleDefault.Background(t.BackgroundColor()).Foreground(t.graphicsColor)
-	for index, node := range t.nodes {
+	for index, current := range rows {
+		node := current.node
 		// Skip invisible parts.
 		if posY >= y+height+1 || posY >= totalHeight {
 			break
 		}
-		if index < t.offsetY {
+		if index < offset {
 			continue
 		}
 
 		// Draw the graphics.
 		if t.graphics {
 			// Draw ancestor branches.
-			ancestor := node.parent
-			for ancestor != nil && ancestor.parent != nil && ancestor.parent.level >= t.topLevel {
-				if ancestor.graphicsX < width {
+			for ancestor := current.parent; ancestor >= 0 && rows[ancestor].parent >= 0; ancestor = rows[ancestor].parent {
+				a := rows[ancestor]
+				if a.gx < width {
 					// Draw a branch if this ancestor is not a last child.
-					if ancestor.parent.children[len(ancestor.parent.children)-1] != ancestor {
-						if posY-1 >= y && ancestor.textX > ancestor.graphicsX {
-							tview.PrintJoinedSemigraphics(screen, x+ancestor.graphicsX, posY-1, borderSet.Left, lineStyle)
+					parent := rows[a.parent].node
+					if parent.children[len(parent.children)-1] != a.node {
+						if posY-1 >= y && a.tx > a.gx {
+							tview.PrintJoinedSemigraphics(screen, x+a.gx, posY-1, borderSet.Left, lineStyle)
 						}
 						if posY < y+height {
-							screen.Put(x+ancestor.graphicsX, posY, borderSet.Right, lineStyle)
+							screen.Put(x+a.gx, posY, borderSet.Right, lineStyle)
 						}
 					}
 				}
-				ancestor = ancestor.parent
 			}
 
-			if node.textX > node.graphicsX && node.graphicsX < width {
+			if current.tx > current.gx && current.gx < width {
 				// BottomLeft for last child; LeftT for non-last siblings.
 				connector := borderSet.BottomLeft
-				if node.parent != nil {
-					if siblings := node.parent.children; len(siblings) > 0 && siblings[len(siblings)-1] != node {
+				if current.parent >= 0 {
+					if siblings := rows[current.parent].node.children; len(siblings) > 0 && siblings[len(siblings)-1] != node {
 						connector = borderSet.LeftT
 					}
 				}
 
 				// Join this node.
 				if posY < y+height {
-					tview.PrintJoinedSemigraphics(screen, x+node.graphicsX, posY, connector, lineStyle)
+					tview.PrintJoinedSemigraphics(screen, x+current.gx, posY, connector, lineStyle)
 
-					for pos := node.graphicsX + 1; pos < node.textX && pos < width; pos++ {
+					for pos := current.gx + 1; pos < current.tx && pos < width; pos++ {
 						screen.Put(x+pos, posY, borderSet.Top, lineStyle)
 					}
 				}
@@ -540,7 +416,7 @@ func (t *Model) View(screen tcell.Screen) {
 		}
 
 		// Draw the prefix and the text.
-		if node.textX < width && posY < y+height {
+		if current.tx < width && posY < y+height {
 			marker := t.markers.Leaf
 			if node.expandable || len(node.children) > 0 {
 				if node.expanded {
@@ -557,31 +433,31 @@ func (t *Model) View(screen tcell.Screen) {
 				prefixStyle = node.line[0].Style
 			}
 			if len(t.prefixes) > 0 {
-				_, _, prefixWidth = tview.PrintStyled(screen, t.prefixes[(node.level-t.topLevel)%len(t.prefixes)], x+node.textX, posY, 0, width-node.textX, tview.AlignmentLeft, prefixStyle, true)
+				_, _, prefixWidth = tview.PrintStyled(screen, t.prefixes[(current.level-t.topLevel)%len(t.prefixes)], x+current.tx, posY, 0, width-current.tx, tview.AlignmentLeft, prefixStyle, true)
 			}
 
 			// Marker.
 			markerWidth := 0
-			if marker != "" && node.textX+prefixWidth < width {
-				_, _, markerWidth = tview.PrintStyled(screen, marker, x+node.textX+prefixWidth, posY, 0, width-node.textX-prefixWidth, tview.AlignmentLeft, prefixStyle, true)
+			if marker != "" && current.tx+prefixWidth < width {
+				_, _, markerWidth = tview.PrintStyled(screen, marker, x+current.tx+prefixWidth, posY, 0, width-current.tx-prefixWidth, tview.AlignmentLeft, prefixStyle, true)
 			}
 
 			// Text.
-			if node.textX+prefixWidth+markerWidth < width {
+			if current.tx+prefixWidth+markerWidth < width {
 				if node == t.currentNode {
 					posX := 0
 					for _, segment := range node.line {
-						if posX >= width-node.textX-prefixWidth-markerWidth {
+						if posX >= width-current.tx-prefixWidth-markerWidth {
 							break
 						}
 						style := tview.MergeStyle(segment.Style, node.selectedTextStyle)
 						_, _, segmentWidth := tview.PrintStyled(
 							screen,
 							segment.Text,
-							x+node.textX+prefixWidth+markerWidth+posX,
+							x+current.tx+prefixWidth+markerWidth+posX,
 							posY,
 							0,
-							width-node.textX-prefixWidth-markerWidth-posX,
+							width-current.tx-prefixWidth-markerWidth-posX,
 							tview.AlignmentLeft,
 							style,
 							false,
@@ -591,16 +467,16 @@ func (t *Model) View(screen tcell.Screen) {
 				} else {
 					posX := 0
 					for _, segment := range node.line {
-						if posX >= width-node.textX-prefixWidth-markerWidth {
+						if posX >= width-current.tx-prefixWidth-markerWidth {
 							break
 						}
 						_, _, segmentWidth := tview.PrintStyled(
 							screen,
 							segment.Text,
-							x+node.textX+prefixWidth+markerWidth+posX,
+							x+current.tx+prefixWidth+markerWidth+posX,
 							posY,
 							0,
-							width-node.textX-prefixWidth-markerWidth-posX,
+							width-current.tx-prefixWidth-markerWidth-posX,
 							tview.AlignmentLeft,
 							segment.Style,
 							false,
@@ -621,45 +497,61 @@ func (t *Model) selectCurrentNode() tview.Cmd {
 	if node == nil {
 		return nil
 	}
-	selectedNode := node
-	return func() tview.Msg {
-		return SelectedMsg{Node: selectedNode}
-	}
+	return func() tview.Msg { return SelectedMsg{Node: node} }
 }
 
 func (t *Model) handleKeyMsg(msg tview.KeyMsg) tview.Cmd {
-	// Because the tree is flattened into a list only at drawing time, we also
-	// postpone the (cursor) movement to drawing time.
-	var selectCmd tview.Cmd
+	rows := t.flatten()
+	index := t.normalize(rows)
 	switch {
 	case keybind.Matches(msg, t.keybinds.Down):
-		t.movement = treeMove
-		t.step = 1
+		t.move(rows, 1)
 	case keybind.Matches(msg, t.keybinds.Up):
-		t.movement = treeMove
-		t.step = -1
+		t.move(rows, -1)
 	case keybind.Matches(msg, t.keybinds.Top):
-		t.movement = treeHome
+		if index < 0 {
+			t.offsetY = 0
+		} else {
+			for i, row := range rows {
+				if row.node.selectable {
+					t.selectRow(rows, i)
+					break
+				}
+			}
+		}
 	case keybind.Matches(msg, t.keybinds.Bottom):
-		t.movement = treeEnd
+		if index < 0 {
+			t.scroll(rows, len(rows))
+		} else {
+			for i := len(rows) - 1; i >= 0; i-- {
+				if rows[i].node.selectable {
+					t.selectRow(rows, i)
+					break
+				}
+			}
+		}
 	case keybind.Matches(msg, t.keybinds.MoveToLastChild):
-		t.movement = treeChild
+		child := index
+		for i := index + 1; i < len(rows); i++ {
+			if rows[i].parent == child && rows[i].node.selectable {
+				child = i
+			}
+		}
+		t.selectRow(rows, child)
 	case keybind.Matches(msg, t.keybinds.MoveToParent):
-		t.movement = treeParent
+		if index >= 0 && rows[index].parent >= 0 && rows[rows[index].parent].node.selectable {
+			t.selectRow(rows, rows[index].parent)
+		}
 	case keybind.Matches(msg, t.keybinds.PageDown):
 		_, _, _, height := t.InnerRect()
-		t.movement = treeMove
-		t.step = height
+		t.move(rows, height)
 	case keybind.Matches(msg, t.keybinds.PageUp):
 		_, _, _, height := t.InnerRect()
-		t.movement = treeMove
-		t.step = -height
+		t.move(rows, -height)
 	case keybind.Matches(msg, t.keybinds.Select):
-		selectCmd = t.selectCurrentNode()
+		return t.selectCurrentNode()
 	}
-
-	t.process(true)
-	return selectCmd
+	return nil
 }
 
 func (t *Model) handleMouseMsg(msg tview.MouseMsg) tview.Cmd {
@@ -673,24 +565,19 @@ func (t *Model) handleMouseMsg(msg tview.MouseMsg) tview.Cmd {
 		t.lastMouseY = y
 	case tview.MouseMove:
 		if msg.Buttons()&tcell.Button1 != 0 && t.lastMouseY != -1 {
-			t.movement = treeScroll
-			t.step = t.lastMouseY - y
+			t.scroll(t.flatten(), t.lastMouseY-y)
 			t.lastMouseY = y
 		}
 	case tview.MouseLeftUp:
 		t.lastMouseY = -1
 	case tview.MouseLeftClick:
-		_, rectY, _, _ := t.InnerRect()
-		y += t.offsetY - rectY
-		if t.lastMouseY != -1 {
-			y += t.lastMouseY - y
-			t.lastMouseY = -1
-			t.movement = treeNone
-		}
-		if y >= 0 && y < len(t.nodes) {
-			node := t.nodes[y]
+		rows := t.flatten()
+		_, top, _, height := t.InnerRect()
+		index := min(max(t.offsetY, 0), max(len(rows)-height, 0)) + y - top
+		if index >= 0 && index < len(rows) {
+			node := rows[index].node
 			if node.selectable {
-				t.currentNode = node
+				t.selectRow(rows, index)
 				return tview.Sequence(tview.SetFocus(t), func() tview.Msg {
 					return SelectedMsg{Node: node}
 				})
@@ -698,11 +585,9 @@ func (t *Model) handleMouseMsg(msg tview.MouseMsg) tview.Cmd {
 		}
 		return tview.SetFocus(t)
 	case tview.MouseScrollUp:
-		t.movement = treeScroll
-		t.step = -1
+		t.scroll(t.flatten(), -1)
 	case tview.MouseScrollDown:
-		t.movement = treeScroll
-		t.step = 1
+		t.scroll(t.flatten(), 1)
 	}
 	return nil
 }

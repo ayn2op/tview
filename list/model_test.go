@@ -57,6 +57,14 @@ func TestViewIsReadOnly(t *testing.T) {
 	}
 }
 
+func TestCursorChangedMsg(t *testing.T) {
+	cmd := testList(2).SetCursor(0).Update(tcell.NewEventKey(tcell.KeyDown, "", tcell.ModNone))
+	msg, ok := cmd().(CursorChangedMsg)
+	if !ok || msg.Index != 1 {
+		t.Fatalf("got %#v", msg)
+	}
+}
+
 func testList(count int) *Model {
 	model := NewModel().SetScrollBarVisibility(ScrollBarVisibilityNever)
 	model.SetBuilder(func(index int) Item {

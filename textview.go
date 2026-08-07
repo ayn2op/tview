@@ -126,18 +126,6 @@ type TextView struct {
 
 	// The default style for newly written text.
 	textStyle tcell.Style
-
-	// An optional function which is called when the content of the text view
-	// has changed.
-	changed func()
-
-	// An optional function which is called when the user presses one of the
-	// following keys: Escape, Enter, Tab, Backtab.
-	done func(tcell.Key)
-
-	// A callback function set by the Form class and called when the user leaves
-	// this form item.
-	finished func(tcell.Key)
 }
 
 // NewTextView returns a new text view.
@@ -199,15 +187,11 @@ func (t *TextView) GetFieldHeight() int {
 	return t.height
 }
 
-// Disabled returns whether or not the item is disabled / read-only.
-func (t *TextView) Disabled() bool {
-	return true // Text views are always read-only.
-}
+// Disabled reports that text views are read-only.
+func (t *TextView) Disabled() bool { return true }
 
-// SetDisabled sets whether or not the item is disabled / read-only.
-func (t *TextView) SetDisabled(disabled bool) FormItem {
-	return t // Text views are always read-only.
-}
+// SetDisabled is a no-op because text views are read-only.
+func (t *TextView) SetDisabled(bool) *TextView { return t }
 
 // SetScrollable sets the flag that decides whether or not the text view is
 // scrollable. If false, text that moves above the text view's top row will be
@@ -298,9 +282,6 @@ func (t *TextView) SetText(text string) *TextView {
 	}
 	t.clear()
 	t.appendText(text, t.textStyle)
-	if t.changed != nil {
-		go t.changed()
-	}
 	return t
 }
 
@@ -336,9 +317,6 @@ func (t *TextView) SetLines(lines []Line) *TextView {
 	}
 	t.rebuildCells()
 	t.resetLayout()
-	if t.changed != nil {
-		go t.changed()
-	}
 	return t
 }
 
@@ -348,9 +326,6 @@ func (t *TextView) AppendSegments(segments ...Segment) *TextView {
 	defer t.Unlock()
 	for _, seg := range segments {
 		t.appendText(seg.Text, seg.Style)
-	}
-	if t.changed != nil {
-		go t.changed()
 	}
 	return t
 }
@@ -368,9 +343,6 @@ func (t *TextView) AppendLine(line Line) *TextView {
 	t.lines = append(t.lines, textViewLogicalLine{})
 	t.rebuildCells()
 	t.resetLayout()
-	if t.changed != nil {
-		go t.changed()
-	}
 	return t
 }
 
@@ -409,37 +381,6 @@ func (t *TextView) Height(width int) int {
 		return 1
 	}
 	return len(wrapped)
-}
-
-// SetChangedFunc sets a handler function which is called when the text of the
-// text view has changed.
-func (t *TextView) SetChangedFunc(handler func()) *TextView {
-	t.changed = handler
-	return t
-}
-
-// SetDoneFunc sets a handler which is called when the user presses on the
-// following keys: Escape, Enter, Tab, Backtab.
-func (t *TextView) SetDoneFunc(handler func(key tcell.Key)) *TextView {
-	t.done = handler
-	return t
-}
-
-// SetFinishedFunc sets a callback invoked when the user leaves this form item.
-func (t *TextView) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
-	t.finished = handler
-	return t
-}
-
-// SetFormAttributes sets attributes shared by all form items.
-func (t *TextView) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
-	t.labelWidth = labelWidth
-	t.backgroundColor = bgColor
-	labelStyle := t.labelStyle.Foreground(labelColor)
-	t.labelStyle = labelStyle
-	textStyle := tcell.StyleDefault.Foreground(fieldTextColor).Background(bgColor)
-	t.textStyle = textStyle
-	return t
 }
 
 // ScrollTo scrolls to the specified row and column (both starting with 0).
@@ -488,7 +429,7 @@ func (t *TextView) GetScrollOffset() (row, column int) {
 	return t.lineOffset, t.columnOffset
 }
 
-// Clear removes all text from the buffer. This triggers the "changed" callback.
+// Clear removes all text from the buffer.
 func (t *TextView) Clear() *TextView {
 	t.Lock()
 	defer t.Unlock()
@@ -496,9 +437,6 @@ func (t *TextView) Clear() *TextView {
 		return t
 	}
 	t.clear()
-	if t.changed != nil {
-		go t.changed()
-	}
 	return t
 }
 
@@ -509,14 +447,7 @@ func (t *TextView) clear() {
 
 // Focus is called when this model receives focus.
 func (t *TextView) Focus(delegate func(m Model)) {
-	t.Lock()
-	if finished := t.finished; finished != nil && !t.scrollable {
-		t.Unlock()
-		finished(-1)
-		return
-	}
 	t.Box.Focus(delegate)
-	t.Unlock()
 }
 
 // HasFocus returns whether or not this model has focus.
@@ -534,13 +465,6 @@ func (t *TextView) Write(p []byte) (n int, err error) {
 }
 
 func (t *TextView) write(p []byte) (n int, err error) {
-	changed := t.changed
-	if changed != nil {
-		defer func() {
-			go changed()
-		}()
-	}
-
 	if len(p) == 0 {
 		return 0, nil
 	}
@@ -870,13 +794,7 @@ func (t *TextView) Update(msg Msg) Cmd {
 		key := msg.Key()
 
 		if key == tcell.KeyEscape || key == tcell.KeyEnter || key == tcell.KeyTab || key == tcell.KeyBacktab {
-			if t.done != nil {
-				t.done(key)
-			}
-			if t.finished != nil {
-				t.finished(key)
-			}
-			return nil
+			return func() Msg { return TextViewExitMsg{Key: key} }
 		}
 
 		if !t.scrollable {

@@ -35,8 +35,6 @@ type Model struct {
 	cursor int
 	scroll state
 
-	changed func(index int)
-
 	// selectedStyle is merged into the cursor item's cell styles at draw time, so selection highlighting needs no separately styled render of that item.
 	selectedStyle tcell.Style
 
@@ -263,9 +261,6 @@ func (l *Model) SetCursor(index int) *Model {
 		l.cursor = index
 		l.atEnd = false
 		l.ensureScroll()
-		if l.changed != nil {
-			l.changed(l.cursor)
-		}
 	}
 	return l.invalidate()
 }
@@ -300,9 +295,6 @@ func (l *Model) NextItem() bool {
 		}
 		l.cursor = 0
 		l.ensureScroll()
-		if l.changed != nil {
-			l.changed(l.cursor)
-		}
 		l.invalidate()
 		return true
 	}
@@ -311,9 +303,6 @@ func (l *Model) NextItem() bool {
 	}
 	l.cursor++
 	l.ensureScroll()
-	if l.changed != nil {
-		l.changed(l.cursor)
-	}
 	l.invalidate()
 	return true
 }
@@ -331,17 +320,8 @@ func (l *Model) PrevItem() bool {
 	}
 	l.cursor--
 	l.ensureScroll()
-	if l.changed != nil {
-		l.changed(l.cursor)
-	}
 	l.invalidate()
 	return true
-}
-
-// SetChangedFunc sets a handler that is called when the cursor changes.
-func (l *Model) SetChangedFunc(handler func(index int)) *Model {
-	l.changed = handler
-	return l
 }
 
 // SetSelectedStyle sets a style merged into the cursor item's cells when it is drawn.
@@ -917,6 +897,16 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 
 // Update handles input events for this model.
 func (l *Model) Update(msg tview.Msg) tview.Cmd {
+	before := l.cursor
+	cmd := l.update(msg)
+	if l.cursor == before {
+		return cmd
+	}
+	index := l.cursor
+	return tview.Batch(cmd, func() tview.Msg { return CursorChangedMsg{Index: index} })
+}
+
+func (l *Model) update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
 	case tview.KeyMsg:
 		switch {

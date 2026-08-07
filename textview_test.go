@@ -31,3 +31,11 @@ func TestTextViewReadsDoNotMutate(t *testing.T) {
 		t.Fatalf("state changed: got %v, want %v", got, want)
 	}
 }
+
+func TestTextViewExitMsg(t *testing.T) {
+	cmd := NewTextView().Update(tcell.NewEventKey(tcell.KeyEscape, "", tcell.ModNone))
+	msg, ok := cmd().(TextViewExitMsg)
+	if !ok || msg.Key != tcell.KeyEscape {
+		t.Fatalf("got %#v", msg)
+	}
+}

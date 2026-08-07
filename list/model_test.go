@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/ayn2op/tview"
+	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/vt"
 )
 
 type fixedHeightItem struct {
@@ -31,6 +33,40 @@ func TestScrollBarMetricsUsesKnownContentHeight(t *testing.T) {
 	if contentLength != 10 || viewportLength != 5 {
 		t.Fatalf("lengths: got (%d, %d), want (10, 5)", contentLength, viewportLength)
 	}
+}
+
+func TestViewIsReadOnly(t *testing.T) {
+	model := testList(5).ScrollDown()
+	model.SetRect(0, 0, 20, 2)
+	if model.scroll.top != 1 || model.scroll.pending != 0 {
+		t.Fatalf("scroll state: %+v", model.scroll)
+	}
+	wantScroll, wantEnd := model.scroll, model.atEnd
+	screen, err := tcell.NewTerminfoScreenFromTty(vt.NewMockTerm(vt.MockOptSize{X: 20, Y: 2}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+
+	model.View(screen)
+	if model.scroll != wantScroll || model.atEnd != wantEnd {
+		t.Fatal("View mutated list state")
+	}
+}
+
+func testList(count int) *Model {
+	model := NewModel().SetScrollBarVisibility(ScrollBarVisibilityNever)
+	model.SetBuilder(func(index int) Item {
+		if index >= count {
+			return nil
+		}
+		return &fixedHeightItem{Box: tview.NewBox(), height: 1}
+	})
+	model.SetRect(0, 0, 20, 2)
+	return model
 }
 
 var _ Item = (*fixedHeightItem)(nil)

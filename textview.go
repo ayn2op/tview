@@ -181,6 +181,14 @@ func (t *TextView) SetSize(rows, columns int) *TextView {
 	return t
 }
 
+// SetRect sets the text view's position and prepares its layout.
+func (t *TextView) SetRect(x, y, width, height int) {
+	t.Lock()
+	defer t.Unlock()
+	t.Box.SetRect(x, y, width, height)
+	t.layout()
+}
+
 // GetFieldWidth returns this model's field width.
 func (t *TextView) GetFieldWidth() int {
 	return t.width
@@ -383,8 +391,8 @@ func (t *TextView) GetWrappedLineCount() int {
 	if width == 0 {
 		width = t.width
 	}
-	t.buildWrapped(width)
-	return len(t.wrapped)
+	wrapped, _ := t.wrapLines(width)
+	return len(wrapped)
 }
 
 // Height returns the required height for rendering the text view at the given
@@ -396,11 +404,11 @@ func (t *TextView) Height(width int) int {
 	if len(t.lines) == 0 {
 		return 1
 	}
-	t.buildWrapped(width)
-	if len(t.wrapped) == 0 {
+	wrapped, _ := t.wrapLines(width)
+	if len(wrapped) == 0 {
 		return 1
 	}
-	return len(t.wrapped)
+	return len(wrapped)
 }
 
 // SetChangedFunc sets a handler function which is called when the text of the
@@ -644,29 +652,21 @@ func (t *TextView) resetLayout() {
 	t.lastWidth = 0
 }
 
-func (t *TextView) buildWrapped(width int) {
+func (t *TextView) wrapLines(width int) (wrapped []textViewLine, longest int) {
 	if width <= 0 {
 		width = math.MaxInt
 	}
-	if t.lastWidth == width && t.wrapped != nil {
-		return
-	}
-
-	t.wrapped = nil
-	t.longestLine = 0
 
 	for lineIndex, line := range t.lines {
 		cells := line.cells
 		if len(cells) == 0 {
-			t.wrapped = append(t.wrapped, textViewLine{logical: lineIndex, start: 0, end: 0, width: 0})
+			wrapped = append(wrapped, textViewLine{logical: lineIndex})
 			continue
 		}
 
 		if !t.wrap || width == math.MaxInt {
-			t.wrapped = append(t.wrapped, textViewLine{logical: lineIndex, start: 0, end: len(cells), width: line.width})
-			if line.width > t.longestLine {
-				t.longestLine = line.width
-			}
+			wrapped = append(wrapped, textViewLine{logical: lineIndex, end: len(cells), width: line.width})
+			longest = max(longest, line.width)
 			continue
 		}
 
@@ -707,15 +707,12 @@ func (t *TextView) buildWrapped(width int) {
 				lineWidth = lastOptionWidth
 			}
 
-			t.wrapped = append(t.wrapped, textViewLine{logical: lineIndex, start: start, end: pos, width: lineWidth})
-			if lineWidth > t.longestLine {
-				t.longestLine = lineWidth
-			}
+			wrapped = append(wrapped, textViewLine{logical: lineIndex, start: start, end: pos, width: lineWidth})
+			longest = max(longest, lineWidth)
 			start = pos
 		}
 	}
-
-	t.lastWidth = width
+	return
 }
 
 func (t *TextView) cellWidth(cell textViewCell, leftPos int) int {
@@ -728,31 +725,71 @@ func (t *TextView) cellWidth(cell textViewCell, leftPos int) int {
 	return cell.width
 }
 
+func (t *TextView) contentRect() (x, y, width, height, labelWidth int) {
+	x, y, width, height = t.InnerRect()
+	labelWidth = t.labelWidth
+	if labelWidth <= 0 {
+		labelWidth = uniseg.StringWidth(t.label)
+	}
+	labelWidth = min(labelWidth, width)
+	x, width = x+labelWidth, width-labelWidth
+	if t.width > 0 {
+		width = min(width, t.width)
+	}
+	if t.height > 0 {
+		height = min(height, t.height)
+	}
+	return
+}
+
+func (t *TextView) offsets(width, height int) (row, column int) {
+	row, column = t.lineOffset, t.columnOffset
+	if t.trackEnd {
+		row = len(t.wrapped) - height
+	}
+	row = min(max(row, 0), max(len(t.wrapped)-height, 0))
+	if t.alignment == AlignmentLeft || t.alignment == AlignmentRight {
+		column = min(max(column, 0), max(t.longestLine-width, 0))
+	} else if half := (t.longestLine - width) / 2; half > 0 {
+		column = min(max(column, -half), half)
+	} else {
+		column = 0
+	}
+	return
+}
+
+func (t *TextView) layout() {
+	_, _, width, height, _ := t.contentRect()
+	if width <= 0 {
+		return
+	}
+	keep := len(t.lines)
+	if !t.scrollable {
+		keep = min(keep, height)
+	}
+	if t.maxLines > 0 {
+		keep = min(keep, t.maxLines)
+	}
+	if trim := len(t.lines) - keep; trim > 0 {
+		t.lines = t.lines[trim:]
+		t.resetLayout()
+	}
+	if t.lastWidth != width || t.wrapped == nil {
+		t.wrapped, t.longestLine = t.wrapLines(width)
+		t.lastWidth = width
+	}
+	t.lineOffset, t.columnOffset = t.offsets(width, height)
+}
+
 // View draws this model onto the screen.
 func (t *TextView) View(screen tcell.Screen) {
-	t.Box.View(screen)
 	t.Lock()
 	defer t.Unlock()
+	t.Box.View(screen)
 
-	x, y, width, height := t.InnerRect()
+	x, y, width, height, labelWidth := t.contentRect()
 	labelBg := t.labelStyle.GetBackground()
-	if t.labelWidth > 0 {
-		labelWidth := min(t.labelWidth, width)
-		PrintStyled(screen, t.label, x, y, 0, labelWidth, AlignmentLeft, t.labelStyle, labelBg == tcell.ColorDefault)
-		x += labelWidth
-		width -= labelWidth
-	} else {
-		_, _, drawnWidth := PrintStyled(screen, t.label, x, y, 0, width, AlignmentLeft, t.labelStyle, labelBg == tcell.ColorDefault)
-		x += drawnWidth
-		width -= drawnWidth
-	}
-
-	if t.width > 0 && t.width < width {
-		width = t.width
-	}
-	if t.height > 0 && t.height < height {
-		height = t.height
-	}
+	PrintStyled(screen, t.label, x-labelWidth, y, 0, labelWidth, AlignmentLeft, t.labelStyle, labelBg == tcell.ColorDefault)
 	if width <= 0 {
 		return
 	}
@@ -766,41 +803,10 @@ func (t *TextView) View(screen tcell.Screen) {
 		}
 	}
 
-	t.buildWrapped(width)
+	lineOffset, columnOffset := t.offsets(width, height)
 
-	if t.trackEnd {
-		t.lineOffset = len(t.wrapped) - height
-	}
-	if t.lineOffset > len(t.wrapped)-height {
-		t.lineOffset = len(t.wrapped) - height
-	}
-	if t.lineOffset < 0 {
-		t.lineOffset = 0
-	}
-
-	if t.alignment == AlignmentLeft || t.alignment == AlignmentRight {
-		if t.columnOffset+width > t.longestLine {
-			t.columnOffset = t.longestLine - width
-		}
-		if t.columnOffset < 0 {
-			t.columnOffset = 0
-		}
-	} else {
-		half := (t.longestLine - width) / 2
-		if half > 0 {
-			if t.columnOffset > half {
-				t.columnOffset = half
-			}
-			if t.columnOffset < -half {
-				t.columnOffset = -half
-			}
-		} else {
-			t.columnOffset = 0
-		}
-	}
-
-	for line := t.lineOffset; line < len(t.wrapped); line++ {
-		if line-t.lineOffset >= height {
+	for line := lineOffset; line < len(t.wrapped); line++ {
+		if line-lineOffset >= height {
 			break
 		}
 
@@ -810,19 +816,19 @@ func (t *TextView) View(screen tcell.Screen) {
 		var skipWidth, xPos int
 		switch t.alignment {
 		case AlignmentLeft:
-			skipWidth = t.columnOffset
+			skipWidth = columnOffset
 		case AlignmentCenter:
-			skipWidth = t.columnOffset + (info.width-width)/2
+			skipWidth = columnOffset + (info.width-width)/2
 			if skipWidth < 0 {
 				skipWidth = 0
-				xPos = (width-info.width)/2 - t.columnOffset
+				xPos = (width-info.width)/2 - columnOffset
 			}
 		case AlignmentRight:
 			maxWidth := max(t.longestLine, width)
-			skipWidth = t.columnOffset - (maxWidth - info.width)
+			skipWidth = columnOffset - (maxWidth - info.width)
 			if skipWidth < 0 {
 				skipWidth = 0
-				xPos = maxWidth - info.width - t.columnOffset
+				xPos = maxWidth - info.width - columnOffset
 			}
 		}
 
@@ -844,28 +850,15 @@ func (t *TextView) View(screen tcell.Screen) {
 				}
 				for offset := w - 1; offset >= 0; offset-- {
 					if offset == 0 {
-						screen.PutStrStyled(x+xPos+offset, y+line-t.lineOffset, ch, cell.style)
+						screen.PutStrStyled(x+xPos+offset, y+line-lineOffset, ch, cell.style)
 					} else {
-						screen.Put(x+xPos+offset, y+line-t.lineOffset, " ", cell.style)
+						screen.Put(x+xPos+offset, y+line-lineOffset, " ", cell.style)
 					}
 				}
 			}
 
 			xPos += w
 		}
-	}
-
-	if !t.scrollable && len(t.lines) > height {
-		trim := len(t.lines) - height
-		t.lines = t.lines[trim:]
-		t.resetLayout()
-		t.lineOffset = 0
-	}
-	if t.maxLines > 0 && len(t.lines) > t.maxLines {
-		trim := len(t.lines) - t.maxLines
-		t.lines = t.lines[trim:]
-		t.resetLayout()
-		t.lineOffset = 0
 	}
 }
 

@@ -29,9 +29,6 @@ type Layers struct {
 	// We keep a reference to the function which allows us to set the focus to
 	// a newly visible layer.
 	setFocus func(m tview.Model)
-	// An optional handler which is called whenever the visibility or the order of
-	// layers changes.
-	changed func()
 }
 
 // Option configures a layer on Add.
@@ -78,23 +75,10 @@ func New() *Layers {
 	return l
 }
 
-func (l *Layers) notifyChanged() {
-	if l.changed != nil {
-		l.changed()
-	}
-}
-
 func (l *Layers) refocusIfNeeded(hasFocus bool) {
 	if hasFocus {
 		l.Focus(l.setFocus)
 	}
-}
-
-// SetChangedFunc sets a handler which is called whenever the visibility or the
-// order of any visible layers changes. This can be used to redraw the layers.
-func (l *Layers) SetChangedFunc(handler func()) *Layers {
-	l.changed = handler
-	return l
 }
 
 // GetLayerCount returns the number of layers currently stored in this object.
@@ -153,7 +137,6 @@ func (l *Layers) AddLayer(item tview.Model, opts ...Option) *Layers {
 		}
 	}
 	l.layers = append(l.layers, newLayer)
-	l.notifyChanged()
 	l.refocusIfNeeded(hasFocus)
 	return l
 }
@@ -164,9 +147,6 @@ func (l *Layers) RemoveLayer(name string) *Layers {
 	for index, layer := range l.layers {
 		if layer.name == name {
 			l.layers = append(l.layers[:index], l.layers[index+1:]...)
-			if layer.visible {
-				l.notifyChanged()
-			}
 			break
 		}
 	}
@@ -190,7 +170,6 @@ func (l *Layers) ShowLayer(name string) *Layers {
 	for _, layer := range l.layers {
 		if layer.name == name && !layer.visible {
 			layer.visible = true
-			l.notifyChanged()
 			break
 		}
 	}
@@ -203,7 +182,6 @@ func (l *Layers) HideLayer(name string) *Layers {
 	for _, layer := range l.layers {
 		if layer.name == name && layer.visible {
 			layer.visible = false
-			l.notifyChanged()
 			break
 		}
 	}
@@ -218,9 +196,6 @@ func (l *Layers) SendToFront(name string) *Layers {
 		if layer.name == name {
 			if index < len(l.layers)-1 {
 				l.layers = append(append(l.layers[:index], l.layers[index+1:]...), layer)
-			}
-			if layer.visible {
-				l.notifyChanged()
 			}
 			break
 		}
@@ -237,9 +212,6 @@ func (l *Layers) SendToBack(name string) *Layers {
 		if ly.name == name {
 			if index > 0 {
 				l.layers = append(append([]*layer{ly}, l.layers[:index]...), l.layers[index+1:]...)
-			}
-			if ly.visible {
-				l.notifyChanged()
 			}
 			break
 		}
@@ -290,9 +262,6 @@ func (l *Layers) SetLayerEnabled(name string, enabled bool) *Layers {
 				layer.item.Blur()
 			}
 			layer.enabled = enabled
-			if layer.visible {
-				l.notifyChanged()
-			}
 			break
 		}
 	}
@@ -305,9 +274,6 @@ func (l *Layers) ClearLayerOverlay(name string) *Layers {
 	for _, layer := range l.layers {
 		if layer.name == name && layer.overlay {
 			layer.overlay = false
-			if layer.visible {
-				l.notifyChanged()
-			}
 			break
 		}
 	}
@@ -317,10 +283,7 @@ func (l *Layers) ClearLayerOverlay(name string) *Layers {
 // SetBackgroundLayerStyle sets the style applied to layers behind the active
 // overlay layer.
 func (l *Layers) SetBackgroundLayerStyle(style tcell.Style) *Layers {
-	if l.backgroundLayerStyle != style {
-		l.backgroundLayerStyle = style
-		l.notifyChanged()
-	}
+	l.backgroundLayerStyle = style
 	return l
 }
 

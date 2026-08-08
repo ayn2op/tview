@@ -78,11 +78,6 @@ type MouseMsg struct {
 
 type PasteMsg string
 
-// TextViewExitMsg is emitted when a text view receives an exit key.
-type TextViewExitMsg struct {
-	Key tcell.Key
-}
-
 type quitMsg struct{}
 
 func Quit() Cmd {

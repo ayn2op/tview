@@ -5,17 +5,10 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// InputFieldChangedMsg is emitted by an [InputField] when its text changes in
-// response to user input.
-type InputFieldChangedMsg struct {
-	// Text is the field's text after the change.
-	Text string
-}
-
 // InputField is a one-line box into which the user can enter text. Use
 // [InputField.SetAcceptanceFunc] to accept or reject input and
 // [InputField.SetMaskCharacter] to hide input from onlookers (e.g. for password
-// input). Handle [InputFieldChangedMsg] to react to text changes.
+// input).
 //
 // Navigation and editing is the same as for a [TextArea], with the following
 // exceptions:
@@ -35,15 +28,6 @@ type InputField struct {
 	// The screen width of the input area. A value of 0 means extend as much as
 	// possible.
 	fieldWidth int
-
-	// An optional function which is called when the user indicated that they
-	// are done entering text. The key which was pressed is provided (tab,
-	// shift-tab, enter, or escape).
-	done func(tcell.Key)
-
-	// A callback function set by the Form class and called when the user leaves
-	// this form item.
-	finished func(tcell.Key)
 }
 
 // NewInputField returns a new input field.
@@ -61,8 +45,7 @@ func (i *InputField) Text() string {
 	return i.textArea.Text()
 }
 
-// SetText sets the current text of the input field. This can be undone by the
-// user. It does not emit [InputFieldChangedMsg]; only user edits do.
+// SetText sets the current text of the input field. This can be undone by the user.
 func (i *InputField) SetText(text string) *InputField {
 	if i.textArea.Text() != text {
 		i.textArea.Replace(0, i.textArea.GetTextLength(), text)
@@ -174,9 +157,6 @@ func (i *InputField) SetDisabled(disabled bool) FormItem {
 	if i.textArea.Disabled() != disabled {
 		i.textArea.SetDisabled(disabled)
 	}
-	if i.finished != nil {
-		i.finished(-1)
-	}
 	return i
 }
 
@@ -195,34 +175,8 @@ func (i *InputField) SetMaskCharacter(mask rune) *InputField {
 	return i
 }
 
-// SetDoneFunc sets a handler which is called when the user is done entering
-// text. The callback function is provided with the key that was pressed, which
-// is one of the following:
-//
-//   - KeyEnter: Done entering text.
-//   - KeyEscape: Abort text input.
-//   - KeyTab: Move to the next field.
-//   - KeyBacktab: Move to the previous field.
-func (i *InputField) SetDoneFunc(handler func(key tcell.Key)) *InputField {
-	i.done = handler
-	return i
-}
-
-// SetFinishedFunc sets a callback invoked when the user leaves this form item.
-func (i *InputField) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
-	i.finished = handler
-	return i
-}
-
 // Focus is called when this model receives focus.
 func (i *InputField) Focus(delegate func(m Model)) {
-	// If we're part of a form and this item is disabled, there's nothing the
-	// user can do here so we're finished.
-	if i.finished != nil && i.textArea.Disabled() {
-		i.finished(-1)
-		return
-	}
-
 	i.Box.Focus(delegate)
 }
 
@@ -272,60 +226,24 @@ func (i *InputField) Update(msg Msg) Cmd {
 
 	switch msg := msg.(type) {
 	case KeyMsg:
-		// Finish up.
-		finish := func(key tcell.Key) {
-			if i.done != nil {
-				i.done(key)
-			}
-			if i.finished != nil {
-				i.finished(key)
-			}
-		}
-
-		// Process special key events for the input field.
-		switch key := msg.Key(); key {
+		switch msg.Key() {
 		case tcell.KeyEnter, tcell.KeyEscape, tcell.KeyTab, tcell.KeyBacktab:
-			finish(key)
 			return nil
-		default:
-			// Forward other key events to the text area.
-			return i.forward(msg)
 		}
+		return i.textArea.Update(msg)
 	case MouseMsg:
-		// Is mouse event within the input field?
 		x, y := msg.Position()
 		if !i.InRect(x, y) {
 			return nil
 		}
 
-		// Forward mouse event to the text area.
 		cmd := i.textArea.Update(msg)
-
-		// Focus in any case.
 		if msg.Action == MouseLeftDown && cmd == nil {
 			cmd = SetFocus(i)
 		}
 		return cmd
 	case PasteMsg:
-		// Forward the pasted text to the text area.
-		return i.forward(msg)
+		return i.textArea.Update(msg)
 	}
 	return nil
-}
-
-// forward passes msg to the text area and, when the text changed as a result,
-// emits an [InputFieldChangedMsg] alongside whatever command the text area returned.
-func (i *InputField) forward(msg Msg) Cmd {
-	before := i.textArea.Text()
-	cmd := i.textArea.Update(msg)
-	text := i.textArea.Text()
-	if text == before {
-		return cmd
-	}
-
-	changed := func() Msg { return InputFieldChangedMsg{Text: text} }
-	if cmd == nil {
-		return changed
-	}
-	return Batch(cmd, changed)
 }

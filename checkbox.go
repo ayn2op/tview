@@ -39,19 +39,6 @@ type Checkbox struct {
 
 	// The string used to display a checked box.
 	checkedString string
-
-	// An optional function which is called when the user changes the checked
-	// state of this checkbox.
-	changed func(checked bool)
-
-	// An optional function which is called when the user indicated that they
-	// are done entering text. The key which was pressed is provided (tab,
-	// shift-tab, or escape).
-	done func(tcell.Key)
-
-	// A callback function set by the Form class and called when the user leaves
-	// this form item.
-	finished func(tcell.Key)
 }
 
 // NewCheckbox returns a new input field.
@@ -72,15 +59,9 @@ func (c *Checkbox) Checked() bool {
 	return c.checked
 }
 
-// SetChecked sets the state of the checkbox. This also triggers the "changed"
-// callback if the state changes with this call.
+// SetChecked sets the state of the checkbox.
 func (c *Checkbox) SetChecked(checked bool) *Checkbox {
-	if c.checked != checked {
-		c.checked = checked
-		if c.changed != nil {
-			c.changed(checked)
-		}
-	}
+	c.checked = checked
 	return c
 }
 
@@ -202,46 +183,11 @@ func (c *Checkbox) Disabled() bool {
 // SetDisabled sets whether or not the item is disabled / read-only.
 func (c *Checkbox) SetDisabled(disabled bool) FormItem {
 	c.disabled = disabled
-	if c.finished != nil {
-		c.finished(-1)
-	}
-	return c
-}
-
-// SetChangedFunc sets a handler which is called when the checked state of this
-// checkbox was changed. The handler function receives the new state.
-func (c *Checkbox) SetChangedFunc(handler func(checked bool)) *Checkbox {
-	c.changed = handler
-	return c
-}
-
-// SetDoneFunc sets a handler which is called when the user is done using the
-// checkbox. The callback function is provided with the key that was pressed,
-// which is one of the following:
-//
-//   - KeyEscape: Abort text input.
-//   - KeyTab: Move to the next field.
-//   - KeyBacktab: Move to the previous field.
-func (c *Checkbox) SetDoneFunc(handler func(key tcell.Key)) *Checkbox {
-	c.done = handler
-	return c
-}
-
-// SetFinishedFunc sets a callback invoked when the user leaves this form item.
-func (c *Checkbox) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
-	c.finished = handler
 	return c
 }
 
 // Focus is called when this model receives focus.
 func (c *Checkbox) Focus(delegate func(m Model)) {
-	// If we're part of a form and this item is disabled, there's nothing the
-	// user can do here so we're finished.
-	if c.finished != nil && c.disabled {
-		c.finished(-1)
-		return
-	}
-
 	c.Box.Focus(delegate)
 }
 
@@ -293,20 +239,12 @@ func (c *Checkbox) Update(msg Msg) Cmd {
 
 	switch msg := msg.(type) {
 	case KeyMsg:
-		// Process key event.
 		switch key := msg.Key(); key {
-		case tcell.KeyRune, tcell.KeyEnter: // Check.
+		case tcell.KeyRune, tcell.KeyEnter:
 			if key == tcell.KeyRune && msg.Str() != " " {
 				break
 			}
-			c.SetChecked(!c.checked)
-		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyEscape: // We're done.
-			if c.done != nil {
-				c.done(key)
-			}
-			if c.finished != nil {
-				c.finished(key)
-			}
+			c.checked = !c.checked
 		}
 		return nil
 	case MouseMsg:
@@ -316,13 +254,12 @@ func (c *Checkbox) Update(msg Msg) Cmd {
 			return nil
 		}
 
-		// Process mouse event.
 		if y == rectY {
 			switch msg.Action {
 			case MouseLeftDown:
 				return SetFocus(c)
 			case MouseLeftClick:
-				c.SetChecked(!c.checked)
+				c.checked = !c.checked
 				return nil
 			}
 		}

@@ -328,19 +328,6 @@ type TextArea struct {
 	// The current undo/redo position on the undo stack. If no undo or redo has
 	// been performed yet, this is the same as len(undoStack).
 	nextUndo int
-
-	// Message handlers:
-
-	// An optional function which is called when the input has changed.
-	changed func()
-
-	// An optional function which is called when the position of the cursor or
-	// the selection has changed.
-	moved func()
-
-	// A callback function set by the Form class and called when the user leaves
-	// this form item.
-	finished func(tcell.Key)
 }
 
 // NewTextArea returns a new text area. Use [TextArea.SetText] to set the
@@ -442,14 +429,6 @@ func (t *TextArea) SetText(text string, cursorAtTheEnd bool) *TextArea {
 		t.spans[1].previous = 0
 	}
 	t.selectionStart = t.cursor
-
-	if t.changed != nil {
-		t.changed()
-	}
-
-	if t.lastWidth > 0 && t.moved != nil {
-		t.moved()
-	}
 
 	return t
 }
@@ -644,11 +623,8 @@ func (t *TextArea) LineCount(limit int) int {
 // half-open interval). They may be the same, in which case text is inserted at
 // the given position. If the text is an empty string, text between start and
 // end is deleted. Index positions will be shifted to line up with character
-// boundaries. A "changed" event will be triggered.
-//
 // Previous selections are cleared. The cursor will be located at the end of the
-// replaced text. Scroll offsets will not be changed. A "moved" event will be
-// triggered.
+// replaced text. Scroll offsets will not be changed.
 //
 // The effects of this function can be undone (and redone) by the user.
 func (t *TextArea) Replace(start, end int, text string) *TextArea {
@@ -659,10 +635,6 @@ func (t *TextArea) Replace(start, end int, text string) *TextArea {
 	t.truncateLines(row - 1)
 	t.findCursor(false, row)
 	t.selectionStart = t.cursor
-	if t.moved != nil {
-		t.moved()
-	}
-	// The "changed" event will have been triggered by the "replace" function.
 	return t
 }
 
@@ -673,13 +645,6 @@ func (t *TextArea) Replace(start, end int, text string) *TextArea {
 //
 // Index positions will be shifted to line up with character boundaries.
 func (t *TextArea) Select(start, end int) *TextArea {
-	oldFrom, oldTo := t.selectionStart, t.cursor
-	defer func() {
-		if (oldFrom != t.selectionStart || oldTo != t.cursor) && t.moved != nil {
-			t.moved()
-		}
-	}()
-
 	// Clamp input values.
 	if start < 0 {
 		start = 0
@@ -862,9 +827,6 @@ func (t *TextArea) Disabled() bool {
 // SetDisabled sets whether or not the item is disabled / read-only.
 func (t *TextArea) SetDisabled(disabled bool) FormItem {
 	t.disabled = disabled
-	if t.finished != nil {
-		t.finished(-1)
-	}
 	return t
 }
 
@@ -973,35 +935,8 @@ func (t *TextArea) GetClipboardText() string {
 	return t.pasteFromClipboard()
 }
 
-// SetChangedFunc sets a handler which is called whenever the text of the text
-// area has changed.
-func (t *TextArea) SetChangedFunc(handler func()) *TextArea {
-	t.changed = handler
-	return t
-}
-
-// SetMovedFunc sets a handler which is called whenever the cursor position or
-// the text selection has changed.
-func (t *TextArea) SetMovedFunc(handler func()) *TextArea {
-	t.moved = handler
-	return t
-}
-
-// SetFinishedFunc sets a callback invoked when the user leaves this form item.
-func (t *TextArea) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
-	t.finished = handler
-	return t
-}
-
 // Focus is called when this model receives focus.
 func (t *TextArea) Focus(delegate func(m Model)) {
-	// If we're part of a form and this item is disabled, there's nothing the
-	// user can do here so we're finished.
-	if t.finished != nil && t.disabled {
-		t.finished(-1)
-		return
-	}
-
 	t.Box.Focus(delegate)
 }
 
@@ -1029,17 +964,10 @@ func (t *TextArea) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldT
 //
 // This function only modifies [TextArea.lineStarts] to update span references
 // but does not change it to reflect the new layout.
-//
-// A "changed" event will be triggered.
 func (t *TextArea) replace(deleteStart, deleteEnd [3]int, insert string, continuation bool) [3]int {
 	// Maybe nothing needs to be done?
 	if deleteStart == deleteEnd && insert == "" || t.maxLength > 0 && len(insert) > 0 && t.length+len(insert) >= t.maxLength {
 		return deleteEnd
-	}
-
-	// Notify at the end.
-	if t.changed != nil {
-		defer t.changed()
 	}
 
 	// Handle a few cases where we don't put anything onto the undo stack for
@@ -1266,7 +1194,6 @@ func (t *TextArea) View(screen tcell.Screen) {
 	}
 
 	// Make sure the visible lines are broken over.
-	firstDrawing := t.lastWidth == 0
 	if t.lastWidth != width && t.lineStarts != nil {
 		t.reset()
 	}
@@ -1282,9 +1209,6 @@ func (t *TextArea) View(screen tcell.Screen) {
 		t.findCursor(true, 0)
 		if t.selectionStart.row < 0 {
 			t.selectionStart = t.cursor
-		}
-		if firstDrawing && t.moved != nil {
-			t.moved()
 		}
 	}
 
@@ -1966,16 +1890,6 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 		t.lastAction = newLastAction
 	}()
 
-	// Trigger a "moved" event if requested.
-	if t.moved != nil {
-		selectionStart, cursor := t.selectionStart, t.cursor
-		defer func() {
-			if selectionStart != t.selectionStart || cursor != t.cursor {
-				t.moved()
-			}
-		}()
-	}
-
 	// Process the different key events.
 	switch key := event.Key(); key {
 	case tcell.KeyLeft: // Move one grapheme cluster to the left.
@@ -2119,12 +2033,6 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 		t.selectionStart = t.cursor
 		newLastAction = taActionTypeSpace
 	case tcell.KeyTab: // Insert a tab character. It will be rendered as TabSize spaces.
-		// But forwarding takes precedence.
-		if t.finished != nil {
-			t.finished(key)
-			return nil
-		}
-
 		from, to, row := t.getSelection()
 		t.cursor.pos = t.replace(from, to, "\t", t.lastAction == taActionTypeSpace)
 		t.cursor.row = -1
@@ -2132,11 +2040,7 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 		t.findCursor(true, row)
 		t.selectionStart = t.cursor
 		newLastAction = taActionTypeSpace
-	case tcell.KeyBacktab, tcell.KeyEscape: // Only used in forms.
-		if t.finished != nil {
-			t.finished(key)
-			return nil
-		}
+	case tcell.KeyBacktab, tcell.KeyEscape:
 	case tcell.KeyRune:
 		if event.Modifiers()&tcell.ModAlt > 0 {
 			// We accept some Alt- key combinations.
@@ -2309,9 +2213,6 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 		t.truncateLines(0) // This is why Undo is expensive for large texts. (t.lineStarts can get largely unusable after an undo.)
 		t.findCursor(true, 0)
 		t.selectionStart = t.cursor
-		if t.changed != nil {
-			defer t.changed()
-		}
 	case tcell.KeyCtrlY: // Redo.
 		if t.nextUndo >= len(t.undoStack) {
 			break
@@ -2331,9 +2232,6 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 		t.truncateLines(0) // This is why Redo is expensive for large texts. (t.lineStarts can get largely unusable after an undo.)
 		t.findCursor(true, 0)
 		t.selectionStart = t.cursor
-		if t.changed != nil {
-			defer t.changed()
-		}
 	}
 	return cmd
 }
@@ -2353,16 +2251,6 @@ func (t *TextArea) handleMouseMsg(msg MouseMsg) Cmd {
 			return SetMouseCapture(nil)
 		}
 		return nil
-	}
-
-	// Trigger a "moved" event at the end if requested.
-	if t.moved != nil {
-		selectionStart, cursor := t.selectionStart, t.cursor
-		defer func() {
-			if selectionStart != t.selectionStart || cursor != t.cursor {
-				t.moved()
-			}
-		}()
 	}
 
 	// Turn mouse coordinates into text coordinates.

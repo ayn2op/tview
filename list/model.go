@@ -897,16 +897,6 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 
 // Update handles input events for this model.
 func (l *Model) Update(msg tview.Msg) tview.Cmd {
-	before := l.cursor
-	cmd := l.update(msg)
-	if l.cursor == before {
-		return cmd
-	}
-	index := l.cursor
-	return tview.Batch(cmd, func() tview.Msg { return CursorChangedMsg{Index: index} })
-}
-
-func (l *Model) update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
 	case tview.KeyMsg:
 		switch {

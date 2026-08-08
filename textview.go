@@ -793,10 +793,6 @@ func (t *TextView) Update(msg Msg) Cmd {
 		previousLineOffset, previousColumnOffset, previousTrackEnd := t.lineOffset, t.columnOffset, t.trackEnd
 		key := msg.Key()
 
-		if key == tcell.KeyEscape || key == tcell.KeyEnter || key == tcell.KeyTab || key == tcell.KeyBacktab {
-			return func() Msg { return TextViewExitMsg{Key: key} }
-		}
-
 		if !t.scrollable {
 			return nil
 		}

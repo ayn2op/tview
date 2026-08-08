@@ -9,18 +9,6 @@ type ButtonSelectedMsg struct {
 	Label string
 }
 
-func newButtonSelectedMsg(label string) ButtonSelectedMsg {
-	return ButtonSelectedMsg{Label: label}
-}
-
-type ButtonExitMsg struct {
-	tcell.Key
-}
-
-func newButtonExitMsg(key tcell.Key) ButtonExitMsg {
-	return ButtonExitMsg{Key: key}
-}
-
 // Button is labeled box that triggers an action when selected.
 type Button struct {
 	*Box
@@ -148,16 +136,9 @@ func (b *Button) Update(msg Msg) Cmd {
 	case KeyMsg:
 		// Process key event.
 		switch key := msg.Key(); key {
-		case tcell.KeyEnter: // Selected.
+		case tcell.KeyEnter:
 			label := b.Label()
-			return func() Msg {
-				return newButtonSelectedMsg(label)
-			}
-		case tcell.KeyBacktab, tcell.KeyTab, tcell.KeyEscape: // Leave. No action.
-			exitKey := key
-			return func() Msg {
-				return newButtonExitMsg(exitKey)
-			}
+			return func() Msg { return ButtonSelectedMsg{Label: label} }
 		}
 		return nil
 	case MouseMsg:
@@ -165,15 +146,12 @@ func (b *Button) Update(msg Msg) Cmd {
 			return nil
 		}
 
-		// Process mouse event.
 		switch msg.Action {
 		case MouseLeftDown:
 			return SetFocus(b)
 		case MouseLeftClick:
 			label := b.Label()
-			return func() Msg {
-				return newButtonSelectedMsg(label)
-			}
+			return func() Msg { return ButtonSelectedMsg{Label: label} }
 		}
 	}
 	return nil

@@ -39,14 +39,6 @@ type FormItem interface {
 	// is manipulated by the user). This value must be greater than 0.
 	GetFieldHeight() int
 
-	// SetFinishedFunc sets the handler function for when the user finished
-	// entering data into the item. The handler may receive events for the
-	// Enter key (we're done), the Escape key (cancel input), the Tab key (move
-	// to next field), the Backtab key (move to previous field), or a negative
-	// value, indicating that the action for the last known key should be
-	// repeated.
-	SetFinishedFunc(handler func(key tcell.Key)) FormItem
-
 	// SetDisabled sets whether or not the item is disabled / read-only. A form
 	// must have at least one item that is not disabled.
 	SetDisabled(disabled bool) FormItem
@@ -97,29 +89,11 @@ type Form struct {
 	// Applied the next time the form itself receives focus. Negative if no
 	// specific item was requested.
 	requestedFocus int
-
-	// A function to set the application's current focus. Does nothing
-	// initially.
-	setFocus func(Model)
-
-	// The last (valid) key that wsa sent to a "finished" handler or -1 if no
-	// such key is known yet.
-	lastFinishedKey tcell.Key
-
-	// Set when Escape was processed by finished(); consumed in Update.
-	cancelRequested bool
 }
 
 type FormSubmitMsg struct {
 	ButtonIndex int
 	ButtonLabel string
-}
-
-func newFormSubmitMsg(buttonIndex int, buttonLabel string) FormSubmitMsg {
-	return FormSubmitMsg{
-		ButtonIndex: buttonIndex,
-		ButtonLabel: buttonLabel,
-	}
 }
 
 type FormCancelMsg struct{}
@@ -137,8 +111,6 @@ func NewForm() *Form {
 		buttonActivatedStyle: tcell.StyleDefault.Reverse(true),
 		buttonDisabledStyle:  tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.ContrastSecondaryTextColor),
 		requestedFocus:       -1,
-		setFocus:             func(Model) {},
-		lastFinishedKey:      tcell.KeyTab, // To skip over inactive elements at the beginning of the form.
 	}
 
 	return f
@@ -213,12 +185,7 @@ func (f *Form) SetFocus(index int) *Form {
 // fieldWidth of 0 extends it as far right as possible, a fieldHeight of 0 will
 // cause it to be [DefaultFormFieldHeight]), and a maximum number of bytes of
 // text allowed (0 means no limit).
-//
-// The optional callback function is invoked when the content of the text area
-// has changed. Note that especially for larger texts, this is an expensive
-// operation due to technical constraints of the [TextArea] model (every key
-// stroke leads to a new reallocation of the entire text).
-func (f *Form) AddTextArea(label, text string, fieldWidth, fieldHeight, maxLength int, changed func(text string)) *Form {
+func (f *Form) AddTextArea(label, text string, fieldWidth, fieldHeight, maxLength int) *Form {
 	if fieldHeight == 0 {
 		fieldHeight = DefaultFormFieldHeight
 	}
@@ -229,25 +196,18 @@ func (f *Form) AddTextArea(label, text string, fieldWidth, fieldHeight, maxLengt
 	if text != "" {
 		textArea.SetText(text, true)
 	}
-	if changed != nil {
-		textArea.SetChangedFunc(func() {
-			changed(textArea.Text())
-		})
-	}
-	textArea.SetFinishedFunc(f.finished)
 	f.items = append(f.items, textArea)
 	return f
 }
 
 // AddInputField adds an input field to the form. It has a label, an optional
 // initial value, and a field width (a value of 0 extends it as far as
-// possible). Handle [InputFieldChangedMsg] to react to text changes.
+// possible).
 func (f *Form) AddInputField(label, value string, fieldWidth int) *Form {
 	inputField := NewInputField().
 		SetLabel(label).
 		SetText(value).
 		SetFieldWidth(fieldWidth)
-	inputField.SetFinishedFunc(f.finished)
 	f.items = append(f.items, inputField)
 	return f
 }
@@ -256,7 +216,7 @@ func (f *Form) AddInputField(label, value string, fieldWidth int) *Form {
 // input field except that the user's input not shown. Instead, a "mask"
 // character is displayed. The password field has a label, an optional initial
 // value, a field width (a value of 0 extends it as far as possible), and a mask
-// character. Handle [InputFieldChangedMsg] to react to text changes.
+// character.
 func (f *Form) AddPasswordField(label, value string, fieldWidth int, mask rune) *Form {
 	if mask == 0 {
 		mask = '*'
@@ -266,20 +226,15 @@ func (f *Form) AddPasswordField(label, value string, fieldWidth int, mask rune) 
 		SetText(value).
 		SetFieldWidth(fieldWidth).
 		SetMaskCharacter(mask)
-	password.SetFinishedFunc(f.finished)
 	f.items = append(f.items, password)
 	return f
 }
 
-// AddCheckbox adds a checkbox to the form. It has a label, an initial state,
-// and an (optional) callback function which is invoked when the state of the
-// checkbox was changed by the user.
-func (f *Form) AddCheckbox(label string, checked bool, changed func(checked bool)) *Form {
+// AddCheckbox adds a checkbox to the form.
+func (f *Form) AddCheckbox(label string, checked bool) *Form {
 	checkbox := NewCheckbox().
 		SetLabel(label).
-		SetChecked(checked).
-		SetChangedFunc(changed)
-	checkbox.SetFinishedFunc(f.finished)
+		SetChecked(checked)
 	f.items = append(f.items, checkbox)
 	return f
 }
@@ -349,7 +304,6 @@ func (f *Form) ClearButtons() *Form {
 //   - The field text color
 //   - The field background color
 func (f *Form) AddFormItem(item FormItem) *Form {
-	item.SetFinishedFunc(f.finished)
 	f.items = append(f.items, item)
 	return f
 }
@@ -614,94 +568,62 @@ func (f *Form) View(screen tcell.Screen) {
 
 // Focus is called by the application when the model receives focus.
 func (f *Form) Focus(delegate func(m Model)) {
-	f.setFocus = delegate
-
 	// If there is no current focus, pick one.
 	focus := f.focusIndex()
 	if f.requestedFocus >= 0 {
 		focus = f.requestedFocus
 	}
 
-	// Delegate focus.
-	for index, item := range f.items {
-		if (focus < 0 || focus == index) && !item.Disabled() {
-			f.requestedFocus = index
-			delegate(item)
-			return
+	for index := range len(f.items) + len(f.buttons) {
+		if focus >= 0 && focus != index {
+			continue
 		}
-	}
-	for index, button := range f.buttons {
-		if (focus < 0 || focus == len(f.items)+index) && !button.Disabled() {
-			f.requestedFocus = len(f.items) + index
-			delegate(button)
-			return
+		model := f.focusable(index)
+		if model == nil {
+			continue
 		}
+		f.requestedFocus = index
+		delegate(model)
+		return
 	}
 
 	f.Box.Focus(delegate)
 }
 
-// finished handles a form item's "finished" event.
-func (f *Form) finished(key tcell.Key) {
+func (f *Form) moveFocus(key tcell.Key) Cmd {
+	step := 1
+	if key == tcell.KeyBacktab {
+		step = -1
+	}
+	total := len(f.items) + len(f.buttons)
 	focus := f.focusIndex()
-	if key >= 0 {
-		f.lastFinishedKey = key
-	}
-
-	totalCount := len(f.items) + len(f.buttons)
-	switch key {
-	case tcell.KeyTab, tcell.KeyEnter:
-		// Find the next focusable item.
-		for range totalCount {
-			focus = (focus + 1) % totalCount
-			if focus < len(f.items) {
-				if !f.items[focus].Disabled() {
-					f.setFocus(f.items[focus])
-					return
-				}
-			} else {
-				if !f.buttons[focus-len(f.items)].Disabled() {
-					f.setFocus(f.buttons[focus-len(f.items)])
-					return
-				}
-			}
-		}
-	case tcell.KeyBacktab:
-		// Find the previous focusable item.
-		for range totalCount {
-			focus = (focus + totalCount - 1) % totalCount
-			if focus < len(f.items) {
-				if !f.items[focus].Disabled() {
-					f.setFocus(f.items[focus])
-					return
-				}
-			} else {
-				if !f.buttons[focus-len(f.items)].Disabled() {
-					f.setFocus(f.buttons[focus-len(f.items)])
-					return
-				}
-			}
-		}
-	case tcell.KeyEscape:
-		f.cancelRequested = true
-	default:
-		if key < 0 && f.lastFinishedKey >= 0 {
-			// Repeat the last action.
-			f.finished(f.lastFinishedKey)
+	for range total {
+		focus = (focus + step + total) % total
+		if model := f.focusable(focus); model != nil {
+			f.requestedFocus = focus
+			return SetFocus(model)
 		}
 	}
+	return nil
 }
 
-func (f *Form) consumeCancelMsg(cmd Cmd) Cmd {
-	if !f.cancelRequested {
-		return cmd
+func (f *Form) focusable(index int) Model {
+	if index < len(f.items) {
+		if !f.items[index].Disabled() {
+			return f.items[index]
+		}
+		return nil
 	}
-	f.cancelRequested = false
-	cancelCmd := func() Msg { return FormCancelMsg{} }
-	if cmd == nil {
-		return cancelCmd
+	button := f.buttons[index-len(f.items)]
+	if !button.Disabled() {
+		return button
 	}
-	return Sequence(cmd, cancelCmd)
+	return nil
+}
+
+func (f *Form) submit(index int) Cmd {
+	label := f.buttons[index].Label()
+	return func() Msg { return FormSubmitMsg{index, label} }
 }
 
 // focusIndex returns the index of the currently focused item, counting form
@@ -732,18 +654,14 @@ func (f *Form) HasFocus() bool {
 // Update handles input events for this model.
 func (f *Form) Update(msg Msg) Cmd {
 	switch msg := msg.(type) {
-	case ButtonExitMsg:
-		f.finished(msg.Key)
-		return f.consumeCancelMsg(nil)
 	case MouseMsg:
 		x, y := msg.Position()
-		// Determine items to pass mouse events to.
 		for _, item := range f.items {
 			if item.Disabled() {
 				continue
 			}
 			if ModelInRect(item, x, y) {
-				return f.consumeCancelMsg(item.Update(msg))
+				return item.Update(msg)
 			}
 		}
 		for index, button := range f.buttons {
@@ -757,27 +675,32 @@ func (f *Form) Update(msg Msg) Cmd {
 			case MouseLeftDown:
 				return SetFocus(button)
 			case MouseLeftClick:
-				buttonIndex := index
-				buttonLabel := button.Label()
-				return Batch(
-					func() Msg {
-						return newFormSubmitMsg(buttonIndex, buttonLabel)
-					},
-					nil,
-				)
+				return f.submit(index)
 			default:
-				return f.consumeCancelMsg(button.Update(msg))
+				return button.Update(msg)
 			}
 		}
 
-		// A mouse down anywhere else will focus this form.
 		if msg.Action == MouseLeftDown && f.InRect(x, y) {
 			return SetFocus(f)
 		}
 	case KeyMsg, PasteMsg:
+		if key, ok := msg.(KeyMsg); ok {
+			switch key.Key() {
+			case tcell.KeyTab, tcell.KeyBacktab:
+				return f.moveFocus(key.Key())
+			case tcell.KeyEscape:
+				return func() Msg { return FormCancelMsg{} }
+			}
+		}
 		for _, item := range f.items {
 			if item.HasFocus() {
-				return f.consumeCancelMsg(item.Update(msg))
+				if key, ok := msg.(KeyMsg); ok && key.Key() == tcell.KeyEnter {
+					if _, ok := item.(*InputField); ok {
+						return f.moveFocus(key.Key())
+					}
+				}
+				return item.Update(msg)
 			}
 		}
 
@@ -786,17 +709,10 @@ func (f *Form) Update(msg Msg) Cmd {
 				continue
 			}
 			if keyMsg, ok := msg.(KeyMsg); ok && keyMsg.Key() == tcell.KeyEnter {
-				buttonIndex := index
-				buttonLabel := button.Label()
-				return Batch(
-					func() Msg {
-						return newFormSubmitMsg(buttonIndex, buttonLabel)
-					},
-					nil,
-				)
+				return f.submit(index)
 			}
-			return f.consumeCancelMsg(button.Update(msg))
+			return button.Update(msg)
 		}
 	}
-	return f.consumeCancelMsg(nil)
+	return nil
 }

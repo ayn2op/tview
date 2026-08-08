@@ -116,9 +116,6 @@ func (m *Model) filter(text string) {
 
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case tview.InputFieldChangedMsg:
-		m.filter(msg.Text)
-		return nil
 	case tview.KeyMsg:
 		switch {
 		case keybind.Matches(msg, m.keybinds.Select):
@@ -136,6 +133,18 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 			keybind.Matches(msg, m.keybinds.ScrollBottom):
 			return m.list.Update(msg)
 		}
+		return m.updateInput(msg)
+	case tview.PasteMsg:
+		return m.updateInput(msg)
 	}
 	return m.Model.Update(msg)
+}
+
+func (m *Model) updateInput(msg tview.Msg) tview.Cmd {
+	before := m.input.Text()
+	cmd := m.Model.Update(msg)
+	if text := m.input.Text(); text != before {
+		m.filter(text)
+	}
+	return cmd
 }

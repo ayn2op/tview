@@ -127,8 +127,6 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 		return func() tview.Msg { return DoneMsg(msg) }
 	case tview.FormCancelMsg:
 		return func() tview.Msg { return DoneMsg{ButtonIndex: -1} }
-	case tview.ButtonExitMsg:
-		return m.form.Update(msg)
 	case tview.MouseMsg:
 		if m.form.InRect(msg.Position()) {
 			return m.form.Update(msg)

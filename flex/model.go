@@ -213,17 +213,6 @@ func (m *Model) View(screen tcell.Screen) {
 	}
 }
 
-// Focus is called when this model receives focus.
-func (m *Model) Focus(delegate func(m tview.Model)) {
-	for _, item := range m.items {
-		if item.Item != nil && item.Focus {
-			delegate(item.Item)
-			return
-		}
-	}
-	m.Box.Focus(delegate)
-}
-
 // HasFocus returns whether or not this model has focus.
 func (m *Model) HasFocus() bool {
 	for _, item := range m.items {
@@ -237,6 +226,13 @@ func (m *Model) HasFocus() bool {
 // Update handles input events for this model.
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
+	case tview.FocusMsg:
+		for _, item := range m.items {
+			if item.Item != nil && item.Focus {
+				return tview.SetFocus(item.Item)
+			}
+		}
+		return m.Box.Update(msg)
 	case tview.MouseMsg:
 		x, y := msg.Position()
 		if !m.InRect(x, y) {
@@ -261,5 +257,5 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 			return item.Item.Update(msg)
 		}
 	}
-	return nil
+	return m.Box.Update(msg)
 }

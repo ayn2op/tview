@@ -80,10 +80,6 @@ func (m *Model) SetFocus(index int) *Model {
 	return m
 }
 
-func (m *Model) Focus(delegate func(tview.Model)) {
-	delegate(m.form)
-}
-
 func (m *Model) HasFocus() bool {
 	return m.form.HasFocus()
 }
@@ -123,6 +119,8 @@ func (m *Model) View(screen tcell.Screen) {
 
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
+	case tview.FocusMsg:
+		return tview.SetFocus(m.form)
 	case tview.FormSubmitMsg:
 		return func() tview.Msg { return DoneMsg(msg) }
 	case tview.FormCancelMsg:
@@ -145,5 +143,5 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	case tview.PasteMsg:
 		return m.frame.Update(msg)
 	}
-	return nil
+	return m.Box.Update(msg)
 }

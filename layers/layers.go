@@ -25,10 +25,6 @@ type Layers struct {
 	layers []*layer
 	// The style applied to layers behind the active overlay layer.
 	backgroundLayerStyle tcell.Style
-
-	// We keep a reference to the function which allows us to set the focus to
-	// a newly visible layer.
-	setFocus func(m tview.Model)
 }
 
 // Option configures a layer on Add.
@@ -71,14 +67,7 @@ func WithOverlay() Option {
 
 // New returns a new Layers object.
 func New() *Layers {
-	l := &Layers{Box: tview.NewBox()}
-	return l
-}
-
-func (l *Layers) refocusIfNeeded(hasFocus bool) {
-	if hasFocus {
-		l.Focus(l.setFocus)
-	}
+	return &Layers{Box: tview.NewBox()}
 }
 
 // GetLayerCount returns the number of layers currently stored in this object.
@@ -117,7 +106,6 @@ func (l *Layers) Clear() *Layers {
 // AddLayer adds a new layer for the given model. Options can configure
 // name, visibility, resize, overlay, and enabled state.
 func (l *Layers) AddLayer(item tview.Model, opts ...Option) *Layers {
-	hasFocus := l.HasFocus()
 	newLayer := &layer{
 		item:    item,
 		visible: true,
@@ -137,20 +125,17 @@ func (l *Layers) AddLayer(item tview.Model, opts ...Option) *Layers {
 		}
 	}
 	l.layers = append(l.layers, newLayer)
-	l.refocusIfNeeded(hasFocus)
 	return l
 }
 
 // RemoveLayer removes the layer with the given name.
 func (l *Layers) RemoveLayer(name string) *Layers {
-	hasFocus := l.HasFocus()
 	for index, layer := range l.layers {
 		if layer.name == name {
 			l.layers = append(l.layers[:index], l.layers[index+1:]...)
 			break
 		}
 	}
-	l.refocusIfNeeded(hasFocus)
 	return l
 }
 
@@ -173,7 +158,6 @@ func (l *Layers) ShowLayer(name string) *Layers {
 			break
 		}
 	}
-	l.refocusIfNeeded(l.HasFocus())
 	return l
 }
 
@@ -185,7 +169,6 @@ func (l *Layers) HideLayer(name string) *Layers {
 			break
 		}
 	}
-	l.refocusIfNeeded(l.HasFocus())
 	return l
 }
 
@@ -200,7 +183,6 @@ func (l *Layers) SendToFront(name string) *Layers {
 			break
 		}
 	}
-	l.refocusIfNeeded(l.HasFocus())
 	return l
 }
 
@@ -216,7 +198,6 @@ func (l *Layers) SendToBack(name string) *Layers {
 			break
 		}
 	}
-	l.refocusIfNeeded(l.HasFocus())
 	return l
 }
 
@@ -255,17 +236,12 @@ func (l *Layers) LayerEnabled(name string) bool {
 // SetLayerEnabled enables or disables a layer. Disabled layers are still drawn
 // (if visible) but do not receive focus or input.
 func (l *Layers) SetLayerEnabled(name string, enabled bool) *Layers {
-	hasFocus := l.HasFocus()
 	for _, layer := range l.layers {
 		if layer.name == name && layer.enabled != enabled {
-			if !enabled && layer.item.HasFocus() {
-				layer.item.Blur()
-			}
 			layer.enabled = enabled
 			break
 		}
 	}
-	l.refocusIfNeeded(hasFocus)
 	return l
 }
 
@@ -297,19 +273,6 @@ func (l *Layers) HasFocus() bool {
 	return l.Box.HasFocus()
 }
 
-// Focus is called by the application when the model receives focus.
-func (l *Layers) Focus(delegate func(m tview.Model)) {
-	if delegate == nil {
-		return // We cannot delegate so we cannot focus.
-	}
-	l.setFocus = delegate
-	if top := l.topVisibleEnabledLayer(); top != nil {
-		delegate(top.item)
-		return
-	}
-	l.Box.Focus(delegate)
-}
-
 // View draws this model onto the screen.
 func (l *Layers) View(screen tcell.Screen) {
 	l.Box.View(screen)
@@ -339,6 +302,14 @@ func (l *Layers) View(screen tcell.Screen) {
 
 // Update handles input events for this model.
 func (l *Layers) Update(msg tview.Msg) tview.Cmd {
+	switch msg := msg.(type) {
+	case tview.FocusMsg:
+		if top := l.topVisibleEnabledLayer(); top != nil {
+			return tview.SetFocus(top.item)
+		}
+		return l.Box.Update(msg)
+	}
+
 	if mouseMsg, ok := msg.(tview.MouseMsg); ok {
 		if !l.InRect(mouseMsg.Position()) {
 			return nil
@@ -352,7 +323,7 @@ func (l *Layers) Update(msg tview.Msg) tview.Cmd {
 	if top := l.topVisibleEnabledLayer(); top != nil {
 		return top.item.Update(msg)
 	}
-	return nil
+	return l.Box.Update(msg)
 }
 
 func (l *Layers) topVisibleEnabledLayer() *layer {

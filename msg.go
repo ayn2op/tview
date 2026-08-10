@@ -11,9 +11,7 @@ type rawMsg struct{ msg any }
 
 // Raw is a command that writes the data to the underlying TTY without any formatting.
 func Raw(r any) Cmd {
-	return func() Msg {
-		return rawMsg{msg: r}
-	}
+	return func() Msg { return rawMsg{msg: r} }
 }
 
 type batchMsg []Cmd
@@ -65,10 +63,12 @@ type InitMsg struct {
 	TerminalVersion string
 }
 
+type KeyMsg = *tcell.EventKey
+type ResizeMsg = *tcell.EventResize
+
 type (
-	KeyMsg    = *tcell.EventKey
-	FocusMsg  = *tcell.EventFocus
-	ResizeMsg = *tcell.EventResize
+	FocusMsg struct{}
+	BlurMsg  struct{}
 )
 
 type MouseMsg struct {
@@ -81,9 +81,17 @@ type PasteMsg string
 type quitMsg struct{}
 
 func Quit() Cmd {
-	return func() Msg {
-		return quitMsg{}
+	return func() Msg { return quitMsg{} }
+}
+
+type suspendMsg Cmd
+
+// Suspend runs a command while the terminal is suspended.
+func Suspend(cmd Cmd) Cmd {
+	if cmd == nil {
+		return nil
 	}
+	return func() Msg { return suspendMsg(cmd) }
 }
 
 type setFocusMsg struct {
@@ -91,9 +99,7 @@ type setFocusMsg struct {
 }
 
 func SetFocus(target Model) Cmd {
-	return func() Msg {
-		return setFocusMsg{target: target}
-	}
+	return func() Msg { return setFocusMsg{target: target} }
 }
 
 type setMouseCaptureMsg struct {
@@ -101,33 +107,25 @@ type setMouseCaptureMsg struct {
 }
 
 func SetMouseCapture(target Model) Cmd {
-	return func() Msg {
-		return setMouseCaptureMsg{target: target}
-	}
+	return func() Msg { return setMouseCaptureMsg{target: target} }
 }
 
 type setTitleMsg string
 
 func SetTitle(title string) Cmd {
-	return func() Msg {
-		return setTitleMsg(title)
-	}
+	return func() Msg { return setTitleMsg(title) }
 }
 
 type getClipboardMsg struct{}
 
 func GetClipboard() Cmd {
-	return func() Msg {
-		return getClipboardMsg{}
-	}
+	return func() Msg { return getClipboardMsg{} }
 }
 
 type setClipboardMsg []byte
 
 func SetClipboard(data []byte) Cmd {
-	return func() Msg {
-		return setClipboardMsg(data)
-	}
+	return func() Msg { return setClipboardMsg(data) }
 }
 
 type notifyMsg struct {
@@ -135,7 +133,5 @@ type notifyMsg struct {
 }
 
 func Notify(title, body string) Cmd {
-	return func() Msg {
-		return notifyMsg{title: title, body: body}
-	}
+	return func() Msg { return notifyMsg{title: title, body: body} }
 }

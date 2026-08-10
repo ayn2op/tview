@@ -445,18 +445,6 @@ func (t *TextView) clear() {
 	t.resetLayout()
 }
 
-// Focus is called when this model receives focus.
-func (t *TextView) Focus(delegate func(m Model)) {
-	t.Box.Focus(delegate)
-}
-
-// HasFocus returns whether or not this model has focus.
-func (t *TextView) HasFocus() bool {
-	t.Lock()
-	defer t.Unlock()
-	return t.Box.HasFocus()
-}
-
 // Write lets us implement the io.Writer interface.
 func (t *TextView) Write(p []byte) (n int, err error) {
 	t.Lock()
@@ -883,5 +871,5 @@ func (t *TextView) Update(msg Msg) Cmd {
 		}
 		return Batch(cmds...)
 	}
-	return nil
+	return t.Box.Update(msg)
 }

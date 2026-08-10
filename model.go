@@ -18,9 +18,4 @@ type Model interface {
 	// HasFocus determines if the model has focus. This function must return
 	// true also if one of this model's child elements has focus.
 	HasFocus() bool
-	// Focus is called by the application when the model receives focus.
-	// Implementers may call delegate() to pass the focus on to another model.
-	Focus(delegate func(Model))
-	// Blur is called by the application when the model loses focus.
-	Blur()
 }

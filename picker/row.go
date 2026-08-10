@@ -34,6 +34,4 @@ func (r *row) View(screen tcell.Screen) {
 func (r *row) Rect() (int, int, int, int) { return r.x, r.y, r.w, r.h }
 func (r *row) SetRect(x, y, w, h int)     { r.x, r.y, r.w, r.h = x, y, w, h }
 func (r *row) HasFocus() bool             { return false }
-func (r *row) Focus(func(tview.Model))    {}
-func (r *row) Blur()                      {}
 func (r *row) Height(int) int             { return 1 }

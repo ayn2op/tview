@@ -52,34 +52,23 @@ func (m *Model) Next() {
 	m.active = min(m.active+1, len(m.tabs)-1)
 }
 
-func (m *Model) Focus(delegate func(m tview.Model)) {
-	if len(m.tabs) == 0 {
-		m.Box.Focus(delegate)
-		return
-	}
-	delegate(m.tabs[m.active]) // delegate to active tab
-}
-
 func (m *Model) HasFocus() bool {
-	if len(m.tabs) > 0 && m.tabs[m.active].HasFocus() {
-		return true
+	for _, tab := range m.tabs {
+		if tab.HasFocus() {
+			return true
+		}
 	}
 	return m.Box.HasFocus()
 }
 
-func (m *Model) Blur() {
-	if len(m.tabs) > 0 {
-		m.tabs[m.active].Blur()
-	}
-	m.Box.Blur()
-}
-
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	if len(m.tabs) == 0 {
-		return nil
+		return m.Box.Update(msg)
 	}
 
 	switch msg := msg.(type) {
+	case tview.FocusMsg:
+		return tview.SetFocus(m.tabs[m.active])
 	case tview.InitMsg:
 		return m.activateTab()
 	case tview.KeyMsg:

@@ -37,19 +37,12 @@ type Box struct {
 	footerStyle     tcell.Style
 	footerAlignment Alignment
 
-	// Whether or not this box has focus. This is typically ignored for
-	// container models (e.g. Flex, Grid, Layers), as they will delegate
-	// focus to their children.
 	hasFocus bool
-
-	// Optional callback functions invoked when the model receives or loses
-	// focus.
-	focus, blur func()
 }
 
 // NewBox returns a Box without a border.
 func NewBox() *Box {
-	b := &Box{
+	return &Box{
 		width:           15,
 		height:          10,
 		backgroundColor: Styles.PrimitiveBackgroundColor,
@@ -62,7 +55,6 @@ func NewBox() *Box {
 		footerStyle:     tcell.StyleDefault.Foreground(Styles.TitleColor),
 		footerAlignment: AlignmentCenter,
 	}
-	return b
 }
 
 // BorderPadding returns the configured border padding.
@@ -84,11 +76,7 @@ func (b *Box) Rect() (int, int, int, int) {
 	return b.x, b.y, b.width, b.height
 }
 
-// SetRect sets a new position of the model. Note that this has no effect
-// if this model is part of a layout (e.g. Flex, Grid) or if it was added
-// like this:
-//
-//	application.SetRoot(p, true)
+// SetRect sets the model's position. Layouts and Application may override it.
 func (b *Box) SetRect(x, y, width, height int) {
 	if b.x != x || b.y != y || b.width != width || b.height != height {
 		b.x = x
@@ -138,7 +126,15 @@ func (b *Box) InnerRect() (int, int, int, int) {
 
 var _ Model = (*Box)(nil)
 
-func (b *Box) Update(msg Msg) Cmd { return nil }
+func (b *Box) Update(msg Msg) Cmd {
+	switch msg.(type) {
+	case FocusMsg:
+		b.hasFocus = true
+	case BlurMsg:
+		b.hasFocus = false
+	}
+	return nil
+}
 
 func (b *Box) View(screen tcell.Screen) {
 	// Don't draw anything if there is no space.
@@ -342,59 +338,6 @@ func (b *Box) SetFooterStyle(style tcell.Style) *Box {
 func (b *Box) SetFooterAlignment(alignment Alignment) *Box {
 	b.footerAlignment = alignment
 	return b
-}
-
-// SetFocusFunc sets a callback function which is invoked when this model
-// receives focus. Container models such as [Flex] or [Grid] will also be
-// notified if one of their descendents receive focus directly. Note that this
-// may result in a blur notification, immediately followed by a focus
-// notification, when the focus is set to a different descendent of the
-// container model.
-//
-// At this point, the order in which the focus callbacks are invoked during one
-// draw cycle, is not defined. However, the blur callbacks are always invoked
-// before the focus callbacks.
-//
-// Set to nil to remove the callback function.
-func (b *Box) SetFocusFunc(callback func()) *Box {
-	b.focus = callback
-	return b
-}
-
-// SetBlurFunc sets a callback function which is invoked when this model
-// loses focus. Container models such as [Flex] or [Grid] will also be
-// notified if one of their descendents lose focus. Note that this may result in
-// a blur notification, immediately followed by a focus notification, when the
-// focus is set to a different descendent of the container model.
-//
-// At this point, the order in which the blur callbacks are invoked during one
-// draw cycle, is not defined. However, the blur callbacks are always invoked
-// before the focus callbacks.
-//
-// Set to nil to remove the callback function.
-func (b *Box) SetBlurFunc(callback func()) *Box {
-	b.blur = callback
-	return b
-}
-
-// Focus is called when this model directly receives focus.
-func (b *Box) Focus(delegate func(m Model)) {
-	if !b.hasFocus {
-		b.hasFocus = true
-	}
-	if b.focus != nil {
-		b.focus()
-	}
-}
-
-// Blur is called when this model directly loses focus.
-func (b *Box) Blur() {
-	if b.hasFocus {
-		b.hasFocus = false
-	}
-	if b.blur != nil {
-		b.blur()
-	}
 }
 
 // HasFocus returns whether or not this model has focus.

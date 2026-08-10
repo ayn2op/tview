@@ -65,16 +65,12 @@ func WithoutCatchPanics() ApplicationOption {
 // depend on it. However, it provides useful tools to set up an application and
 // plays nicely with all widgets.
 type Application struct {
-	sync.RWMutex
-
 	msgs     chan Msg
 	cmds     chan Cmd
 	done     chan struct{}
 	doneOnce sync.Once
 
-	// The root model to be seen on the screen.
-	root Model
-	// The model which currently has the keyboard focus.
+	root  Model
 	focus Model
 
 	mouseCapturingModel    Model            // A model requested to capture future mouse messages.
@@ -86,17 +82,17 @@ type Application struct {
 	// forceRedraw requests a full clear before the next frame.
 	forceRedraw bool
 
-	// options
 	screen             tcell.Screen
 	disableCatchPanics bool
 }
 
-// NewApplication creates and returns a new application.
-func NewApplication(options ...ApplicationOption) *Application {
+// NewApplication creates an application with root as its top-level model.
+func NewApplication(root Model, options ...ApplicationOption) *Application {
 	a := &Application{
 		msgs: make(chan Msg),
 		cmds: make(chan Cmd),
 		done: make(chan struct{}),
+		root: root,
 	}
 	for _, option := range options {
 		option(a)
@@ -112,31 +108,25 @@ func (a *Application) Run() error {
 	)
 
 	// Make a screen if there is none yet.
-	a.Lock()
 	if a.screen == nil {
 		screen, err := tcell.NewScreen()
 		if err != nil {
-			a.Unlock()
 			return err
 		}
 		if err = screen.Init(); err != nil {
-			a.Unlock()
 			return err
 		}
 		a.screen = screen
 	}
-	a.Unlock()
 
 	defer a.stop()
 
 	go a.handleEvents()
 	go a.handleCmds()
 
-	a.RLock()
 	root := a.root
-	a.RUnlock()
-
 	if root != nil {
+		a.setFocus(root)
 		terminalName, terminalVersion := a.screen.Terminal()
 		a.queueCmd(root.Update(InitMsg{
 			TerminalName:    terminalName,
@@ -166,6 +156,12 @@ func (a *Application) Run() error {
 			}
 		case setFocusMsg:
 			a.setFocus(msg.target)
+		case suspendMsg:
+			var next Msg
+			a.suspend(func() { next = Cmd(msg)() })
+			if next != nil {
+				a.queueCmd(func() Msg { return next })
+			}
 		case setMouseCaptureMsg:
 			a.mouseCapturingModel = msg.target
 		case setTitleMsg:
@@ -185,11 +181,8 @@ func (a *Application) Run() error {
 				break
 			}
 
-			a.RLock()
-			root := a.root
-			a.RUnlock()
-
 			// Pass other key events to the root model.
+			root := a.root
 			if root != nil && root.HasFocus() {
 				a.queueCmd(root.Update(msg))
 			}
@@ -199,19 +192,15 @@ func (a *Application) Run() error {
 				pasteBuffer.Reset()
 			} else if msg.End() {
 				pasting = false
-				a.RLock()
 				root := a.root
-				a.RUnlock()
 				if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
 					a.queueCmd(root.Update(PasteMsg(pasteBuffer.String())))
 				}
 			}
 		case *tcell.EventResize:
-			a.Lock()
 			// Resize events can imply terminal state changes even when size
 			// reports unchanged, so force one redraw pass.
 			a.forceRedraw = true
-			a.Unlock()
 			if time.Since(lastRedraw) < redrawPause {
 				if redrawTimer != nil {
 					redrawTimer.Stop()
@@ -228,9 +217,7 @@ func (a *Application) Run() error {
 				a.mouseDownX, a.mouseDownY = msg.Position()
 			}
 		default:
-			a.RLock()
 			root := a.root
-			a.RUnlock()
 			if root != nil {
 				a.queueCmd(root.Update(msg))
 			}
@@ -253,10 +240,7 @@ func appendPasteKey(buffer *strings.Builder, msg KeyMsg) {
 }
 
 func (a *Application) handleEvents() {
-	a.Lock()
-	screen := a.screen
-	a.Unlock()
-	for event := range screen.EventQ() {
+	for event := range a.screen.EventQ() {
 		a.queueMsg(event)
 	}
 }
@@ -393,139 +377,61 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 // stop finalizes the active screen and leaves terminal UI mode.
 func (a *Application) stop() {
 	a.doneOnce.Do(func() {
-		a.Lock()
-		screen := a.screen
-		a.Unlock()
-
-		if screen != nil {
-			screen.Fini()
-			a.Lock()
+		if a.screen != nil {
+			a.screen.Fini()
 			a.screen = nil
-			a.Unlock()
 		}
 
 		close(a.done)
 	})
 }
 
-// Suspend temporarily suspends the application by exiting terminal UI mode and
-// invoking the provided function "f". When "f" returns, terminal UI mode is
-// entered again and the application resumes.
-//
-// A return value of true indicates that the application was suspended and "f"
-// was called. If false is returned, the application was already suspended,
-// terminal UI mode was not exited, and "f" was not called.
-func (a *Application) Suspend(f func()) bool {
-	a.RLock()
+func (a *Application) suspend(f func()) {
 	screen := a.screen
-	a.RUnlock()
-	if screen == nil {
-		return false // Screen has not yet been initialized.
+	if screen == nil || screen.Suspend() != nil {
+		return
 	}
-
-	// Enter suspended mode.
-	if err := screen.Suspend(); err != nil {
-		return false // Suspension failed.
-	}
-
-	// Wait for "f" to return.
 	f()
-
-	// If the screen object has changed in the meantime, we need to do more.
-	a.RLock()
-	defer a.RUnlock()
-	if a.screen != screen {
-		// Calling stop() while in suspend mode currently still leads to a
-		// panic, see https://github.com/gdamore/tcell/issues/440.
-		screen.Fini()
-		if a.screen == nil {
-			return true // If stop was called (a.screen is nil), we're done already.
-		}
-	} else {
-		// It hasn't changed. Resume.
-		screen.Resume() // Not much we can do in case of an error.
-	}
-
-	// Continue application loop.
-	return true
+	screen.Resume()
 }
 
-// draw actually does what Draw() promises to do.
-func (a *Application) draw() *Application {
-	a.RLock()
+func (a *Application) draw() {
 	screen := a.screen
 	root := a.root
-	forceRedraw := a.forceRedraw
-	a.RUnlock()
 
 	// Maybe we're not ready yet or not anymore.
 	if screen == nil || root == nil {
-		return a
+		return
 	}
 
 	drawWidth, drawHeight := screen.Size()
 	root.SetRect(0, 0, drawWidth, drawHeight)
 
-	// tcell already keeps a logical back buffer and emits only visual deltas in
-	// Show(). Avoid clearing on regular redraws so we don't rewrite the full
-	// logical screen every frame; keep full clears for forced redraws.
-	if forceRedraw {
+	// tcell.Show emits only visual deltas; clear only when forced.
+	if a.forceRedraw {
 		screen.Clear()
 	}
 	root.View(screen)
 	screen.Show()
 
-	a.Lock()
 	a.forceRedraw = false
-	a.Unlock()
-
-	return a
 }
 
-// SetRoot sets the root model for this application. This function must be called at least once or nothing will be displayed when the application starts.
-func (a *Application) SetRoot(root Model) *Application {
-	a.Lock()
-	a.root = root
-	if a.screen != nil {
-		a.forceRedraw = true
-	}
-	a.Unlock()
-
-	a.setFocus(root)
-	return a
-}
-
-// setFocus sets the focus to a new model. All key events will be directed
-// down the hierarchy (starting at the root) until a model handles them,
-// which per default goes towards the focused model.
-//
-// Blur() will be called on the previously focused model. Focus() will be
-// called on the new model.
-func (a *Application) setFocus(m Model) *Application {
-	a.Lock()
-	if a.focus != nil {
-		a.focus.Blur()
-	}
+func (a *Application) setFocus(m Model) {
+	previous := a.focus
 	a.focus = m
 	if a.screen != nil {
 		a.screen.HideCursor()
 	}
-	a.Unlock()
-	if m != nil {
-		m.Focus(func(m Model) {
-			a.setFocus(m)
-		})
+	var blur Cmd
+	if previous != nil {
+		blur = previous.Update(BlurMsg{})
 	}
-
-	return a
-}
-
-// Focused returns the model which has the current focus. If none has it,
-// nil is returned.
-func (a *Application) Focused() Model {
-	a.RLock()
-	defer a.RUnlock()
-	return a.focus
+	var focus Cmd
+	if m != nil {
+		focus = m.Update(FocusMsg{})
+	}
+	a.queueCmd(Sequence(blur, focus))
 }
 
 func (a *Application) queueMsg(msg Msg) {

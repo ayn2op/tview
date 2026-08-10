@@ -566,9 +566,7 @@ func (f *Form) View(screen tcell.Screen) {
 	}
 }
 
-// Focus is called by the application when the model receives focus.
-func (f *Form) Focus(delegate func(m Model)) {
-	// If there is no current focus, pick one.
+func (f *Form) focusTarget() Model {
 	focus := f.focusIndex()
 	if f.requestedFocus >= 0 {
 		focus = f.requestedFocus
@@ -583,11 +581,9 @@ func (f *Form) Focus(delegate func(m Model)) {
 			continue
 		}
 		f.requestedFocus = index
-		delegate(model)
-		return
+		return model
 	}
-
-	f.Box.Focus(delegate)
+	return nil
 }
 
 func (f *Form) moveFocus(key tcell.Key) Cmd {
@@ -654,6 +650,11 @@ func (f *Form) HasFocus() bool {
 // Update handles input events for this model.
 func (f *Form) Update(msg Msg) Cmd {
 	switch msg := msg.(type) {
+	case FocusMsg:
+		if target := f.focusTarget(); target != nil {
+			return SetFocus(target)
+		}
+		return f.Box.Update(msg)
 	case MouseMsg:
 		x, y := msg.Position()
 		for _, item := range f.items {
@@ -714,5 +715,5 @@ func (f *Form) Update(msg Msg) Cmd {
 			return button.Update(msg)
 		}
 	}
-	return nil
+	return f.Box.Update(msg)
 }

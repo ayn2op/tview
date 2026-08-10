@@ -935,11 +935,6 @@ func (t *TextArea) GetClipboardText() string {
 	return t.pasteFromClipboard()
 }
 
-// Focus is called when this model receives focus.
-func (t *TextArea) Focus(delegate func(m Model)) {
-	t.Box.Focus(delegate)
-}
-
 // SetFormAttributes sets attributes shared by all form items.
 func (t *TextArea) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
 	t.labelWidth = labelWidth
@@ -2337,5 +2332,5 @@ func (t *TextArea) Update(msg Msg) Cmd {
 	case PasteMsg:
 		return t.handlePasteMsg(msg)
 	}
-	return nil
+	return t.Box.Update(msg)
 }

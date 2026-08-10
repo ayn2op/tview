@@ -9,7 +9,7 @@ import (
 func TestFormNavigation(t *testing.T) {
 	for _, key := range []tcell.Key{tcell.KeyTab, tcell.KeyEnter} {
 		form := NewForm().AddInputField("", "", 0).AddCheckbox("", false)
-		form.items[0].Focus(func(Model) {})
+		form.items[0].Update(FocusMsg{})
 		msg := form.Update(tcell.NewEventKey(key, "", 0))()
 		focus, ok := msg.(setFocusMsg)
 		if !ok || focus.target != form.items[1] {

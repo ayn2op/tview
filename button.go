@@ -129,7 +129,7 @@ func (b *Button) View(screen tcell.Screen) {
 // Update handles input events for this model.
 func (b *Button) Update(msg Msg) Cmd {
 	if b.disabled {
-		return nil
+		return b.Box.Update(msg)
 	}
 
 	switch msg := msg.(type) {
@@ -154,5 +154,5 @@ func (b *Button) Update(msg Msg) Cmd {
 			return func() Msg { return ButtonSelectedMsg{Label: label} }
 		}
 	}
-	return nil
+	return b.Box.Update(msg)
 }

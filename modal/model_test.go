@@ -17,16 +17,7 @@ func TestModelDone(t *testing.T) {
 		{tcell.KeyEscape, -1, ""},
 	} {
 		m := NewModel().AddButtons([]string{"Yes", "No"})
-		var focused tview.Model
-		var focus func(tview.Model)
-		focus = func(next tview.Model) {
-			if focused != nil {
-				focused.Blur()
-			}
-			focused = next
-			next.Focus(focus)
-		}
-		focus(m)
+		m.form.GetButton(0).Update(tview.FocusMsg{})
 
 		msg := tview.Msg(tcell.NewEventKey(test.key, "", tcell.ModNone))
 		for {

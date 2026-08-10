@@ -600,5 +600,5 @@ func (t *Model) Update(msg tview.Msg) tview.Cmd {
 	case tview.MouseMsg:
 		return t.handleMouseMsg(msg)
 	}
-	return nil
+	return t.Box.Update(msg)
 }

@@ -186,11 +186,6 @@ func (c *Checkbox) SetDisabled(disabled bool) FormItem {
 	return c
 }
 
-// Focus is called when this model receives focus.
-func (c *Checkbox) Focus(delegate func(m Model)) {
-	c.Box.Focus(delegate)
-}
-
 // View draws this model onto the screen.
 func (c *Checkbox) View(screen tcell.Screen) {
 	c.Box.View(screen)
@@ -234,7 +229,7 @@ func (c *Checkbox) View(screen tcell.Screen) {
 // Update handles input events for this model.
 func (c *Checkbox) Update(msg Msg) Cmd {
 	if c.disabled {
-		return nil
+		return c.Box.Update(msg)
 	}
 
 	switch msg := msg.(type) {
@@ -264,5 +259,5 @@ func (c *Checkbox) Update(msg Msg) Cmd {
 			}
 		}
 	}
-	return nil
+	return c.Box.Update(msg)
 }

@@ -175,22 +175,6 @@ func (i *InputField) SetMaskCharacter(mask rune) *InputField {
 	return i
 }
 
-// Focus is called when this model receives focus.
-func (i *InputField) Focus(delegate func(m Model)) {
-	i.Box.Focus(delegate)
-}
-
-// HasFocus returns whether or not this model has focus.
-func (i *InputField) HasFocus() bool {
-	return i.textArea.HasFocus() || i.Box.HasFocus()
-}
-
-// Blur is called when this model loses focus.
-func (i *InputField) Blur() {
-	i.textArea.Blur()
-	i.Box.Blur()
-}
-
 // View draws this model onto the screen.
 func (i *InputField) View(screen tcell.Screen) {
 	i.Box.View(screen)
@@ -213,13 +197,16 @@ func (i *InputField) View(screen tcell.Screen) {
 	i.textArea.SetRect(x, y, labelWidth+fieldWidth, 1)
 	i.textArea.setMinCursorPadding(fieldWidth-1, 1)
 
-	// Draw text area.
-	i.textArea.hasFocus = i.HasFocus() // Force cursor positioning.
 	i.textArea.View(screen)
 }
 
 // Update handles input events for this model.
 func (i *InputField) Update(msg Msg) Cmd {
+	switch msg.(type) {
+	case FocusMsg, BlurMsg:
+		i.Box.Update(msg)
+		return i.textArea.Update(msg)
+	}
 	if i.textArea.Disabled() {
 		return nil
 	}

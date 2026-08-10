@@ -26,9 +26,6 @@ type Model struct {
 
 	// Border spacing.
 	top, bottom, header, footer, left, right int
-
-	// Keep a reference in case we need it when we change the model.
-	setFocus func(m tview.Model)
 }
 
 // NewModel returns a new frame around the given model. The model's
@@ -56,17 +53,7 @@ func (f *Model) Primitive() tview.Model {
 // SetPrimitive replaces the contained model with the given one. To remove
 // a model, set it to nil.
 func (f *Model) SetPrimitive(m tview.Model) *Model {
-	if f.primitive == m {
-		return f
-	}
-	var hasFocus bool
-	if f.primitive != nil {
-		hasFocus = f.primitive.HasFocus()
-	}
 	f.primitive = m
-	if hasFocus && f.setFocus != nil {
-		f.setFocus(m) // Restore focus.
-	}
 	return f
 }
 
@@ -163,16 +150,6 @@ func (f *Model) View(screen tcell.Screen) {
 	}
 }
 
-// Focus is called when this model receives focus.
-func (f *Model) Focus(delegate func(m tview.Model)) {
-	f.setFocus = delegate
-	if f.primitive != nil {
-		delegate(f.primitive)
-	} else {
-		f.Box.Focus(delegate)
-	}
-}
-
 // HasFocus returns whether or not this model has focus.
 func (f *Model) HasFocus() bool {
 	if f.primitive == nil {
@@ -184,6 +161,11 @@ func (f *Model) HasFocus() bool {
 // Update handles input events for this model.
 func (f *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
+	case tview.FocusMsg:
+		if f.primitive != nil {
+			return tview.SetFocus(f.primitive)
+		}
+		return f.Box.Update(msg)
 	case tview.MouseMsg:
 		x, y := msg.Position()
 		if !f.InRect(x, y) {
@@ -205,5 +187,5 @@ func (f *Model) Update(msg tview.Msg) tview.Cmd {
 		}
 		return f.primitive.Update(msg)
 	}
-	return nil
+	return f.Box.Update(msg)
 }

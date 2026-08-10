@@ -999,7 +999,7 @@ func (l *Model) Update(msg tview.Msg) tview.Cmd {
 			return nil
 		}
 	}
-	return nil
+	return l.Box.Update(msg)
 }
 
 func (l *Model) lastIndex() int {

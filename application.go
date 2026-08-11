@@ -183,7 +183,7 @@ func (a *Application) Run() error {
 
 			// Pass other key events to the root model.
 			root := a.root
-			if root != nil && root.HasFocus() {
+			if root != nil {
 				a.queueCmd(root.Update(msg))
 			}
 		case *tcell.EventPaste:
@@ -193,7 +193,7 @@ func (a *Application) Run() error {
 			} else if msg.End() {
 				pasting = false
 				root := a.root
-				if root != nil && root.HasFocus() && pasteBuffer.Len() > 0 {
+				if root != nil && pasteBuffer.Len() > 0 {
 					a.queueCmd(root.Update(PasteMsg(pasteBuffer.String())))
 				}
 			}

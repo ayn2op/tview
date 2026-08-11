@@ -380,18 +380,15 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 // stop finalizes the active screen and leaves terminal UI mode.
 func (a *Application) stop() {
 	a.doneOnce.Do(func() {
-		if a.screen != nil {
-			a.screen.Fini()
-			a.screen = nil
-		}
-
+		a.screen.Fini()
+		a.screen = nil
 		close(a.done)
 	})
 }
 
 func (a *Application) suspend(f func()) {
 	screen := a.screen
-	if screen == nil || screen.Suspend() != nil {
+	if screen.Suspend() != nil {
 		return
 	}
 	f()
@@ -402,8 +399,7 @@ func (a *Application) draw() {
 	screen := a.screen
 	root := a.root
 
-	// Maybe we're not ready yet or not anymore.
-	if screen == nil || root == nil {
+	if root == nil {
 		return
 	}
 
@@ -423,9 +419,7 @@ func (a *Application) draw() {
 func (a *Application) setFocus(m Model) {
 	previous := a.focus
 	a.focus = m
-	if a.screen != nil {
-		a.screen.HideCursor()
-	}
+	a.screen.HideCursor()
 	var blur Cmd
 	if previous != nil {
 		blur = previous.Update(BlurMsg{})

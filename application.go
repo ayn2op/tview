@@ -210,6 +210,9 @@ func (a *Application) Run() error {
 				})
 			}
 			lastRedraw = time.Now()
+			if root := a.root; root != nil {
+				a.queueCmd(root.Update(msg))
+			}
 		case *tcell.EventMouse:
 			isMouseDownAction := a.fireMouseActions(msg)
 			a.lastMouseButtons = msg.Buttons()

@@ -1,6 +1,7 @@
 package help
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/ayn2op/tview"
@@ -383,7 +384,5 @@ func segmentsWidth(segments []segment) int {
 }
 
 func cloneSegments(in []segment) []segment {
-	out := make([]segment, len(in))
-	copy(out, in)
-	return out
+	return slices.Clone(in)
 }

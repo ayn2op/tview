@@ -174,9 +174,7 @@ func (m *Model) View(screen tcell.Screen) {
 			proportionSum += item.Proportion
 		}
 	}
-	if distSize < 0 {
-		distSize = 0
-	}
+	distSize = max(distSize, 0)
 
 	// Calculate positions and draw items.
 	pos := x

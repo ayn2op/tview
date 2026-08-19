@@ -218,8 +218,8 @@ func (m *Model) AddItem(p tview.Model, row, column, rowSpan, colSpan, minGridHei
 // RemoveItem removes all items for the given model from the grid, keeping
 // the order of the remaining items intact.
 func (g *Model) RemoveItem(m tview.Model) *Model {
-	for index := len(g.items) - 1; index >= 0; index-- {
-		if g.items[index].Item == m {
+	for index, current := range slices.Backward(g.items) {
+		if current.Item == m {
 			g.items = slices.Delete(g.items, index, index+1)
 		}
 	}

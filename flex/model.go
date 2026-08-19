@@ -104,8 +104,8 @@ func (m *Model) AddItem(p tview.Model, fixedSize, proportion int, focus bool) *M
 // RemoveItem removes all items for the given model from the container,
 // keeping the order of the remaining items intact.
 func (m *Model) RemoveItem(item tview.Model) *Model {
-	for index := len(m.items) - 1; index >= 0; index-- {
-		if m.items[index].Item == item {
+	for index, current := range slices.Backward(m.items) {
+		if current.Item == item {
 			m.items = slices.Delete(m.items, index, index+1)
 		}
 	}

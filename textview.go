@@ -292,9 +292,7 @@ func (t *TextView) Lines() []Line {
 
 	out := make([]Line, 0, len(t.lines))
 	for _, line := range t.lines {
-		copied := make(Line, len(line.segments))
-		copy(copied, line.segments)
-		out = append(out, copied)
+		out = append(out, line.segments.Clone())
 	}
 	return out
 }

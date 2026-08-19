@@ -1,6 +1,7 @@
 package tview
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
@@ -23,9 +24,7 @@ type Line []Segment
 
 // Clone returns a copy of this line with an independent backing array.
 func (l Line) Clone() Line {
-	out := make(Line, len(l))
-	copy(out, l)
-	return out
+	return slices.Clone(l)
 }
 
 // NewLine returns a line from the provided segments, skipping empty segments.
@@ -112,9 +111,7 @@ func (b *LineBuilder) AppendLines(lines []Line) {
 
 // NewLine flushes the current line into the builder output.
 func (b *LineBuilder) NewLine() {
-	line := make(Line, len(b.current))
-	copy(line, b.current)
-	b.lines = append(b.lines, line)
+	b.lines = append(b.lines, slices.Clone(b.current))
 	b.current = nil
 }
 

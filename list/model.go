@@ -1,6 +1,8 @@
 package list
 
 import (
+	"slices"
+
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
@@ -692,7 +694,7 @@ func (l *Model) insertChildren(children *[]drawnItem, width int, ah int) {
 			row:    ah,
 			height: height,
 		}
-		*children = append([]drawnItem{entry}, *children...)
+		*children = slices.Insert(*children, 0, entry)
 
 		if l.scroll.top == 0 {
 			break

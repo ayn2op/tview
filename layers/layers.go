@@ -121,7 +121,7 @@ func (l *Layers) AddLayer(item tview.Model, opts ...Option) *Layers {
 	if newLayer.name != "" {
 		for index, layer := range l.layers {
 			if layer.name == newLayer.name {
-				l.layers = append(l.layers[:index], l.layers[index+1:]...)
+				l.layers = slices.Delete(l.layers, index, index+1)
 				break
 			}
 		}
@@ -134,7 +134,7 @@ func (l *Layers) AddLayer(item tview.Model, opts ...Option) *Layers {
 func (l *Layers) RemoveLayer(name string) *Layers {
 	for index, layer := range l.layers {
 		if layer.name == name {
-			l.layers = append(l.layers[:index], l.layers[index+1:]...)
+			l.layers = slices.Delete(l.layers, index, index+1)
 			break
 		}
 	}
@@ -180,7 +180,7 @@ func (l *Layers) SendToFront(name string) *Layers {
 	for index, layer := range l.layers {
 		if layer.name == name {
 			if index < len(l.layers)-1 {
-				l.layers = append(append(l.layers[:index], l.layers[index+1:]...), layer)
+				l.layers = append(slices.Delete(l.layers, index, index+1), layer)
 			}
 			break
 		}
@@ -195,7 +195,8 @@ func (l *Layers) SendToBack(name string) *Layers {
 	for index, ly := range l.layers {
 		if ly.name == name {
 			if index > 0 {
-				l.layers = append(append([]*layer{ly}, l.layers[:index]...), l.layers[index+1:]...)
+				copy(l.layers[1:index+1], l.layers[:index])
+				l.layers[0] = ly
 			}
 			break
 		}

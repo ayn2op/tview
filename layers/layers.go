@@ -1,6 +1,8 @@
 package layers
 
 import (
+	"slices"
+
 	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
 )
@@ -79,9 +81,9 @@ func (l *Layers) GetLayerCount() int {
 // optionally limited to visible layers.
 func (l *Layers) GetLayerNames(visibleOnly bool) []string {
 	var names []string
-	for index := len(l.layers) - 1; index >= 0; index-- {
-		if !visibleOnly || l.layers[index].visible {
-			names = append(names, l.layers[index].name)
+	for _, layer := range slices.Backward(l.layers) {
+		if !visibleOnly || layer.visible {
+			names = append(names, layer.name)
 		}
 	}
 	return names

@@ -332,9 +332,7 @@ ItemLoop:
 	proportionalHeight := 0
 	for index, row := range m.rows {
 		if row > 0 {
-			if row < m.minHeight {
-				row = m.minHeight
-			}
+			row = max(row, m.minHeight)
 			remainingHeight -= row
 			rowHeight[index] = row
 		} else if row == 0 {
@@ -345,9 +343,7 @@ ItemLoop:
 	}
 	for index, column := range m.columns {
 		if column > 0 {
-			if column < m.minWidth {
-				column = m.minWidth
-			}
+			column = max(column, m.minWidth)
 			remainingWidth -= column
 			columnWidth[index] = column
 		} else if column == 0 {
@@ -369,12 +365,8 @@ ItemLoop:
 	if columns > len(m.columns) {
 		proportionalWidth += columns - len(m.columns)
 	}
-	if remainingWidth < 0 {
-		remainingWidth = 0
-	}
-	if remainingHeight < 0 {
-		remainingHeight = 0
-	}
+	remainingWidth = max(remainingWidth, 0)
+	remainingHeight = max(remainingHeight, 0)
 
 	// Distribute proportional rows/columns.
 	for index := range rows {
@@ -392,9 +384,7 @@ ItemLoop:
 		rowAbs := row * remainingHeight / proportionalHeight
 		remainingHeight -= rowAbs
 		proportionalHeight -= row
-		if rowAbs < m.minHeight {
-			rowAbs = m.minHeight
-		}
+		rowAbs = max(rowAbs, m.minHeight)
 		rowHeight[index] = rowAbs
 	}
 	for index := range columns {
@@ -412,9 +402,7 @@ ItemLoop:
 		columnAbs := column * remainingWidth / proportionalWidth
 		remainingWidth -= columnAbs
 		proportionalWidth -= column
-		if columnAbs < m.minWidth {
-			columnAbs = m.minWidth
-		}
+		columnAbs = max(columnAbs, m.minWidth)
 		columnWidth[index] = columnAbs
 	}
 

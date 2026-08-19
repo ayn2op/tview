@@ -1,6 +1,10 @@
 package tview
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"slices"
+
+	"github.com/gdamore/tcell/v3"
+)
 
 type Msg any
 
@@ -49,13 +53,7 @@ func Sequence(cmds ...Cmd) Cmd {
 }
 
 func compactCmds(cmds ...Cmd) []Cmd {
-	valid := cmds[:0]
-	for _, cmd := range cmds {
-		if cmd != nil {
-			valid = append(valid, cmd)
-		}
-	}
-	return valid
+	return slices.DeleteFunc(cmds, func(cmd Cmd) bool { return cmd == nil })
 }
 
 type InitMsg struct {

@@ -657,14 +657,8 @@ func (l *Model) scrollBarMetrics(width int, viewport int, children []drawnItem, 
 	}
 
 	position -= first.row
-	if position < 0 {
-		position = 0
-	}
-
 	maxOffset := max(content-viewport, 0)
-	if position > maxOffset {
-		position = maxOffset
-	}
+	position = min(max(position, 0), maxOffset)
 
 	contentLength = content
 	viewportContentLength = viewport

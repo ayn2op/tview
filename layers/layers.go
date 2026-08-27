@@ -207,9 +207,9 @@ func (l *Layers) SendToBack(name string) *Layers {
 // GetFrontLayer returns the front-most visible layer. If there are no visible
 // layers, ("", nil) is returned.
 func (l *Layers) GetFrontLayer() (name string, item tview.Model) {
-	for index := len(l.layers) - 1; index >= 0; index-- {
-		if l.layers[index].visible {
-			return l.layers[index].name, l.layers[index].item
+	for _, v := range slices.Backward(l.layers) {
+		if v.visible {
+			return v.name, v.item
 		}
 	}
 	return
@@ -330,8 +330,7 @@ func (l *Layers) Update(msg tview.Msg) tview.Cmd {
 }
 
 func (l *Layers) topVisibleEnabledLayer() *layer {
-	for index := len(l.layers) - 1; index >= 0; index-- {
-		layer := l.layers[index]
+	for _, layer := range slices.Backward(l.layers) {
 		if layer.visible && layer.enabled {
 			return layer
 		}
@@ -343,8 +342,7 @@ func (l *Layers) topVisibleEnabledLayer() *layer {
 // layer that is both visible and enabled. This is used so only one overlay
 // is applied at a time.
 func (l *Layers) topVisibleEnabledOverlayIndex() int {
-	for index := len(l.layers) - 1; index >= 0; index-- {
-		layer := l.layers[index]
+	for index, layer := range slices.Backward(l.layers) {
 		if layer.visible && layer.enabled && layer.overlay {
 			return index
 		}

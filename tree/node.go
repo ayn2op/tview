@@ -62,8 +62,8 @@ func (n *Node) Walk(callback func(node, parent *Node) bool) *Node {
 		if !callback(current.node, current.parent) {
 			continue
 		}
-		for i := len(current.node.children) - 1; i >= 0; i-- {
-			stack = append(stack, entry{current.node.children[i], current.node})
+		for _, v := range slices.Backward(current.node.children) {
+			stack = append(stack, entry{v, current.node})
 		}
 	}
 	return n

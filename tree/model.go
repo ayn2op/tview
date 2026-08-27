@@ -1,6 +1,8 @@
 package tree
 
 import (
+	"slices"
+
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
@@ -523,8 +525,8 @@ func (t *Model) handleKeyMsg(msg tview.KeyMsg) tview.Cmd {
 		if index < 0 {
 			t.scroll(rows, len(rows))
 		} else {
-			for i := len(rows) - 1; i >= 0; i-- {
-				if rows[i].node.selectable {
+			for i, row := range slices.Backward(rows) {
+				if row.node.selectable {
 					t.selectRow(rows, i)
 					break
 				}

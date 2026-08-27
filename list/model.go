@@ -603,7 +603,7 @@ func (l *Model) View(screen tcell.Screen) {
 		styled := newStyledScreen(clipped, l.selectedStyle)
 		for row := range child.height {
 			for col := range contentWidth {
-				styled.SetContent(x+col, y+child.row+row, ' ', nil, tcell.StyleDefault)
+				styled.Put(x+col, y+child.row+row, " ", tcell.StyleDefault)
 			}
 		}
 		child.item.View(styled)

@@ -52,25 +52,14 @@ func (m *Model) Next() {
 	m.active = min(m.active+1, len(m.tabs)-1)
 }
 
-func (m *Model) HasFocus() bool {
-	for _, tab := range m.tabs {
-		if tab.HasFocus() {
-			return true
-		}
-	}
-	return m.Box.HasFocus()
-}
-
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	if len(m.tabs) == 0 {
 		return m.Box.Update(msg)
 	}
 
 	switch msg := msg.(type) {
-	case tview.FocusMsg:
-		return tview.SetFocus(m.tabs[m.active])
 	case tview.InitMsg:
-		return m.activateTab()
+		return m.tabs[m.active].Update(msg)
 	case tview.KeyMsg:
 		switch {
 		case keybind.Matches(msg, m.keybinds.Previous):
@@ -92,15 +81,11 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 			return nil
 		}
 
-		if msg.Action == tview.MouseLeftDown {
-			return tview.SetFocus(m)
-		}
-
 		if tab, ok := m.tabAt(x, y); ok {
 			switch msg.Action {
 			case tview.MouseLeftClick:
 				if tab == m.active {
-					return tview.SetFocus(m)
+					return nil
 				}
 				m.active = tab
 				return m.activateTab()
@@ -154,10 +139,7 @@ func (m *Model) View(screen tcell.Screen) {
 }
 
 func (m *Model) activateTab() tview.Cmd {
-	return tview.Sequence(
-		m.tabs[m.active].Update(tview.InitMsg{}),
-		tview.SetFocus(m),
-	)
+	return m.tabs[m.active].Update(tview.InitMsg{})
 }
 
 func (m *Model) tabAt(x, y int) (int, bool) {

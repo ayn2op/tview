@@ -36,8 +36,6 @@ type Box struct {
 	footer          string
 	footerStyle     tcell.Style
 	footerAlignment Alignment
-
-	hasFocus bool
 }
 
 // NewBox returns a Box without a border.
@@ -127,12 +125,6 @@ func (b *Box) InnerRect() (int, int, int, int) {
 var _ Model = (*Box)(nil)
 
 func (b *Box) Update(msg Msg) Cmd {
-	switch msg.(type) {
-	case FocusMsg:
-		b.hasFocus = true
-	case BlurMsg:
-		b.hasFocus = false
-	}
 	return nil
 }
 
@@ -338,9 +330,4 @@ func (b *Box) SetFooterStyle(style tcell.Style) *Box {
 func (b *Box) SetFooterAlignment(alignment Alignment) *Box {
 	b.footerAlignment = alignment
 	return b
-}
-
-// HasFocus returns whether or not this model has focus.
-func (b *Box) HasFocus() bool {
-	return b.hasFocus
 }

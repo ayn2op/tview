@@ -150,22 +150,9 @@ func (f *Model) View(screen tcell.Screen) {
 	}
 }
 
-// HasFocus returns whether or not this model has focus.
-func (f *Model) HasFocus() bool {
-	if f.primitive == nil {
-		return f.Box.HasFocus()
-	}
-	return f.primitive.HasFocus()
-}
-
 // Update handles input events for this model.
 func (f *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case tview.FocusMsg:
-		if f.primitive != nil {
-			return tview.SetFocus(f.primitive)
-		}
-		return f.Box.Update(msg)
 	case tview.MouseMsg:
 		x, y := msg.Position()
 		if !f.InRect(x, y) {
@@ -179,13 +166,12 @@ func (f *Model) Update(msg tview.Msg) tview.Cmd {
 
 		// Clicking on the frame parts.
 		if msg.Action == tview.MouseLeftDown {
-			return tview.SetFocus(f)
-		}
-	case tview.KeyMsg, tview.PasteMsg:
-		if f.primitive == nil {
 			return nil
 		}
-		return f.primitive.Update(msg)
+	case tview.KeyMsg, tview.PasteMsg:
+		if f.primitive != nil {
+			return f.primitive.Update(msg)
+		}
 	}
 	return f.Box.Update(msg)
 }

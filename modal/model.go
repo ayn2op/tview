@@ -80,10 +80,6 @@ func (m *Model) SetFocus(index int) *Model {
 	return m
 }
 
-func (m *Model) HasFocus() bool {
-	return m.form.HasFocus()
-}
-
 func (m *Model) View(screen tcell.Screen) {
 	x, y, availableWidth, availableHeight := m.Rect()
 	if availableWidth <= 0 || availableHeight <= 0 {
@@ -119,8 +115,6 @@ func (m *Model) View(screen tcell.Screen) {
 
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case tview.FocusMsg:
-		return tview.SetFocus(m.form)
 	case tview.FormSubmitMsg:
 		return func() tview.Msg { return DoneMsg(msg) }
 	case tview.FormCancelMsg:
@@ -130,7 +124,7 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 			return m.form.Update(msg)
 		}
 		if msg.Action == tview.MouseLeftDown && m.InRect(msg.Position()) {
-			return tview.SetFocus(m)
+			return nil
 		}
 	case tview.KeyMsg:
 		switch msg.Key() {

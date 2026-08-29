@@ -64,11 +64,6 @@ type InitMsg struct {
 type KeyMsg = *tcell.EventKey
 type ResizeMsg = *tcell.EventResize
 
-type (
-	FocusMsg struct{}
-	BlurMsg  struct{}
-)
-
 type MouseMsg struct {
 	*tcell.EventMouse
 	Action MouseAction
@@ -90,14 +85,6 @@ func Suspend(cmd Cmd) Cmd {
 		return nil
 	}
 	return func() Msg { return suspendMsg(cmd) }
-}
-
-type setFocusMsg struct {
-	target Model
-}
-
-func SetFocus(target Model) Cmd {
-	return func() Msg { return setFocusMsg{target: target} }
 }
 
 type setMouseCaptureMsg struct {

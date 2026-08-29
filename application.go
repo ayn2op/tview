@@ -60,19 +60,13 @@ func WithoutCatchPanics() ApplicationOption {
 }
 
 // Application represents the top node of an application.
-//
-// It is not strictly required to use this class as none of the other classes
-// depend on it. However, it provides useful tools to set up an application and
-// plays nicely with all widgets.
 type Application struct {
 	msgs     chan Msg
 	cmds     chan Cmd
 	done     chan struct{}
 	doneOnce sync.Once
 
-	root  Model
-	focus Model
-
+	root                   Model
 	mouseCapturingModel    Model            // A model requested to capture future mouse messages.
 	lastMouseX, lastMouseY int              // The last position of the mouse.
 	mouseDownX, mouseDownY int              // The position of the mouse when a button was last pressed.
@@ -126,7 +120,6 @@ func (a *Application) Run() error {
 
 	root := a.root
 	if root != nil {
-		a.setFocus(root)
 		terminalName, terminalVersion := a.screen.Terminal()
 		a.queueCmd(root.Update(InitMsg{
 			TerminalName:    terminalName,
@@ -154,8 +147,6 @@ func (a *Application) Run() error {
 				data := fmt.Append(nil, msg.msg)
 				_, _ = tty.Write(data)
 			}
-		case setFocusMsg:
-			a.setFocus(msg.target)
 		case suspendMsg:
 			var next Msg
 			a.suspend(func() { next = Cmd(msg)() })
@@ -414,21 +405,6 @@ func (a *Application) draw() {
 	screen.Show()
 
 	a.forceRedraw = false
-}
-
-func (a *Application) setFocus(m Model) {
-	previous := a.focus
-	a.focus = m
-	a.screen.HideCursor()
-	var blur Cmd
-	if previous != nil {
-		blur = previous.Update(BlurMsg{})
-	}
-	var focus Cmd
-	if m != nil {
-		focus = m.Update(FocusMsg{})
-	}
-	a.queueCmd(Sequence(blur, focus))
 }
 
 func (a *Application) queueMsg(msg Msg) {

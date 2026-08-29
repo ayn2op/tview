@@ -202,11 +202,6 @@ func (i *InputField) View(screen tcell.Screen) {
 
 // Update handles input events for this model.
 func (i *InputField) Update(msg Msg) Cmd {
-	switch msg.(type) {
-	case FocusMsg, BlurMsg:
-		i.Box.Update(msg)
-		return i.textArea.Update(msg)
-	}
 	if i.textArea.Disabled() {
 		return nil
 	}
@@ -224,11 +219,7 @@ func (i *InputField) Update(msg Msg) Cmd {
 			return nil
 		}
 
-		cmd := i.textArea.Update(msg)
-		if msg.Action == MouseLeftDown && cmd == nil {
-			cmd = SetFocus(i)
-		}
-		return cmd
+		return i.textArea.Update(msg)
 	case PasteMsg:
 		return i.textArea.Update(msg)
 	}

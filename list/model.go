@@ -951,7 +951,6 @@ func (l *Model) Update(msg tview.Msg) tview.Cmd {
 			row := y - innerY
 			switch msg.Action {
 			case tview.MouseLeftDown:
-				cmd = tview.SetFocus(l)
 				if l.startScrollBarDrag(row, innerHeight, contentWidth) {
 					return tview.Batch(cmd, tview.SetMouseCapture(l))
 				}
@@ -976,7 +975,7 @@ func (l *Model) Update(msg tview.Msg) tview.Cmd {
 			if index >= 0 {
 				l.SetCursor(index)
 			}
-			return tview.SetFocus(l)
+			return nil
 		case tview.MouseScrollUp:
 			if l.snapToItems {
 				l.scrollByItems(-1, 1)

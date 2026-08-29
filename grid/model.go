@@ -14,10 +14,8 @@ type item struct {
 	Row, Column                 int         // The top-left grid cell where the item is placed.
 	Width, Height               int         // The number of rows and columns the item occupies.
 	MinGridWidth, MinGridHeight int         // The minimum grid width/height for which this item is visible.
-	Focus                       bool        // Whether or not this item attracts the layout's focus.
-
-	visible    bool // Whether or not this item was visible the last time the grid was drawn.
-	x, y, w, h int  // The last position of the item relative to the top-left corner of the grid. Undefined if visible is false.
+	visible                     bool        // Whether or not this item was visible the last time the grid was drawn.
+	x, y, w, h                  int         // The last position of the item relative to the top-left corner of the grid. Undefined if visible is false.
 }
 
 // Model is an implementation of a grid-based layout. It works by defining the
@@ -32,7 +30,10 @@ type Model struct {
 	*tview.Box
 
 	// The items to be positioned.
-	items []*item
+	items []item
+
+	// The item which receives input. A negative value focuses the grid itself.
+	focused int
 
 	// The definition of the rows and columns of the grid. See
 	// [Model.SetRows] / [Model.SetColumns] for details.
@@ -69,6 +70,7 @@ type Model struct {
 func NewModel() *Model {
 	g := &Model{
 		bordersColor: tview.Styles.GraphicsColor,
+		focused:      -1,
 	}
 	g.Box = tview.NewBox()
 	g.SetDontClear(true)
@@ -202,7 +204,7 @@ func (m *Model) SetBordersColor(color tcell.Color) *Model {
 // receives focus. If there are multiple items with a true focus flag, the last
 // visible one that was added will receive focus.
 func (m *Model) AddItem(p tview.Model, row, column, rowSpan, colSpan, minGridHeight, minGridWidth int, focus bool) *Model {
-	m.items = append(m.items, &item{
+	m.items = append(m.items, item{
 		Item:          p,
 		Row:           row,
 		Column:        column,
@@ -210,9 +212,27 @@ func (m *Model) AddItem(p tview.Model, row, column, rowSpan, colSpan, minGridHei
 		Width:         colSpan,
 		MinGridHeight: minGridHeight,
 		MinGridWidth:  minGridWidth,
-		Focus:         focus,
 	})
+	if focus && p != nil {
+		m.changeFocus(len(m.items) - 1)
+	}
 	return m
+}
+
+// SetFocus selects the item which receives input. A negative or out-of-range
+// index selects the grid itself.
+func (m *Model) SetFocus(index int) *Model {
+	if index < 0 || index >= len(m.items) || m.items[index].Item == nil {
+		index = -1
+	}
+	m.changeFocus(index)
+	return m
+}
+
+// Focused returns the index of the item which receives input, or -1 when the
+// grid itself receives input.
+func (m *Model) Focused() int {
+	return m.focused
 }
 
 // RemoveItem removes all items for the given model from the grid, keeping
@@ -221,6 +241,12 @@ func (g *Model) RemoveItem(m tview.Model) *Model {
 	for index, current := range slices.Backward(g.items) {
 		if current.Item == m {
 			g.items = slices.Delete(g.items, index, index+1)
+			switch {
+			case index == g.focused:
+				g.focused = -1
+			case index < g.focused:
+				g.focused--
+			}
 		}
 	}
 	return g
@@ -229,6 +255,7 @@ func (g *Model) RemoveItem(m tview.Model) *Model {
 // Clear removes all items from the grid.
 func (m *Model) Clear() *Model {
 	m.items = nil
+	m.focused = -1
 	return m
 }
 
@@ -248,16 +275,6 @@ func (m *Model) SetOffset(rows, columns int) *Model {
 	return m
 }
 
-// HasFocus returns whether or not this model has focus.
-func (m *Model) HasFocus() bool {
-	for _, item := range m.items {
-		if item.visible && item.Item.HasFocus() {
-			return true
-		}
-	}
-	return m.Box.HasFocus()
-}
-
 // View draws this model onto the screen.
 func (m *Model) View(screen tcell.Screen) {
 	m.Box.View(screen)
@@ -268,7 +285,8 @@ func (m *Model) View(screen tcell.Screen) {
 	// Make a list of items which apply.
 	items := make([]*item, 0, len(m.items))
 ItemLoop:
-	for _, item := range m.items {
+	for index := range m.items {
+		item := &m.items[index]
 		item.visible = false
 		if item.Item == nil || item.Width <= 0 || item.Height <= 0 || width < item.MinGridWidth || height < item.MinGridHeight {
 			continue // Disqualified.
@@ -450,7 +468,7 @@ ItemLoop:
 		}
 		item.x, item.y, item.w, item.h = px, py, pw, ph
 		item.visible = true
-		if item.Item.HasFocus() {
+		if item.Item == m.focusedItem() {
 			focus = item
 		}
 	}
@@ -562,7 +580,10 @@ ItemLoop:
 
 		// Draw model.
 		if item == focus {
-			defer item.Item.View(screen)
+			defer func() {
+				screen.HideCursor()
+				item.Item.View(screen)
+			}()
 		} else {
 			item.Item.View(screen)
 		}
@@ -619,13 +640,6 @@ ItemLoop:
 // Update handles input events for this model.
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case tview.FocusMsg:
-		for _, item := range m.items {
-			if item.Item != nil && item.Focus {
-				return tview.SetFocus(item.Item)
-			}
-		}
-		return m.Box.Update(msg)
 	case tview.MouseMsg:
 		x, y := msg.Position()
 		if !m.InRect(x, y) {
@@ -633,24 +647,22 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 		}
 
 		// Pass mouse events along to the first child item that takes it.
-		for _, item := range m.items {
+		for index := range m.items {
+			item := &m.items[index]
 			if item.Item == nil || !item.visible {
 				continue
 			}
 			if tview.ModelInRect(item.Item, x, y) {
+				if msg.Action == tview.MouseLeftDown {
+					m.changeFocus(index)
+				}
 				return item.Item.Update(msg)
 			}
 		}
 	case tview.KeyMsg:
 		previousRowOffset, previousColumnOffset := m.rowOffset, m.columnOffset
-		if !m.Box.HasFocus() {
-			// Pass event on to child model.
-			for _, item := range m.items {
-				if item != nil && item.Item.HasFocus() {
-					return item.Item.Update(msg)
-				}
-			}
-			return nil
+		if child := m.focusedItem(); child != nil {
+			return child.Update(msg)
 		}
 
 		// Process our own key events if we have direct focus.
@@ -689,10 +701,19 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	}
 
 	// Forward events to the focused child.
-	for _, item := range m.items {
-		if item != nil && item.Item.HasFocus() {
-			return item.Item.Update(msg)
-		}
+	if child := m.focusedItem(); child != nil {
+		return child.Update(msg)
 	}
 	return m.Box.Update(msg)
+}
+
+func (m *Model) focusedItem() tview.Model {
+	if m.focused < 0 || m.focused >= len(m.items) {
+		return nil
+	}
+	return m.items[m.focused].Item
+}
+
+func (m *Model) changeFocus(index int) {
+	m.focused = index
 }

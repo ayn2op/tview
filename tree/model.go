@@ -580,12 +580,12 @@ func (t *Model) handleMouseMsg(msg tview.MouseMsg) tview.Cmd {
 			node := rows[index].node
 			if node.selectable {
 				t.selectRow(rows, index)
-				return tview.Sequence(tview.SetFocus(t), func() tview.Msg {
+				return func() tview.Msg {
 					return SelectedMsg{Node: node}
-				})
+				}
 			}
 		}
-		return tview.SetFocus(t)
+		return nil
 	case tview.MouseScrollUp:
 		t.scroll(t.flatten(), -1)
 	case tview.MouseScrollDown:

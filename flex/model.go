@@ -26,7 +26,6 @@ type item struct {
 	Item       tview.Model // The item to be positioned. May be nil for an empty item.
 	FixedSize  int         // The item's fixed size which may not be changed, 0 if it has no fixed size.
 	Proportion int         // The item's proportion.
-	Focus      bool        // Whether or not this item attracts the layout's focus.
 }
 
 // Model is a basic implementation of the Flexbox layout. The contained
@@ -37,7 +36,10 @@ type Model struct {
 	*tview.Box
 
 	// The items to be positioned.
-	items []*item
+	items []item
+
+	// The item which receives input. A negative value focuses the flex itself.
+	focused int
 
 	// Layout direction.
 	direction Direction
@@ -60,6 +62,7 @@ type Model struct {
 func NewModel() *Model {
 	m := &Model{
 		direction: DirectionColumn,
+		focused:   -1,
 	}
 	m.Box = tview.NewBox()
 	m.SetDontClear(true)
@@ -97,8 +100,27 @@ func (m *Model) SetFullScreen(fullScreen bool) *Model {
 // You can provide a nil value for the model. This will still consume screen
 // space but nothing will be drawn.
 func (m *Model) AddItem(p tview.Model, fixedSize, proportion int, focus bool) *Model {
-	m.items = append(m.items, &item{Item: p, FixedSize: fixedSize, Proportion: proportion, Focus: focus})
+	m.items = append(m.items, item{Item: p, FixedSize: fixedSize, Proportion: proportion})
+	if focus && m.focused < 0 && p != nil {
+		m.changeFocus(len(m.items) - 1)
+	}
 	return m
+}
+
+// SetFocus selects the item which receives input. A negative or out-of-range
+// index selects the flex itself.
+func (m *Model) SetFocus(index int) *Model {
+	if index < 0 || index >= len(m.items) || m.items[index].Item == nil {
+		index = -1
+	}
+	m.changeFocus(index)
+	return m
+}
+
+// Focused returns the index of the item which receives input, or -1 when the
+// flex itself receives input.
+func (m *Model) Focused() int {
+	return m.focused
 }
 
 // RemoveItem removes all items for the given model from the container,
@@ -107,6 +129,12 @@ func (m *Model) RemoveItem(item tview.Model) *Model {
 	for index, current := range slices.Backward(m.items) {
 		if current.Item == item {
 			m.items = slices.Delete(m.items, index, index+1)
+			switch {
+			case index == m.focused:
+				m.focused = -1
+			case index < m.focused:
+				m.focused--
+			}
 		}
 	}
 	return m
@@ -128,6 +156,7 @@ func (m *Model) GetItem(index int) tview.Model {
 // Clear removes all items from the container.
 func (m *Model) Clear() *Model {
 	m.items = nil
+	m.focused = -1
 	return m
 }
 
@@ -135,7 +164,8 @@ func (m *Model) Clear() *Model {
 // are multiple Model items with the same model, they will all receive the
 // same size. For details regarding the size parameters, see AddItem().
 func (m *Model) ResizeItem(p tview.Model, fixedSize, proportion int) *Model {
-	for _, item := range m.items {
+	for index := range m.items {
+		item := &m.items[index]
 		if item.Item == p && (item.FixedSize != fixedSize || item.Proportion != proportion) {
 			item.FixedSize = fixedSize
 			item.Proportion = proportion
@@ -167,7 +197,8 @@ func (m *Model) View(screen tcell.Screen) {
 	if m.direction == DirectionRow {
 		distSize = height
 	}
-	for _, item := range m.items {
+	for index := range m.items {
+		item := &m.items[index]
 		if item.FixedSize > 0 {
 			distSize -= item.FixedSize
 		} else {
@@ -181,7 +212,8 @@ func (m *Model) View(screen tcell.Screen) {
 	if m.direction == DirectionRow {
 		pos = y
 	}
-	for _, item := range m.items {
+	for index := range m.items {
+		item := &m.items[index]
 		size := item.FixedSize
 		if size <= 0 {
 			if proportionSum > 0 {
@@ -202,8 +234,11 @@ func (m *Model) View(screen tcell.Screen) {
 		pos += size
 
 		if item.Item != nil && size > 0 {
-			if item.Item.HasFocus() {
-				defer item.Item.View(screen)
+			if index == m.focused {
+				defer func() {
+					screen.HideCursor()
+					item.Item.View(screen)
+				}()
 			} else {
 				item.Item.View(screen)
 			}
@@ -211,26 +246,9 @@ func (m *Model) View(screen tcell.Screen) {
 	}
 }
 
-// HasFocus returns whether or not this model has focus.
-func (m *Model) HasFocus() bool {
-	for _, item := range m.items {
-		if item.Item != nil && item.Item.HasFocus() {
-			return true
-		}
-	}
-	return m.Box.HasFocus()
-}
-
 // Update handles input events for this model.
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {
-	case tview.FocusMsg:
-		for _, item := range m.items {
-			if item.Item != nil && item.Focus {
-				return tview.SetFocus(item.Item)
-			}
-		}
-		return m.Box.Update(msg)
 	case tview.MouseMsg:
 		x, y := msg.Position()
 		if !m.InRect(x, y) {
@@ -238,11 +256,15 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 		}
 
 		// Pass mouse events along to the first child item that takes it.
-		for _, item := range m.items {
+		for index := range m.items {
+			item := &m.items[index]
 			if item.Item == nil {
 				continue
 			}
 			if tview.ModelInRect(item.Item, x, y) {
+				if msg.Action == tview.MouseLeftDown {
+					m.changeFocus(index)
+				}
 				return item.Item.Update(msg)
 			}
 		}
@@ -250,10 +272,19 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	}
 
 	// Forward events to the focused child.
-	for _, item := range m.items {
-		if item.Item != nil && item.Item.HasFocus() {
-			return item.Item.Update(msg)
-		}
+	if child := m.focusedItem(); child != nil {
+		return child.Update(msg)
 	}
 	return m.Box.Update(msg)
+}
+
+func (m *Model) focusedItem() tview.Model {
+	if m.focused < 0 || m.focused >= len(m.items) {
+		return nil
+	}
+	return m.items[m.focused].Item
+}
+
+func (m *Model) changeFocus(index int) {
+	m.focused = index
 }

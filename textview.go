@@ -58,11 +58,6 @@ func (w TextViewWriter) Write(p []byte) (n int, err error) {
 	return w.t.write(p)
 }
 
-// HasFocus returns whether the underlying TextView has focus.
-func (w TextViewWriter) HasFocus() bool {
-	return w.t.hasFocus
-}
-
 // TextView is a component to display read-only text. The content is represented
 // as styled segments grouped by lines.
 type TextView struct {
@@ -840,7 +835,6 @@ func (t *TextView) Update(msg Msg) Cmd {
 		_, _, width, _ := t.InnerRect()
 		switch msg.Action {
 		case MouseLeftDown:
-			cmds = append(cmds, SetFocus(t))
 		case MouseLeftClick:
 		case MouseScrollUp:
 			if !t.scrollable {

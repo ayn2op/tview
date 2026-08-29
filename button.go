@@ -18,8 +18,6 @@ type Button struct {
 	text string
 	// The button's style (when deactivated).
 	style tcell.Style
-	// The button's style (when activated).
-	activatedStyle tcell.Style
 	// The button's style (when disabled).
 	disabledStyle tcell.Style
 }
@@ -29,11 +27,10 @@ func NewButton(label string) *Button {
 	box := NewBox()
 	box.SetRect(0, 0, uniseg.StringWidth(label)+4, 1)
 	return &Button{
-		Box:            box,
-		text:           label,
-		style:          tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.PrimaryTextColor),
-		activatedStyle: tcell.StyleDefault.Background(Styles.PrimaryTextColor).Foreground(Styles.InverseTextColor),
-		disabledStyle:  tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.ContrastSecondaryTextColor),
+		Box:           box,
+		text:          label,
+		style:         tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.PrimaryTextColor),
+		disabledStyle: tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.ContrastSecondaryTextColor),
 	}
 }
 
@@ -58,28 +55,6 @@ func (b *Button) SetLabelColor(color tcell.Color) *Button {
 // SetStyle sets the style of the button used when it is not focused.
 func (b *Button) SetStyle(style tcell.Style) *Button {
 	b.style = style
-	return b
-}
-
-// SetLabelColorActivated sets the color of the button text when the button is
-// in focus.
-func (b *Button) SetLabelColorActivated(color tcell.Color) *Button {
-	style := b.activatedStyle.Foreground(color)
-	b.activatedStyle = style
-	return b
-}
-
-// SetBackgroundColorActivated sets the background color of the button text when
-// the button is in focus.
-func (b *Button) SetBackgroundColorActivated(color tcell.Color) *Button {
-	style := b.activatedStyle.Background(color)
-	b.activatedStyle = style
-	return b
-}
-
-// SetActivatedStyle sets the style of the button used when it is focused.
-func (b *Button) SetActivatedStyle(style tcell.Style) *Button {
-	b.activatedStyle = style
 	return b
 }
 
@@ -110,9 +85,6 @@ func (b *Button) View(screen tcell.Screen) {
 	style := b.style
 	if b.disabled {
 		style = b.disabledStyle
-	}
-	if b.HasFocus() && !b.disabled {
-		style = b.activatedStyle
 	}
 	backgroundColor := style.GetBackground()
 	b.SetBackgroundColor(backgroundColor)
@@ -148,7 +120,7 @@ func (b *Button) Update(msg Msg) Cmd {
 
 		switch msg.Action {
 		case MouseLeftDown:
-			return SetFocus(b)
+			return nil
 		case MouseLeftClick:
 			label := b.Label()
 			return func() Msg { return ButtonSelectedMsg{Label: label} }

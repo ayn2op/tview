@@ -266,21 +266,12 @@ func (l *Layers) SetBackgroundLayerStyle(style tcell.Style) *Layers {
 	return l
 }
 
-// HasFocus returns whether or not this model has focus.
-func (l *Layers) HasFocus() bool {
-	for _, layer := range l.layers {
-		if layer.enabled && layer.item.HasFocus() {
-			return true
-		}
-	}
-	return l.Box.HasFocus()
-}
-
 // View draws this model onto the screen.
 func (l *Layers) View(screen tcell.Screen) {
 	l.Box.View(screen)
 
 	overlayIndex := l.topVisibleEnabledOverlayIndex()
+	active := l.topVisibleEnabledLayer()
 	var ovScreen *overlayScreen
 	if overlayIndex >= 0 {
 		ovScreen = newOverlayScreen(screen, l.backgroundLayerStyle)
@@ -299,20 +290,15 @@ func (l *Layers) View(screen tcell.Screen) {
 			x, y, width, height := l.InnerRect()
 			layer.item.SetRect(x, y, width, height)
 		}
+		if layer == active {
+			screen.HideCursor()
+		}
 		layer.item.View(layerScreen)
 	}
 }
 
 // Update handles input events for this model.
 func (l *Layers) Update(msg tview.Msg) tview.Cmd {
-	switch msg := msg.(type) {
-	case tview.FocusMsg:
-		if top := l.topVisibleEnabledLayer(); top != nil {
-			return tview.SetFocus(top.item)
-		}
-		return l.Box.Update(msg)
-	}
-
 	if mouseMsg, ok := msg.(tview.MouseMsg); ok {
 		if !l.InRect(mouseMsg.Position()) {
 			return nil

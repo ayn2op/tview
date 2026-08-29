@@ -188,6 +188,10 @@ func (c *Checkbox) SetDisabled(disabled bool) FormItem {
 
 // View draws this model onto the screen.
 func (c *Checkbox) View(screen tcell.Screen) {
+	c.view(screen, false)
+}
+
+func (c *Checkbox) view(screen tcell.Screen, focused bool) {
 	c.Box.View(screen)
 
 	// Prepare
@@ -220,7 +224,7 @@ func (c *Checkbox) View(screen tcell.Screen) {
 	if c.disabled {
 		style = style.Background(c.backgroundColor)
 	}
-	if c.HasFocus() {
+	if focused {
 		style = c.focusStyle
 	}
 	PrintStyled(screen, str, x, y, 0, width, AlignmentLeft, style, c.disabled)
@@ -252,7 +256,7 @@ func (c *Checkbox) Update(msg Msg) Cmd {
 		if y == rectY {
 			switch msg.Action {
 			case MouseLeftDown:
-				return SetFocus(c)
+				return nil
 			case MouseLeftClick:
 				c.checked = !c.checked
 				return nil

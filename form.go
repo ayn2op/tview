@@ -85,10 +85,8 @@ type Form struct {
 	// The style of the buttons when they are disabled.
 	buttonDisabledStyle tcell.Style
 
-	// The index of the item or button for which the user requested focus.
-	// Applied the next time the form itself receives focus. Negative if no
-	// specific item was requested.
-	requestedFocus int
+	// The index of the item or button which receives input.
+	focused int
 }
 
 type FormSubmitMsg struct {
@@ -110,7 +108,7 @@ func NewForm() *Form {
 		buttonStyle:          tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.PrimaryTextColor),
 		buttonActivatedStyle: tcell.StyleDefault.Reverse(true),
 		buttonDisabledStyle:  tcell.StyleDefault.Background(Styles.ContrastBackgroundColor).Foreground(Styles.ContrastSecondaryTextColor),
-		requestedFocus:       -1,
+		focused:              -1,
 	}
 
 	return f
@@ -171,12 +169,10 @@ func (f *Form) SetButtonDisabledStyle(style tcell.Style) *Form {
 }
 
 // SetFocus shifts the focus to the form element with the given index, counting
-// non-button items first and buttons last. This does not change the
-// application's focus immediately, but the next time the form itself receives
-// focus, the given element will be focused once. Set to a negative value to
-// focus the first (enabled) element.
+// non-button items first and buttons last. Set to a negative value to select
+// the first enabled element the next time the form is focused.
 func (f *Form) SetFocus(index int) *Form {
-	f.requestedFocus = index
+	f.changeFocus(index)
 	return f
 }
 
@@ -356,7 +352,7 @@ func (f *Form) GetFormItemIndex(label string) int {
 // GetFocusedItemIndex returns the indices of the form element or button which
 // currently has focus. If they don't, -1 is returned respectively.
 func (f *Form) GetFocusedItemIndex() (formItem, button int) {
-	index := f.focusIndex()
+	index := f.focused
 	if index < 0 {
 		return -1, -1
 	}
@@ -368,6 +364,7 @@ func (f *Form) GetFocusedItemIndex() (formItem, button int) {
 
 // View draws this model onto the screen.
 func (f *Form) View(screen tcell.Screen) {
+	f.focusTarget()
 	f.Box.View(screen)
 
 	// Determine the dimensions.
@@ -446,7 +443,7 @@ func (f *Form) View(screen tcell.Screen) {
 		positions[index].y = y
 		positions[index].width = itemWidth
 		positions[index].height = itemHeight
-		if item.HasFocus() {
+		if index == f.focused {
 			focusedPosition = positions[index]
 		}
 
@@ -502,17 +499,18 @@ func (f *Form) View(screen tcell.Screen) {
 		if buttonWidth > space {
 			buttonWidth = space
 		}
-		button.SetStyle(f.buttonStyle).
-			SetActivatedStyle(f.buttonActivatedStyle).
-			SetDisabledStyle(f.buttonDisabledStyle)
-
 		buttonIndex := index + len(f.items)
+		style := f.buttonStyle
+		if buttonIndex == f.focused {
+			style = f.buttonActivatedStyle
+		}
+		button.SetStyle(style).SetDisabledStyle(f.buttonDisabledStyle)
 		positions[buttonIndex].x = x
 		positions[buttonIndex].y = y
 		positions[buttonIndex].width = buttonWidth
 		positions[buttonIndex].height = 1
 
-		if button.HasFocus() {
+		if buttonIndex == f.focused {
 			focusedPosition = positions[buttonIndex]
 		}
 
@@ -541,10 +539,10 @@ func (f *Form) View(screen tcell.Screen) {
 		}
 
 		// Draw items with focus last (in case of overlaps).
-		if item.HasFocus() {
-			defer item.View(screen)
+		if index == f.focused {
+			defer viewFormItem(screen, item, true)
 		} else {
-			item.View(screen)
+			viewFormItem(screen, item, false)
 		}
 	}
 
@@ -562,27 +560,37 @@ func (f *Form) View(screen tcell.Screen) {
 		}
 
 		// Draw button.
+		if buttonIndex == f.focused {
+			screen.HideCursor()
+		}
 		button.View(screen)
 	}
 }
 
-func (f *Form) focusTarget() Model {
-	focus := f.focusIndex()
-	if f.requestedFocus >= 0 {
-		focus = f.requestedFocus
+func viewFormItem(screen tcell.Screen, item FormItem, focused bool) {
+	if focused {
+		screen.HideCursor()
 	}
+	if checkbox, ok := item.(*Checkbox); ok {
+		checkbox.view(screen, focused)
+		return
+	}
+	item.View(screen)
+}
 
+func (f *Form) focusTarget() Model {
 	for index := range len(f.items) + len(f.buttons) {
-		if focus >= 0 && focus != index {
+		if f.focused >= 0 && f.focused != index {
 			continue
 		}
 		model := f.focusable(index)
 		if model == nil {
 			continue
 		}
-		f.requestedFocus = index
+		f.focused = index
 		return model
 	}
+	f.focused = -1
 	return nil
 }
 
@@ -592,18 +600,21 @@ func (f *Form) moveFocus(key tcell.Key) Cmd {
 		step = -1
 	}
 	total := len(f.items) + len(f.buttons)
-	focus := f.focusIndex()
+	focus := f.focused
 	for range total {
 		focus = (focus + step + total) % total
 		if model := f.focusable(focus); model != nil {
-			f.requestedFocus = focus
-			return SetFocus(model)
+			f.changeFocus(focus)
+			return nil
 		}
 	}
 	return nil
 }
 
 func (f *Form) focusable(index int) Model {
+	if index < 0 || index >= len(f.items)+len(f.buttons) {
+		return nil
+	}
 	if index < len(f.items) {
 		if !f.items[index].Disabled() {
 			return f.items[index]
@@ -622,46 +633,20 @@ func (f *Form) submit(index int) Cmd {
 	return func() Msg { return FormSubmitMsg{index, label} }
 }
 
-// focusIndex returns the index of the currently focused item, counting form
-// items first, then buttons. A negative value indicates that no containeed item
-// has focus.
-func (f *Form) focusIndex() int {
-	for index, item := range f.items {
-		if item.HasFocus() {
-			return index
-		}
-	}
-	for index, button := range f.buttons {
-		if button.HasFocus() {
-			return len(f.items) + index
-		}
-	}
-	return -1
-}
-
-// HasFocus returns whether or not this model has focus.
-func (f *Form) HasFocus() bool {
-	if f.focusIndex() >= 0 {
-		return true
-	}
-	return f.Box.HasFocus()
-}
-
 // Update handles input events for this model.
 func (f *Form) Update(msg Msg) Cmd {
+	f.focusTarget()
 	switch msg := msg.(type) {
-	case FocusMsg:
-		if target := f.focusTarget(); target != nil {
-			return SetFocus(target)
-		}
-		return f.Box.Update(msg)
 	case MouseMsg:
 		x, y := msg.Position()
-		for _, item := range f.items {
+		for index, item := range f.items {
 			if item.Disabled() {
 				continue
 			}
 			if ModelInRect(item, x, y) {
+				if msg.Action == MouseLeftDown {
+					f.changeFocus(index)
+				}
 				return item.Update(msg)
 			}
 		}
@@ -674,7 +659,8 @@ func (f *Form) Update(msg Msg) Cmd {
 			}
 			switch msg.Action {
 			case MouseLeftDown:
-				return SetFocus(button)
+				f.changeFocus(len(f.items) + index)
+				return button.Update(msg)
 			case MouseLeftClick:
 				return f.submit(index)
 			default:
@@ -683,7 +669,8 @@ func (f *Form) Update(msg Msg) Cmd {
 		}
 
 		if msg.Action == MouseLeftDown && f.InRect(x, y) {
-			return SetFocus(f)
+			f.changeFocus(-1)
+			return nil
 		}
 	case KeyMsg, PasteMsg:
 		if key, ok := msg.(KeyMsg); ok {
@@ -694,26 +681,24 @@ func (f *Form) Update(msg Msg) Cmd {
 				return func() Msg { return FormCancelMsg{} }
 			}
 		}
-		for _, item := range f.items {
-			if item.HasFocus() {
-				if key, ok := msg.(KeyMsg); ok && key.Key() == tcell.KeyEnter {
-					if _, ok := item.(*InputField); ok {
-						return f.moveFocus(key.Key())
-					}
+		if target := f.focusable(f.focused); target != nil {
+			if key, ok := msg.(KeyMsg); ok && key.Key() == tcell.KeyEnter {
+				if _, ok := target.(*InputField); ok {
+					return f.moveFocus(key.Key())
 				}
-				return item.Update(msg)
 			}
-		}
-
-		for index, button := range f.buttons {
-			if !button.HasFocus() {
-				continue
+			if f.focused >= len(f.items) {
+				index := f.focused - len(f.items)
+				if keyMsg, ok := msg.(KeyMsg); ok && keyMsg.Key() == tcell.KeyEnter {
+					return f.submit(index)
+				}
 			}
-			if keyMsg, ok := msg.(KeyMsg); ok && keyMsg.Key() == tcell.KeyEnter {
-				return f.submit(index)
-			}
-			return button.Update(msg)
+			return target.Update(msg)
 		}
 	}
 	return f.Box.Update(msg)
+}
+
+func (f *Form) changeFocus(index int) {
+	f.focused = index
 }

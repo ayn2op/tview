@@ -1159,21 +1159,23 @@ func (t *TextArea) View(screen tcell.Screen) {
 		}
 	}
 
-	// Show/hide the cursor at the end.
+	// Show the cursor at the end.
 	defer func() {
-		if t.HasFocus() {
-			row, column := t.cursor.row, t.cursor.actualColumn
-			if t.length > 0 && t.wrap && column >= t.lastWidth { // This happens when a row has text all the way until the end, pushing the cursor outside the viewport.
-				row++
-				column = 0
-			}
-			if row >= 0 &&
-				row-t.rowOffset >= 0 && row-t.rowOffset < height &&
-				column-columnOffset >= 0 && column-columnOffset < width {
-				screen.ShowCursor(x+column-columnOffset, y+row-t.rowOffset)
-			} else {
-				screen.HideCursor()
-			}
+		if t.disabled {
+			screen.HideCursor()
+			return
+		}
+		row, column := t.cursor.row, t.cursor.actualColumn
+		if t.length > 0 && t.wrap && column >= t.lastWidth { // This happens when a row has text all the way until the end, pushing the cursor outside the viewport.
+			row++
+			column = 0
+		}
+		if row >= 0 &&
+			row-t.rowOffset >= 0 && row-t.rowOffset < height &&
+			column-columnOffset >= 0 && column-columnOffset < width {
+			screen.ShowCursor(x+column-columnOffset, y+row-t.rowOffset)
+		} else {
+			screen.HideCursor()
 		}
 	}()
 
@@ -2268,7 +2270,7 @@ func (t *TextArea) handleMouseMsg(msg MouseMsg) Cmd {
 		if msg.Modifiers()&tcell.ModShift == 0 {
 			t.selectionStart = t.cursor
 		}
-		cmds = append(cmds, SetFocus(t), SetMouseCapture(t))
+		cmds = append(cmds, SetMouseCapture(t))
 		t.dragging = true
 	case MouseMove:
 		if !t.dragging {

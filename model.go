@@ -14,8 +14,4 @@ type Model interface {
 	Rect() (int, int, int, int)
 	// SetRect sets a new position of the model.
 	SetRect(x, y, width, height int)
-
-	// HasFocus determines if the model has focus. This function must return
-	// true also if one of this model's child elements has focus.
-	HasFocus() bool
 }

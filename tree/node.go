@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -16,7 +17,7 @@ type Node struct {
 	children []*Node
 
 	// The item's text.
-	line tview.Line
+	line text.Line
 
 	// The style of selected text.
 	selectedTextStyle tcell.Style
@@ -35,10 +36,10 @@ type Node struct {
 }
 
 // NewNode returns a new tree node.
-func NewNode(text string) *Node {
+func NewNode(value string) *Node {
 	textStyle := tcell.StyleDefault.Foreground(tview.Styles.PrimaryTextColor).Background(tview.Styles.PrimitiveBackgroundColor)
 	return &Node{
-		line:              tview.NewLine(tview.NewSegment(text, textStyle)),
+		line:              text.NewLine(text.NewSegment(value, textStyle)),
 		selectedTextStyle: tcell.StyleDefault.Reverse(true),
 		indent:            2,
 		expanded:          true,
@@ -95,12 +96,12 @@ func (n *Node) SetChildren(childNodes []*Node) *Node {
 }
 
 // Line returns the node's styled text line.
-func (n *Node) Line() tview.Line {
+func (n *Node) Line() text.Line {
 	return n.line.Clone()
 }
 
 // SetLine sets the node's styled text line.
-func (n *Node) SetLine(line tview.Line) *Node {
+func (n *Node) SetLine(line text.Line) *Node {
 	n.line = line.Clone()
 
 	return n

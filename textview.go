@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
@@ -21,7 +22,7 @@ type textViewCell struct {
 }
 
 type textViewLogicalLine struct {
-	segments Line
+	segments text.Line
 	cells    []textViewCell
 	width    int
 }
@@ -280,26 +281,26 @@ func (t *TextView) SetText(text string) *TextView {
 	return t
 }
 
-// Lines returns a copy of the styled content.
-func (t *TextView) Lines() []Line {
+// Content returns a copy of the styled content.
+func (t *TextView) Content() text.Text {
 	t.Lock()
 	defer t.Unlock()
 
-	out := make([]Line, 0, len(t.lines))
+	out := make(text.Text, 0, len(t.lines))
 	for _, line := range t.lines {
 		out = append(out, line.segments.Clone())
 	}
 	return out
 }
 
-// SetLines replaces the content with styled lines.
-func (t *TextView) SetLines(lines []Line) *TextView {
+// SetContent replaces the styled content.
+func (t *TextView) SetContent(content text.Text) *TextView {
 	t.Lock()
 	defer t.Unlock()
 
-	t.lines = make([]textViewLogicalLine, 0, len(lines))
-	for _, line := range lines {
-		copied := make(Line, 0, len(line))
+	t.lines = make([]textViewLogicalLine, 0, len(content))
+	for _, line := range content {
+		copied := make(text.Line, 0, len(line))
 		for _, seg := range line {
 			if seg.Text == "" {
 				continue
@@ -313,18 +314,16 @@ func (t *TextView) SetLines(lines []Line) *TextView {
 	return t
 }
 
-// AppendSegments appends styled segments to the last line.
-func (t *TextView) AppendSegments(segments ...Segment) *TextView {
+// AppendSegment appends a styled segment.
+func (t *TextView) AppendSegment(segment text.Segment) *TextView {
 	t.Lock()
 	defer t.Unlock()
-	for _, seg := range segments {
-		t.appendText(seg.Text, seg.Style)
-	}
+	t.appendText(segment.Text, segment.Style)
 	return t
 }
 
 // AppendLine appends a new line made of segments.
-func (t *TextView) AppendLine(line Line) *TextView {
+func (t *TextView) AppendLine(line text.Line) *TextView {
 	t.Lock()
 	defer t.Unlock()
 	if len(t.lines) == 0 {
@@ -461,40 +460,40 @@ func (t *TextView) BatchWriter() TextViewWriter {
 	return TextViewWriter{t: t}
 }
 
-func (t *TextView) appendText(text string, style tcell.Style) {
+func (t *TextView) appendText(value string, style tcell.Style) {
 	if len(t.lines) == 0 {
 		t.lines = append(t.lines, textViewLogicalLine{})
 	}
 
 	lineIndex := len(t.lines) - 1
-	for len(text) > 0 {
+	for len(value) > 0 {
 		nl := -1
-		for i := range len(text) {
-			if text[i] == '\n' {
+		for i := range len(value) {
+			if value[i] == '\n' {
 				nl = i
 				break
 			}
 		}
 
 		if nl < 0 {
-			t.appendSegment(lineIndex, Segment{Text: text, Style: style})
+			t.appendSegment(lineIndex, text.Segment{Text: value, Style: style})
 			break
 		}
 
 		if nl > 0 {
-			t.appendSegment(lineIndex, Segment{Text: text[:nl], Style: style})
+			t.appendSegment(lineIndex, text.Segment{Text: value[:nl], Style: style})
 		}
 
 		t.lines = append(t.lines, textViewLogicalLine{})
 		lineIndex = len(t.lines) - 1
-		text = text[nl+1:]
+		value = value[nl+1:]
 	}
 
 	t.rebuildCells()
 	t.resetLayout()
 }
 
-func (t *TextView) appendSegment(lineIndex int, seg Segment) {
+func (t *TextView) appendSegment(lineIndex int, seg text.Segment) {
 	if seg.Text == "" {
 		return
 	}

@@ -3,29 +3,16 @@ package tview
 import (
 	"testing"
 
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
 )
 
-func TestLineClone(t *testing.T) {
-	var nilLine Line
-	if nilLine.Clone() != nil {
-		t.Fatal("nil line cloned as non-nil")
-	}
-
-	line := Line{{Text: "original"}}
-	clone := line.Clone()
-	clone[0].Text = "clone"
-	if line[0].Text != "original" {
-		t.Fatal("clone shares backing storage")
-	}
-}
-
-func TestTextViewLinesReturnsCopy(t *testing.T) {
-	view := NewTextView().SetLines([]Line{{{Text: "original"}}})
-	lines := view.Lines()
+func TestTextViewContentReturnsCopy(t *testing.T) {
+	view := NewTextView().SetContent(text.Text{{{Text: "original"}}})
+	lines := view.Content()
 	lines[0][0].Text = "copy"
-	if view.Lines()[0][0].Text != "original" {
+	if view.Content()[0][0].Text != "original" {
 		t.Fatal("lines share backing storage")
 	}
 }

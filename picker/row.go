@@ -2,6 +2,7 @@ package picker
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -9,11 +10,11 @@ import (
 // Picker entries are single-line, non-wrapping and left-aligned, so wrapping each one in a full TextView only pays for scroll/wrap/form machinery it never uses.
 // row holds just the segments and a rect and draws via tview's shared print helper.
 type row struct {
-	line       tview.Line
+	line       text.Line
 	x, y, w, h int
 }
 
-func newRow(line tview.Line) *row {
+func newRow(line text.Line) *row {
 	return &row{line: line}
 }
 

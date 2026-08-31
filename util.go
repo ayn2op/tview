@@ -1,6 +1,7 @@
 package tview
 
 import (
+	"github.com/ayn2op/tview/internal/grapheme"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -51,16 +52,16 @@ func PrintStyled(screen tcell.Screen, text string, x, y, skipWidth, maxWidth int
 
 	// Skip beginning and measure width.
 	var textWidth int
-	state := stepState{unisegState: -1}
+	state := grapheme.NewState()
 	newState := state
 	str := text
 	for len(str) > 0 {
-		_, str, state = step(str, state)
+		_, str, state = grapheme.Step(str, state)
 		if skipWidth > 0 {
 			skipWidth -= state.Width()
 			text = str
 			newState = state
-			start += state.GrossLength()
+			start += state.Length()
 		} else {
 			textWidth += state.Width()
 		}
@@ -72,19 +73,19 @@ func PrintStyled(screen tcell.Screen, text string, x, y, skipWidth, maxWidth int
 	case AlignmentRight:
 		// Chop off characters on the left until it fits.
 		for len(text) > 0 && textWidth > maxWidth {
-			_, text, state = step(text, state)
+			_, text, state = grapheme.Step(text, state)
 			textWidth -= state.Width()
-			start += state.GrossLength()
+			start += state.Length()
 		}
 		x, maxWidth = x+maxWidth-textWidth, textWidth
 	case AlignmentCenter:
 		// Chop off characters on the left until it fits.
 		subtracted := (textWidth - maxWidth) / 2
 		for len(text) > 0 && subtracted > 0 {
-			_, text, state = step(text, state)
+			_, text, state = grapheme.Step(text, state)
 			subtracted -= state.Width()
 			textWidth -= state.Width()
-			start += state.GrossLength()
+			start += state.Length()
 		}
 		if textWidth < maxWidth {
 			x, maxWidth = x+maxWidth/2-textWidth/2, textWidth
@@ -96,7 +97,7 @@ func PrintStyled(screen tcell.Screen, text string, x, y, skipWidth, maxWidth int
 	rightBorder := x + maxWidth
 	for len(text) > 0 && x < rightBorder && x < totalWidth {
 		var c string
-		c, text, state = step(text, state)
+		c, text, state = grapheme.Step(text, state)
 		if c == "" {
 			break
 		}
@@ -123,7 +124,7 @@ func PrintStyled(screen tcell.Screen, text string, x, y, skipWidth, maxWidth int
 		}
 
 		x += width
-		end += state.GrossLength()
+		end += state.Length()
 		printedWidth += width
 	}
 

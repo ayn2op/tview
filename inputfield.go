@@ -1,6 +1,7 @@
 package tview
 
 import (
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
@@ -77,7 +78,7 @@ func (i *InputField) SetLabelWidth(width int) *InputField {
 
 // SetPlaceholder sets the styled text to be displayed when the input text is
 // empty.
-func (i *InputField) SetPlaceholder(line Line) *InputField {
+func (i *InputField) SetPlaceholder(line text.Line) *InputField {
 	i.textArea.SetPlaceholder(line)
 	return i
 }

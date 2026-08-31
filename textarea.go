@@ -6,6 +6,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
@@ -200,7 +201,7 @@ type TextArea struct {
 	width, height int
 
 	// The text to be shown in the text area when it is empty.
-	placeholder Line
+	placeholder text.Line
 
 	// The label text shown, usually when part of a form.
 	label string
@@ -771,7 +772,7 @@ func (t *TextArea) SetWordWrap(wrapOnWords bool) *TextArea {
 
 // SetPlaceholder sets the styled line to be displayed when the text area is
 // empty.
-func (t *TextArea) SetPlaceholder(placeholder Line) *TextArea {
+func (t *TextArea) SetPlaceholder(placeholder text.Line) *TextArea {
 	t.placeholder = placeholder.Clone()
 	return t
 }
@@ -1268,7 +1269,7 @@ func (t *TextArea) View(screen tcell.Screen) {
 func (t *TextArea) drawPlaceholder(screen tcell.Screen, x, y, width, height int) {
 	// We use a TextView to draw the placeholder. It will take care of word
 	// wrapping etc.
-	textView := NewTextView().SetLines([]Line{t.placeholder})
+	textView := NewTextView().SetContent(text.Text{t.placeholder})
 	textView.SetRect(x, y, width, height)
 	textView.View(screen)
 }

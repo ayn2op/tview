@@ -5,6 +5,7 @@ import (
 	"github.com/ayn2op/tview/flex"
 	"github.com/ayn2op/tview/keybind"
 	"github.com/ayn2op/tview/list"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 	"github.com/sahilm/fuzzy"
 )
@@ -59,7 +60,7 @@ func (m *Model) setFilteredItems(filtered Items) {
 
 	items := make([]list.Item, len(filtered))
 	for i, item := range filtered {
-		items[i] = newRow(tview.Line{{Text: item.Text, Style: tcell.StyleDefault}})
+		items[i] = newRow(text.Line{{Text: item.Text, Style: tcell.StyleDefault}})
 	}
 
 	m.list.SetBuilder(func(index int) list.Item {

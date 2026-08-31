@@ -3,6 +3,7 @@ package modal
 import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/frame"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
@@ -97,7 +98,7 @@ func (m *Model) View(screen tcell.Screen) {
 	}
 	contentWidth = min(max(contentWidth, buttonsWidth), maxContentWidth)
 
-	lines := tview.WordWrap(m.text, contentWidth)
+	lines := text.WordWrap(m.text, contentWidth)
 	lines = lines[:min(len(lines), max(availableHeight-6, 0))]
 	m.frame.Clear()
 	for _, line := range lines {

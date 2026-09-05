@@ -332,10 +332,6 @@ func (s *ScrollBar) glyphForVertical(start, fillLen int) (string, tcell.Style) {
 	return s.glyphSet.ThumbVerticalLower[ix], s.thumbStyle
 }
 
-func (s *ScrollBar) put(screen tcell.Screen, x, y, index int, glyph string, style tcell.Style) {
-	screen.Put(x, y+index, glyph, style)
-}
-
 // View draws the scrollBar.
 func (s *ScrollBar) View(screen tcell.Screen) {
 	s.Box.View(screen)
@@ -352,19 +348,19 @@ func (s *ScrollBar) View(screen tcell.Screen) {
 
 	idx := 0
 	if s.arrows.hasStart() {
-		s.put(screen, x, y, idx, s.glyphSet.ArrowVerticalStart, s.arrowStyle)
+		screen.Put(x, y+idx, s.glyphSet.ArrowVerticalStart, s.arrowStyle)
 		idx++
 	}
 
 	for cell := range m.trackCells {
 		start, fillLen := cellFill(m, cell)
 		glyph, style := s.glyphForVertical(start, fillLen)
-		s.put(screen, x, y, idx, glyph, style)
+		screen.Put(x, y+idx, glyph, style)
 		idx++
 	}
 
 	if s.arrows.hasEnd() {
-		s.put(screen, x, y, idx, s.glyphSet.ArrowVerticalEnd, s.arrowStyle)
+		screen.Put(x, y+idx, s.glyphSet.ArrowVerticalEnd, s.arrowStyle)
 	}
 }
 

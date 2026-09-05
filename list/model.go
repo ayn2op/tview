@@ -588,7 +588,7 @@ func (l *Model) View(screen tcell.Screen) {
 			child.item.View(clipped)
 			continue
 		}
-		styled := newStyledScreen(clipped, l.selectedStyle)
+		styled := &styledScreen{Screen: clipped, style: l.selectedStyle}
 		for row := range child.height {
 			for col := range contentWidth {
 				styled.Put(x+col, y+child.row+row, " ", tcell.StyleDefault)
@@ -1282,10 +1282,6 @@ func (s *clippedScreen) ShowCursor(x int, y int) {
 type styledScreen struct {
 	tcell.Screen
 	style tcell.Style
-}
-
-func newStyledScreen(screen tcell.Screen, style tcell.Style) *styledScreen {
-	return &styledScreen{Screen: screen, style: style}
 }
 
 func (s *styledScreen) SetContent(x int, y int, primary rune, combining []rune, style tcell.Style) {

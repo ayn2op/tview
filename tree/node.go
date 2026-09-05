@@ -123,12 +123,8 @@ func (n *Node) AddChild(node *Node) *Node {
 // RemoveChild removes a child node from this node. If the child node cannot be
 // found, nothing happens.
 func (n *Node) RemoveChild(node *Node) *Node {
-	for index, child := range n.children {
-		if child == node {
-			n.children = slices.Delete(n.children, index, index+1)
-
-			break
-		}
+	if index := slices.Index(n.children, node); index >= 0 {
+		n.children = slices.Delete(n.children, index, index+1)
 	}
 	return n
 }

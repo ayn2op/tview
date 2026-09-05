@@ -265,12 +265,9 @@ func (f *Form) GetButtonCount() int {
 // with 0 for the button that was added first. If no such label was found, -1
 // is returned.
 func (f *Form) GetButtonIndex(label string) int {
-	for index, button := range f.buttons {
-		if button.Label() == label {
-			return index
-		}
-	}
-	return -1
+	return slices.IndexFunc(f.buttons, func(button *Button) bool {
+		return button.Label() == label
+	})
 }
 
 // Clear removes all input elements from the form, including the buttons if
@@ -341,12 +338,9 @@ func (f *Form) GetFormItemByLabel(label string) FormItem {
 // label. If no such element is found, -1 is returned. Buttons are not searched
 // and will therefore not be returned.
 func (f *Form) GetFormItemIndex(label string) int {
-	for index, item := range f.items {
-		if item.Label() == label {
-			return index
-		}
-	}
-	return -1
+	return slices.IndexFunc(f.items, func(item FormItem) bool {
+		return item.Label() == label
+	})
 }
 
 // GetFocusedItemIndex returns the indices of the form element or button which

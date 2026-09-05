@@ -1,11 +1,11 @@
 package help
 
 import (
-	"slices"
 	"strings"
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/keybind"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
@@ -100,11 +100,11 @@ func (m *Model) View(screen tcell.Screen) {
 
 	x, y, width, height := m.InnerRect()
 
-	var lines [][]segment
+	var lines []text.Line
 	if m.showAll {
 		lines = m.fullHelpSegments(m.keyMap.FullHelp(), width)
 	} else {
-		lines = [][]segment{m.shortHelpSegments(m.keyMap.ShortHelp(), width)}
+		lines = []text.Line{m.shortHelpSegments(m.keyMap.ShortHelp(), width)}
 	}
 
 	for row := 0; row < len(lines) && row < height; row++ {
@@ -119,20 +119,15 @@ func (m *Model) FullHelpLines(groups [][]keybind.Keybind, maxWidth int) []string
 	for _, line := range styled {
 		var b strings.Builder
 		for _, s := range line {
-			b.WriteString(s.text)
+			b.WriteString(s.Text)
 		}
 		lines = append(lines, b.String())
 	}
 	return lines
 }
 
-type segment struct {
-	text  string
-	style tcell.Style
-}
-
-func (m *Model) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) []segment {
-	items := make([][]segment, 0, len(bindings))
+func (m *Model) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) text.Line {
+	items := make([]text.Line, 0, len(bindings))
 	for _, kb := range bindings {
 		hp := kb.Help()
 		item := shortItemSegments(m.formatKey(hp.Key), hp.Desc, m.styles.ShortKey, m.styles.ShortDesc)
@@ -149,13 +144,13 @@ func (m *Model) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) []se
 	if sepText == "" {
 		sepText = " "
 	}
-	sep := segment{text: sepText, style: m.styles.ShortSeparator}
+	sep := text.Segment{Text: sepText, Style: m.styles.ShortSeparator}
 
-	out := cloneSegments(items[0])
+	out := items[0].Clone()
 	for i := 1; i < len(items); i++ {
-		candidate := append(cloneSegments(out), sep)
+		candidate := append(out.Clone(), sep)
 		candidate = append(candidate, items[i]...)
-		if maxWidth > 0 && segmentsWidth(candidate) > maxWidth {
+		if maxWidth > 0 && candidate.Width() > maxWidth {
 			tail := m.truncationTail(out, maxWidth)
 			if len(tail) > 0 {
 				out = append(out, tail...)
@@ -165,13 +160,13 @@ func (m *Model) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) []se
 		out = candidate
 	}
 
-	if maxWidth > 0 && segmentsWidth(out) > maxWidth {
+	if maxWidth > 0 && out.Width() > maxWidth {
 		return nil
 	}
 	return out
 }
 
-func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]segment {
+func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) []text.Line {
 	type entry struct {
 		key  string
 		desc string
@@ -235,7 +230,7 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 	}
 
 	if included == 0 {
-		return [][]segment{{{text: m.ellipsis, style: m.styles.Ellipsis}}}
+		return []text.Line{{{Text: m.ellipsis, Style: m.styles.Ellipsis}}}
 	}
 	truncated := included < len(columns)
 
@@ -244,19 +239,19 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 		maxRows = max(maxRows, len(columns[i].entries))
 	}
 
-	lines := make([][]segment, 0, maxRows)
+	lines := make([]text.Line, 0, maxRows)
 	for row := range maxRows {
-		line := make([]segment, 0, included*4)
+		line := make(text.Line, 0, included*4)
 		for col := range included {
 			if col > 0 {
-				line = append(line, segment{text: sepText, style: m.styles.FullSeparator})
+				line = append(line, text.Segment{Text: sepText, Style: m.styles.FullSeparator})
 			}
 
 			c := columns[col]
-			cell := make([]segment, 0, 4)
+			cell := make(text.Line, 0, 4)
 			if row >= len(c.entries) {
 				// Empty rows still occupy full column width so the following separators do not drift.
-				cell = append(cell, segment{text: strings.Repeat(" ", c.colW), style: m.styles.FullDesc})
+				cell = append(cell, text.Segment{Text: strings.Repeat(" ", c.colW), Style: m.styles.FullDesc})
 				line = append(line, cell...)
 				continue
 			}
@@ -264,23 +259,23 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 			e := c.entries[row]
 			keyPad := c.keyW - uniseg.StringWidth(e.key)
 			if e.key != "" {
-				cell = append(cell, segment{text: e.key, style: m.styles.FullKey})
+				cell = append(cell, text.Segment{Text: e.key, Style: m.styles.FullKey})
 			}
 			if keyPad > 0 {
-				cell = append(cell, segment{text: strings.Repeat(" ", keyPad), style: m.styles.FullKey})
+				cell = append(cell, text.Segment{Text: strings.Repeat(" ", keyPad), Style: m.styles.FullKey})
 			}
 			if e.key != "" && e.desc != "" {
-				cell = append(cell, segment{text: " ", style: m.styles.FullDesc})
+				cell = append(cell, text.Segment{Text: " ", Style: m.styles.FullDesc})
 			}
 			if e.desc != "" {
-				cell = append(cell, segment{text: e.desc, style: m.styles.FullDesc})
+				cell = append(cell, text.Segment{Text: e.desc, Style: m.styles.FullDesc})
 			}
 
 			// Every non-last column is padded to fixed width so row-specific content lengths do not shift separators.
 			if col < included-1 {
-				cellWidth := segmentsWidth(cell)
+				cellWidth := cell.Width()
 				if pad := c.colW - cellWidth; pad > 0 {
-					cell = append(cell, segment{text: strings.Repeat(" ", pad), style: m.styles.FullDesc})
+					cell = append(cell, text.Segment{Text: strings.Repeat(" ", pad), Style: m.styles.FullDesc})
 				}
 			}
 
@@ -299,22 +294,22 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 	return lines
 }
 
-func (m *Model) truncationTail(current []segment, maxWidth int) []segment {
+func (m *Model) truncationTail(current text.Line, maxWidth int) text.Line {
 	if maxWidth <= 0 || m.ellipsis == "" {
 		return nil
 	}
 	// We only add an ellipsis when it fully fits because clipping looks broken in narrow widths.
-	tail := []segment{
-		{text: " ", style: m.styles.Ellipsis},
-		{text: m.ellipsis, style: m.styles.Ellipsis},
+	tail := text.Line{
+		{Text: " ", Style: m.styles.Ellipsis},
+		{Text: m.ellipsis, Style: m.styles.Ellipsis},
 	}
-	if segmentsWidth(current)+segmentsWidth(tail) <= maxWidth {
+	if current.Width()+tail.Width() <= maxWidth {
 		return tail
 	}
 	return nil
 }
 
-func (m *Model) drawSegments(screen tcell.Screen, x, y, width int, segments []segment) {
+func (m *Model) drawSegments(screen tcell.Screen, x, y, width int, segments text.Line) {
 	if width <= 0 || len(segments) == 0 {
 		return
 	}
@@ -322,25 +317,25 @@ func (m *Model) drawSegments(screen tcell.Screen, x, y, width int, segments []se
 	cursor := x
 	remaining := width
 	for _, s := range segments {
-		if s.text == "" || remaining <= 0 {
+		if s.Text == "" || remaining <= 0 {
 			continue
 		}
-		_, printedWidth := tview.PrintWithStyle(screen, s.text, cursor, y, remaining, tview.AlignmentLeft, s.style)
+		_, printedWidth := tview.PrintWithStyle(screen, s.Text, cursor, y, remaining, tview.AlignmentLeft, s.Style)
 		cursor += printedWidth
 		remaining -= printedWidth
 	}
 }
 
-func shortItemSegments(key, desc string, keyStyle, descStyle tcell.Style) []segment {
+func shortItemSegments(key, desc string, keyStyle, descStyle tcell.Style) text.Line {
 	switch {
 	case key == "" && desc == "":
 		return nil
 	case key == "":
-		return []segment{{text: desc, style: descStyle}}
+		return text.Line{{Text: desc, Style: descStyle}}
 	case desc == "":
-		return []segment{{text: key, style: keyStyle}}
+		return text.Line{{Text: key, Style: keyStyle}}
 	default:
-		return []segment{{text: key, style: keyStyle}, {text: " ", style: descStyle}, {text: desc, style: descStyle}}
+		return text.Line{{Text: key, Style: keyStyle}, {Text: " ", Style: descStyle}, {Text: desc, Style: descStyle}}
 	}
 }
 
@@ -349,16 +344,4 @@ func (m *Model) formatKey(key string) string {
 		return key
 	}
 	return compactModifierReplacer.Replace(key)
-}
-
-func segmentsWidth(segments []segment) int {
-	width := 0
-	for _, segment := range segments {
-		width += uniseg.StringWidth(segment.text)
-	}
-	return width
-}
-
-func cloneSegments(in []segment) []segment {
-	return slices.Clone(in)
 }

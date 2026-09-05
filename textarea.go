@@ -1372,6 +1372,15 @@ func (t *TextArea) truncateLines(fromLine int) {
 	}
 }
 
+// finishEdit resets row-dependent cursor state after replacing text that
+// contained the given row.
+func (t *TextArea) finishEdit(row int) {
+	t.cursor.row = -1
+	t.truncateLines(row - 1)
+	t.findCursor(true, row)
+	t.selectionStart = t.cursor
+}
+
 // findCursor determines the cursor position if its "row" value is < 0
 // (=unknown) but only its span position ("pos" value) is known. If the cursor
 // position is already known (row >= 0), it can also be used to modify row and
@@ -1999,18 +2008,12 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 	case tcell.KeyEnter: // Insert a newline.
 		from, to, row := t.getSelection()
 		t.cursor.pos = t.replace(from, to, TextAreaNewLine, t.lastAction == taActionTypeSpace)
-		t.cursor.row = -1
-		t.truncateLines(row - 1)
-		t.findCursor(true, row)
-		t.selectionStart = t.cursor
+		t.finishEdit(row)
 		newLastAction = taActionTypeSpace
 	case tcell.KeyTab: // Insert a tab character. It will be rendered as TabSize spaces.
 		from, to, row := t.getSelection()
 		t.cursor.pos = t.replace(from, to, "\t", t.lastAction == taActionTypeSpace)
-		t.cursor.row = -1
-		t.truncateLines(row - 1)
-		t.findCursor(true, row)
-		t.selectionStart = t.cursor
+		t.finishEdit(row)
 		newLastAction = taActionTypeSpace
 	case tcell.KeyBacktab, tcell.KeyEscape:
 	case tcell.KeyRune:
@@ -2039,20 +2042,14 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 				newLastAction = taActionTypeSpace
 			}
 			t.cursor.pos = t.replace(from, to, str, newLastAction == t.lastAction || t.lastAction == taActionTypeNonSpace && newLastAction == taActionTypeSpace)
-			t.cursor.row = -1
-			t.truncateLines(row - 1)
-			t.findCursor(true, row)
-			t.selectionStart = t.cursor
+			t.finishEdit(row)
 		}
 	case tcell.KeyBackspace, tcell.KeyBackspace2: // Delete backwards. tcell.KeyBackspace is the same as tcell.CtrlH.
 		from, to, row := t.getSelection()
 		if from != to {
 			// Simply delete the current selection.
 			t.cursor.pos = t.replace(from, to, "", false)
-			t.cursor.row = -1
-			t.truncateLines(row - 1)
-			t.findCursor(true, row)
-			t.selectionStart = t.cursor
+			t.finishEdit(row)
 			break
 		}
 
@@ -2088,10 +2085,7 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 		if from != to {
 			// Simply delete the current selection.
 			t.cursor.pos = t.replace(from, to, "", false)
-			t.cursor.row = -1
-			t.truncateLines(row - 1)
-			t.findCursor(true, row)
-			t.selectionStart = t.cursor
+			t.finishEdit(row)
 			break
 		}
 
@@ -2121,10 +2115,7 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 		}
 		t.cursor.pos = t.replace(t.cursor.pos, pos, "", false)
 		row := t.cursor.row
-		t.cursor.row = -1
-		t.truncateLines(row - 1)
-		t.findCursor(true, row)
-		t.selectionStart = t.cursor
+		t.finishEdit(row)
 	case tcell.KeyCtrlW: // Delete from the start of the current word to the left of the cursor.
 		pos := t.cursor.pos
 		t.moveWordLeft(true)
@@ -2154,18 +2145,12 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 			t.copyToClipboard(t.getSelectedText())
 			from, to, row := t.getSelection()
 			t.cursor.pos = t.replace(from, to, "", false)
-			t.cursor.row = -1
-			t.truncateLines(row - 1)
-			t.findCursor(true, row)
-			t.selectionStart = t.cursor
+			t.finishEdit(row)
 		}
 	case tcell.KeyCtrlV: // Paste from clipboard.
 		from, to, row := t.getSelection()
 		t.cursor.pos = t.replace(from, to, t.pasteFromClipboard(), false)
-		t.cursor.row = -1
-		t.truncateLines(row - 1)
-		t.findCursor(true, row)
-		t.selectionStart = t.cursor
+		t.finishEdit(row)
 	case tcell.KeyCtrlZ: // Undo.
 		if t.nextUndo <= 0 {
 			break
@@ -2292,10 +2277,7 @@ func (t *TextArea) handleMouseMsg(msg MouseMsg) Cmd {
 func (t *TextArea) handlePasteMsg(msg PasteMsg) Cmd {
 	from, to, row := t.getSelection()
 	t.cursor.pos = t.replace(from, to, string(msg), false)
-	t.cursor.row = -1
-	t.truncateLines(row - 1)
-	t.findCursor(true, row)
-	t.selectionStart = t.cursor
+	t.finishEdit(row)
 	return nil
 }
 

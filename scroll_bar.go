@@ -188,7 +188,17 @@ func (s *ScrollBar) HasEndArrow() bool {
 
 // TrackLengthExcludingArrowHeads returns track length excluding arrow cells.
 func (s *ScrollBar) TrackLengthExcludingArrowHeads(length int) int {
-	return s.trackLengthExcludingArrowHeads(length)
+	if length <= 0 {
+		return 0
+	}
+	arrows := 0
+	if s.arrows.hasStart() {
+		arrows++
+	}
+	if s.arrows.hasEnd() {
+		arrows++
+	}
+	return max(length-arrows, 0)
 }
 
 // SetAutoHide controls whether the scrollBar is hidden when there is nothing to scroll.
@@ -231,20 +241,6 @@ func (s *ScrollBar) SetArrowStyle(style tcell.Style) *ScrollBar {
 	return s
 }
 
-func (s *ScrollBar) trackLengthExcludingArrowHeads(length int) int {
-	if length <= 0 {
-		return 0
-	}
-	arrows := 0
-	if s.arrows.hasStart() {
-		arrows++
-	}
-	if s.arrows.hasEnd() {
-		arrows++
-	}
-	return max(length-arrows, 0)
-}
-
 func (s *ScrollBar) viewportLength(length int) int {
 	if s.viewportLen > 0 {
 		return s.viewportLen
@@ -261,7 +257,7 @@ type scrollMetrics struct {
 
 // metrics computes scrollBar geometry in subcell units.
 func (s *ScrollBar) metrics(length int) scrollMetrics {
-	trackCells := s.trackLengthExcludingArrowHeads(length)
+	trackCells := s.TrackLengthExcludingArrowHeads(length)
 	return computeScrollMetrics(trackCells, s.contentLen, s.viewportLength(length), s.offset)
 }
 

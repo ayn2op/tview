@@ -338,9 +338,6 @@ func (t *TextView) AppendLine(line text.Line) *TextView {
 
 // GetOriginalLineCount returns the number of logical lines in the current text.
 func (t *TextView) GetOriginalLineCount() int {
-	if len(t.lines) == 0 {
-		return 0
-	}
 	return len(t.lines)
 }
 
@@ -363,14 +360,8 @@ func (t *TextView) Height(width int) int {
 	if width < 1 {
 		return 1
 	}
-	if len(t.lines) == 0 {
-		return 1
-	}
 	wrapped, _ := t.wrapLines(width)
-	if len(wrapped) == 0 {
-		return 1
-	}
-	return len(wrapped)
+	return max(len(wrapped), 1)
 }
 
 // ScrollTo scrolls to the specified row and column (both starting with 0).
@@ -732,13 +723,10 @@ func (t *TextView) View(screen tcell.Screen) {
 				if ch == "\t" {
 					ch = " "
 				}
-				for offset := w - 1; offset >= 0; offset-- {
-					if offset == 0 {
-						screen.PutStrStyled(x+xPos+offset, y+line-lineOffset, ch, cell.style)
-					} else {
-						screen.Put(x+xPos+offset, y+line-lineOffset, " ", cell.style)
-					}
+				for offset := w - 1; offset >= 1; offset-- {
+					screen.Put(x+xPos+offset, y+line-lineOffset, " ", cell.style)
 				}
+				screen.PutStrStyled(x+xPos, y+line-lineOffset, ch, cell.style)
 			}
 
 			xPos += w

@@ -166,26 +166,20 @@ func (n *Node) SetExpandable(expandable bool) *Node {
 
 // Expand makes the child nodes of this node appear.
 func (n *Node) Expand() *Node {
-	if !n.expanded {
-		n.expanded = true
-	}
+	n.expanded = true
 	return n
 }
 
 // Collapse makes the child nodes of this node disappear.
 func (n *Node) Collapse() *Node {
-	if n.expanded {
-		n.expanded = false
-	}
+	n.expanded = false
 	return n
 }
 
 // ExpandAll expands this node and all descendent nodes.
 func (n *Node) ExpandAll() *Node {
 	n.Walk(func(node, parent *Node) bool {
-		if !node.expanded {
-			node.expanded = true
-		}
+		node.expanded = true
 		return true
 	})
 	return n
@@ -194,9 +188,7 @@ func (n *Node) ExpandAll() *Node {
 // CollapseAll collapses this node and all descendent nodes.
 func (n *Node) CollapseAll() *Node {
 	n.Walk(func(node, parent *Node) bool {
-		if node.expanded {
-			node.expanded = false
-		}
+		node.expanded = false
 		return true
 	})
 	return n

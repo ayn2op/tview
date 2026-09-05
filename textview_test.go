@@ -8,6 +8,25 @@ import (
 	"github.com/gdamore/tcell/v3/vt"
 )
 
+func TestTextViewScrollSetters(t *testing.T) {
+	v := NewTextView()
+	for range 2 {
+		v.ScrollTo(4, 5).ScrollToEnd().ScrollToBeginning()
+		row, column := v.GetScrollOffset()
+		if row != 0 || column != 0 || v.trackEnd {
+			t.Fatalf("got (%d, %d, %v), want (0, 0, false)", row, column, v.trackEnd)
+		}
+	}
+
+	v.SetScrollable(false)
+	v.lineOffset, v.columnOffset, v.trackEnd = 4, 5, false
+	v.ScrollToBeginning().ScrollToEnd().ScrollTo(1, 2).SetScrollable(false)
+	row, column := v.GetScrollOffset()
+	if row != 4 || column != 5 || v.trackEnd {
+		t.Fatalf("got (%d, %d, %v), want (4, 5, false)", row, column, v.trackEnd)
+	}
+}
+
 func TestTextViewContentReturnsCopy(t *testing.T) {
 	view := NewTextView().SetContent(text.Text{{{Text: "original"}}})
 	lines := view.Content()

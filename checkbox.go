@@ -98,27 +98,17 @@ func (c *Checkbox) SetLabelStyle(style tcell.Style) *Checkbox {
 
 // SetFieldBackgroundColor sets the background color of the input area.
 func (c *Checkbox) SetFieldBackgroundColor(color tcell.Color) *Checkbox {
-	uncheckedStyle := c.uncheckedStyle.Background(color)
-	checkedStyle := c.checkedStyle.Background(color)
-	focusStyle := c.focusStyle.Foreground(color)
-	if c.uncheckedStyle != uncheckedStyle || c.checkedStyle != checkedStyle || c.focusStyle != focusStyle {
-		c.uncheckedStyle = uncheckedStyle
-		c.checkedStyle = checkedStyle
-		c.focusStyle = focusStyle
-	}
+	c.uncheckedStyle = c.uncheckedStyle.Background(color)
+	c.checkedStyle = c.checkedStyle.Background(color)
+	c.focusStyle = c.focusStyle.Foreground(color)
 	return c
 }
 
 // SetFieldTextColor sets the text color of the input area.
 func (c *Checkbox) SetFieldTextColor(color tcell.Color) *Checkbox {
-	uncheckedStyle := c.uncheckedStyle.Foreground(color)
-	checkedStyle := c.checkedStyle.Foreground(color)
-	focusStyle := c.focusStyle.Background(color)
-	if c.uncheckedStyle != uncheckedStyle || c.checkedStyle != checkedStyle || c.focusStyle != focusStyle {
-		c.uncheckedStyle = uncheckedStyle
-		c.checkedStyle = checkedStyle
-		c.focusStyle = focusStyle
-	}
+	c.uncheckedStyle = c.uncheckedStyle.Foreground(color)
+	c.checkedStyle = c.checkedStyle.Foreground(color)
+	c.focusStyle = c.focusStyle.Background(color)
 	return c
 }
 

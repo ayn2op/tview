@@ -61,18 +61,14 @@ func (i *InputField) Label() string {
 
 // SetLabel sets the text to be displayed before the input area.
 func (i *InputField) SetLabel(label string) *InputField {
-	if i.textArea.Label() != label {
-		i.textArea.SetLabel(label)
-	}
+	i.textArea.SetLabel(label)
 	return i
 }
 
 // SetLabelWidth sets the screen width of the label.
 // A value of 0 represents the width of the label string.
 func (i *InputField) SetLabelWidth(width int) *InputField {
-	if i.textArea.LabelWidth() != width {
-		i.textArea.SetLabelWidth(width)
-	}
+	i.textArea.SetLabelWidth(width)
 	return i
 }
 
@@ -85,10 +81,7 @@ func (i *InputField) SetPlaceholder(line text.Line) *InputField {
 
 // SetLabelColor sets the text color of the label.
 func (i *InputField) SetLabelColor(color tcell.Color) *InputField {
-	style := i.textArea.LabelStyle().Foreground(color)
-	if i.textArea.LabelStyle() != style {
-		i.textArea.SetLabelStyle(style)
-	}
+	i.textArea.SetLabelStyle(i.textArea.LabelStyle().Foreground(color))
 	return i
 }
 
@@ -99,9 +92,7 @@ func (i *InputField) LabelStyle() tcell.Style {
 
 // SetLabelStyle sets the style of the label.
 func (i *InputField) SetLabelStyle(style tcell.Style) *InputField {
-	if i.textArea.LabelStyle() != style {
-		i.textArea.SetLabelStyle(style)
-	}
+	i.textArea.SetLabelStyle(style)
 	return i
 }
 
@@ -114,9 +105,7 @@ func (i *InputField) FieldStyle() tcell.Style {
 // SetFieldStyle sets the style of the input area (when no placeholder is
 // shown).
 func (i *InputField) SetFieldStyle(style tcell.Style) *InputField {
-	if i.textArea.TextStyle() != style {
-		i.textArea.SetTextStyle(style)
-	}
+	i.textArea.SetTextStyle(style)
 	return i
 }
 
@@ -155,9 +144,7 @@ func (i *InputField) Disabled() bool {
 
 // SetDisabled sets whether or not the item is disabled / read-only.
 func (i *InputField) SetDisabled(disabled bool) FormItem {
-	if i.textArea.Disabled() != disabled {
-		i.textArea.SetDisabled(disabled)
-	}
+	i.textArea.SetDisabled(disabled)
 	return i
 }
 

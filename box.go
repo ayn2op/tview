@@ -62,9 +62,7 @@ func (b *Box) BorderPadding() (top, bottom, left, right int) {
 
 // SetBorderPadding sets the size of the borders around the box content.
 func (b *Box) SetBorderPadding(top, bottom, left, right int) *Box {
-	if b.paddingTop != top || b.paddingBottom != bottom || b.paddingLeft != left || b.paddingRight != right {
-		b.paddingTop, b.paddingBottom, b.paddingLeft, b.paddingRight = top, bottom, left, right
-	}
+	b.paddingTop, b.paddingBottom, b.paddingLeft, b.paddingRight = top, bottom, left, right
 	return b
 }
 
@@ -76,12 +74,10 @@ func (b *Box) Rect() (int, int, int, int) {
 
 // SetRect sets the model's position. Layouts and Application may override it.
 func (b *Box) SetRect(x, y, width, height int) {
-	if b.x != x || b.y != y || b.width != width || b.height != height {
-		b.x = x
-		b.y = y
-		b.width = width
-		b.height = height
-	}
+	b.x = x
+	b.y = y
+	b.width = width
+	b.height = height
 }
 
 // InnerRect returns the position of the inner rectangle (x, y, width,
@@ -255,9 +251,7 @@ func (b *Box) Borders() Borders {
 
 // SetBorders sets which borders to draw.
 func (b *Box) SetBorders(flag Borders) *Box {
-	if b.borders != flag {
-		b.borders = flag
-	}
+	b.borders = flag
 	return b
 }
 
@@ -285,9 +279,7 @@ func (b *Box) Title() string {
 
 // SetTitle sets the box's title.
 func (b *Box) SetTitle(title string) *Box {
-	if b.title != title {
-		b.title = title
-	}
+	b.title = title
 	return b
 }
 
@@ -310,9 +302,7 @@ func (b *Box) Footer() string {
 
 // SetFooter sets the box's footer.
 func (b *Box) SetFooter(footer string) *Box {
-	if b.footer != footer {
-		b.footer = footer
-	}
+	b.footer = footer
 	return b
 }
 

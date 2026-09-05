@@ -243,9 +243,10 @@ type TextArea struct {
 	// deleted from this slice.
 	spans []textAreaSpan
 
-	// An optional function which transforms grapheme clusters. This can be used
-	// to hide characters from the screen while preserving the original text.
-	transform func(cluster, rest string, boundaries int) (newCluster string, newBoundaries int)
+	// mask hides text on the screen while preserving the original text. An
+	// empty mask disables masking. maskWidth is its precomputed screen width.
+	mask      string
+	maskWidth int
 
 	// Display, navigation, and cursor related fields:
 
@@ -1515,19 +1516,6 @@ RowLoop:
 	}
 }
 
-// setTransform sets the transform function to be used when drawing the text.
-// This function is called for each grapheme cluster and can be used to modify
-// the cluster, the cluster's screen width, and the cluster's boundaries. The
-// function is called with the original cluster, the rest of the text, the
-// original cluster's width, and the original cluster's boundaries. The function
-// must return the new cluster, the new width, and the new boundaries. This only
-// affects the drawing of the text, not the text content itself. The boundaries
-// values correspond to the values returned by
-// [github.com/rivo/uniseg.StepString].
-func (t *TextArea) setTransform(transform func(cluster, rest string, boundaries int) (newCluster string, newBoundaries int)) {
-	t.transform = transform
-}
-
 // step is similar to [github.com/rivo/uniseg.StepString] but it iterates over
 // the piece chain, starting with "pos", a span position plus state (which may
 // be -1 for the start of the text). The returned "boundaries" value is the same
@@ -1590,8 +1578,8 @@ func (t *TextArea) step(text string, pos, endPos [3]int) (cluster, rest string, 
 		span = t.spans[pos[0]]
 	}
 
-	if t.transform != nil {
-		cluster, boundaries = t.transform(cluster, text, boundaries)
+	if t.mask != "" {
+		cluster, boundaries = t.mask, t.maskWidth<<uniseg.ShiftWidth
 	}
 
 	if cluster == "\t" {

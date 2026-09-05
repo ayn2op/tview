@@ -15,3 +15,14 @@ func TestFormNavigation(t *testing.T) {
 		}
 	}
 }
+
+func TestInputFieldMask(t *testing.T) {
+	i := NewInputField().SetMaskCharacter('*')
+	if i.textArea.mask != "*" || i.textArea.maskWidth <= 0 {
+		t.Fatalf("mask = %q width %d", i.textArea.mask, i.textArea.maskWidth)
+	}
+	i.SetMaskCharacter(0)
+	if i.textArea.mask != "" || i.textArea.maskWidth != 0 {
+		t.Fatalf("mask not disabled: %q width %d", i.textArea.mask, i.textArea.maskWidth)
+	}
+}

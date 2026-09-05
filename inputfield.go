@@ -152,14 +152,11 @@ func (i *InputField) SetDisabled(disabled bool) FormItem {
 // of 0 disables masking.
 func (i *InputField) SetMaskCharacter(mask rune) *InputField {
 	if mask == 0 {
-		i.textArea.setTransform(nil)
+		i.textArea.mask, i.textArea.maskWidth = "", 0
 		return i
 	}
-	maskStr := string(mask)
-	maskWidth := uniseg.StringWidth(maskStr)
-	i.textArea.setTransform(func(cluster, rest string, boundaries int) (newCluster string, newBoundaries int) {
-		return maskStr, maskWidth << uniseg.ShiftWidth
-	})
+	i.textArea.mask = string(mask)
+	i.textArea.maskWidth = uniseg.StringWidth(i.textArea.mask)
 	return i
 }
 

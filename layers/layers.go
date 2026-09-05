@@ -269,7 +269,7 @@ func (l *Layers) View(screen tcell.Screen) {
 	active := l.topVisibleEnabledLayer()
 	var ovScreen *overlayScreen
 	if overlayIndex >= 0 {
-		ovScreen = newOverlayScreen(screen, l.backgroundLayerStyle)
+		ovScreen = &overlayScreen{Screen: screen, overlay: l.backgroundLayerStyle}
 	}
 	for index, layer := range l.layers {
 		if !layer.visible {
@@ -334,13 +334,6 @@ func (l *Layers) topVisibleEnabledOverlayIndex() int {
 type overlayScreen struct {
 	tcell.Screen
 	overlay tcell.Style
-}
-
-func newOverlayScreen(screen tcell.Screen, overlay tcell.Style) *overlayScreen {
-	return &overlayScreen{
-		Screen:  screen,
-		overlay: overlay,
-	}
 }
 
 func (s *overlayScreen) SetContent(x int, y int, primary rune, combining []rune, style tcell.Style) {

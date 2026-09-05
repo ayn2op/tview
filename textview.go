@@ -756,7 +756,6 @@ func (t *TextView) View(screen tcell.Screen) {
 func (t *TextView) Update(msg Msg) Cmd {
 	switch msg := msg.(type) {
 	case KeyMsg:
-		previousLineOffset, previousColumnOffset, previousTrackEnd := t.lineOffset, t.columnOffset, t.trackEnd
 		key := msg.Key()
 
 		if !t.scrollable {
@@ -807,46 +806,28 @@ func (t *TextView) Update(msg Msg) Cmd {
 			t.trackEnd = false
 			t.lineOffset -= pageSize
 		}
-		if t.lineOffset != previousLineOffset || t.columnOffset != previousColumnOffset || t.trackEnd != previousTrackEnd {
-			return nil
-		}
 	case MouseMsg:
-		var cmds []Cmd
 		x, y := msg.Position()
 		if !t.InRect(x, y) {
+			return nil
+		}
+		if !t.scrollable {
 			return nil
 		}
 
 		_, _, width, _ := t.InnerRect()
 		switch msg.Action {
-		case MouseLeftDown:
-		case MouseLeftClick:
 		case MouseScrollUp:
-			if !t.scrollable {
-				break
-			}
 			t.trackEnd = false
 			t.lineOffset--
 		case MouseScrollDown:
-			if !t.scrollable {
-				break
-			}
 			t.lineOffset++
 		case MouseScrollLeft:
-			if !t.scrollable {
-				break
-			}
 			t.columnOffset -= width / 2
 		case MouseScrollRight:
-			if !t.scrollable {
-				break
-			}
 			t.columnOffset += width / 2
 		}
-		if len(cmds) == 0 {
-			return nil
-		}
-		return Batch(cmds...)
+		return nil
 	}
 	return t.Box.Update(msg)
 }

@@ -58,8 +58,6 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	}
 
 	switch msg := msg.(type) {
-	case tview.InitMsg:
-		return m.tabs[m.active].Update(msg)
 	case tview.KeyMsg:
 		switch {
 		case keybind.Matches(msg, m.keybinds.Previous):

@@ -222,12 +222,10 @@ func (l *Model) invalidate() *Model {
 // ScrollTop resets the scroll position to the top (index 0), without changing
 // the cursor.
 func (l *Model) ScrollTop() *Model {
-	if l.scroll.top != 0 || l.scroll.offset != 0 || l.scroll.wantsCursor || l.atEnd {
-		l.scroll.top = 0
-		l.scroll.offset = 0
-		l.scroll.wantsCursor = false
-		l.atEnd = false
-	}
+	l.scroll.top = 0
+	l.scroll.offset = 0
+	l.scroll.wantsCursor = false
+	l.atEnd = false
 	return l.invalidate()
 }
 
@@ -238,11 +236,9 @@ func (l *Model) ScrollBottom() *Model {
 		return l
 	}
 	top, offset := l.endScrollState(width, height)
-	if l.scroll.top != top || l.scroll.offset != offset || l.scroll.wantsCursor || !l.atEnd {
-		l.scroll.top, l.scroll.offset = top, offset
-		l.scroll.wantsCursor = false
-		l.atEnd = true
-	}
+	l.scroll.top, l.scroll.offset = top, offset
+	l.scroll.wantsCursor = false
+	l.atEnd = true
 	return l.invalidate()
 }
 
@@ -849,9 +845,6 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 			return i, offset
 		}
 		total += itemHeight
-		if i == 0 {
-			break
-		}
 	}
 	return 0, 0
 }
@@ -1002,13 +995,13 @@ func (l *Model) startScrollBarDrag(row int, height int, contentWidth int) bool {
 	return true
 }
 
-func (l *Model) dragScrollBarTo(row int, height int, contentWidth int) bool {
+func (l *Model) dragScrollBarTo(row int, height int, contentWidth int) {
 	if l.scrollBarInteraction.dragDelta < 0 || l.scrollBar == nil || contentWidth <= 0 || height <= 0 {
-		return false
+		return
 	}
 	state, ok := l.currentScrollBarState(height, contentWidth)
 	if !ok {
-		return false
+		return
 	}
 
 	trackRow := row
@@ -1020,11 +1013,11 @@ func (l *Model) dragScrollBarTo(row int, height int, contentWidth int) bool {
 
 	maxOffset := max(state.contentLength-state.viewportLength, 0)
 	if maxOffset <= 0 {
-		return true
+		return
 	}
 	thumbTravel := max(state.metrics.trackLen-state.metrics.thumbLen, 0)
 	if thumbTravel <= 0 {
-		return true
+		return
 	}
 
 	targetStart := clickPos - l.scrollBarInteraction.dragDelta
@@ -1037,7 +1030,6 @@ func (l *Model) dragScrollBarTo(row int, height int, contentWidth int) bool {
 		l.scrollBarInteraction.dragMoved = true
 		l.invalidate()
 	}
-	return true
 }
 
 func (l *Model) shouldDrawScrollBar(width int, height int) bool {

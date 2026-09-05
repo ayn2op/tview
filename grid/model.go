@@ -321,14 +321,8 @@ ItemLoop:
 	rows := len(m.rows)
 	columns := len(m.columns)
 	for _, item := range items {
-		rowEnd := item.Row + item.Height
-		if rowEnd > rows {
-			rows = rowEnd
-		}
-		columnEnd := item.Column + item.Width
-		if columnEnd > columns {
-			columns = columnEnd
-		}
+		rows = max(rows, item.Row+item.Height)
+		columns = max(columns, item.Column+item.Width)
 	}
 	if rows == 0 || columns == 0 {
 		return // No content.
@@ -521,12 +515,7 @@ ItemLoop:
 			to = index
 		}
 	}
-	if m.rowOffset < from {
-		m.rowOffset = from
-	}
-	if m.rowOffset > to {
-		m.rowOffset = to
-	}
+	m.rowOffset = min(max(m.rowOffset, from), to)
 	from, to = 0, 0
 	for index, pos := range columnPos {
 		if pos-offsetX < 0 {
@@ -536,12 +525,7 @@ ItemLoop:
 			to = index
 		}
 	}
-	if m.columnOffset < from {
-		m.columnOffset = from
-	}
-	if m.columnOffset > to {
-		m.columnOffset = to
-	}
+	m.columnOffset = min(max(m.columnOffset, from), to)
 
 	// Draw models and borders.
 	borderStyle := tcell.StyleDefault.Background(m.BackgroundColor()).Foreground(m.bordersColor)

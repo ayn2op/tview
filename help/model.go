@@ -192,10 +192,7 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 			}
 			keyText := m.formatKey(hp.Key)
 			col.entries = append(col.entries, entry{key: keyText, desc: hp.Desc})
-			kw := uniseg.StringWidth(keyText)
-			if kw > col.keyW {
-				col.keyW = kw
-			}
+			col.keyW = max(col.keyW, uniseg.StringWidth(keyText))
 		}
 		if len(col.entries) == 0 {
 			continue
@@ -207,9 +204,7 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 				w += 1
 			}
 			w += uniseg.StringWidth(e.desc)
-			if w > col.colW {
-				col.colW = w
-			}
+			col.colW = max(col.colW, w)
 		}
 		columns = append(columns, col)
 	}
@@ -246,9 +241,7 @@ func (m *Model) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) [][]s
 
 	maxRows := 0
 	for i := range included {
-		if len(columns[i].entries) > maxRows {
-			maxRows = len(columns[i].entries)
-		}
+		maxRows = max(maxRows, len(columns[i].entries))
 	}
 
 	lines := make([][]segment, 0, maxRows)

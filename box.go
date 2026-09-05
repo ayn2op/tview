@@ -112,12 +112,8 @@ func (b *Box) InnerRect() (int, int, int, int) {
 	y += b.paddingTop
 	width -= (b.paddingLeft + b.paddingRight)
 	height -= (b.paddingTop + b.paddingBottom)
-	if width < 0 {
-		width = 0
-	}
-	if height < 0 {
-		height = 0
-	}
+	width = max(width, 0)
+	height = max(height, 0)
 
 	return x, y, width, height
 }

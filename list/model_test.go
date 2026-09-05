@@ -57,6 +57,30 @@ func TestViewIsReadOnly(t *testing.T) {
 	}
 }
 
+func TestIntegerBounds(t *testing.T) {
+	model := testList(3)
+	for _, tt := range []struct{ input, gap, cursor int }{
+		{-2, 0, -1}, {-1, 0, -1}, {0, 0, 0}, {2, 2, 2},
+	} {
+		model.SetGap(tt.input).SetCursor(tt.input)
+		if model.gap != tt.gap || model.Cursor() != tt.cursor {
+			t.Fatalf("input %d: gap/cursor = %d/%d, want %d/%d", tt.input, model.gap, model.Cursor(), tt.gap, tt.cursor)
+		}
+	}
+	model.SetGap(0).ScrollTop()
+	for _, tt := range []struct{ width, height, want int }{
+		{0, 2, 0}, {20, 0, 0}, {20, 1, 1}, {20, 2, 2}, {20, 5, 3},
+	} {
+		if got := model.visibleItemCount(tt.width, tt.height); got != tt.want {
+			t.Fatalf("visibleItemCount(%d, %d) = %d, want %d", tt.width, tt.height, got, tt.want)
+		}
+	}
+	model.SetBuilder(func(int) Item { return &fixedHeightItem{Box: tview.NewBox(), height: 3} })
+	if got := model.visibleItemCount(20, 2); got != 1 {
+		t.Fatalf("oversized item count = %d, want 1", got)
+	}
+}
+
 func testList(count int) *Model {
 	model := NewModel().SetScrollBarVisibility(ScrollBarVisibilityNever)
 	model.SetBuilder(func(index int) Item {

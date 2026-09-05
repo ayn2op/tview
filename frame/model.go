@@ -114,18 +114,14 @@ func (f *Model) View(screen tcell.Screen) {
 			if y >= bottomMin {
 				continue
 			}
-			if y+1 > topMax {
-				topMax = y + 1
-			}
+			topMax = max(topMax, y+1)
 		} else {
 			y = bottom - rows[3+text.Alignment]
 			rows[3+text.Alignment]++
 			if y <= topMax {
 				continue
 			}
-			if y-1 < bottomMin {
-				bottomMin = y - 1
-			}
+			bottomMin = min(bottomMin, y-1)
 		}
 
 		// Draw text.

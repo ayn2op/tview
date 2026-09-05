@@ -377,10 +377,7 @@ func (f *Form) View(screen tcell.Screen) {
 	// Find the longest label.
 	var maxLabelWidth int
 	for _, item := range f.items {
-		labelWidth := uniseg.StringWidth(item.Label())
-		if labelWidth > maxLabelWidth {
-			maxLabelWidth = labelWidth
-		}
+		maxLabelWidth = max(maxLabelWidth, uniseg.StringWidth(item.Label()))
 	}
 	maxLabelWidth++ // Add one space.
 
@@ -420,9 +417,7 @@ func (f *Form) View(screen tcell.Screen) {
 		}
 
 		// Update line height.
-		if itemHeight > lineHeight {
-			lineHeight = itemHeight
-		}
+		lineHeight = max(lineHeight, itemHeight)
 
 		// Adjust the item's attributes.
 		if x+itemWidth >= rightLimit {
@@ -496,9 +491,7 @@ func (f *Form) View(screen tcell.Screen) {
 				break // No space for this button anymore.
 			}
 		}
-		if buttonWidth > space {
-			buttonWidth = space
-		}
+		buttonWidth = min(buttonWidth, space)
 		buttonIndex := index + len(f.items)
 		style := f.buttonStyle
 		if buttonIndex == f.focused {

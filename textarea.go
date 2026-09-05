@@ -647,18 +647,8 @@ func (t *TextArea) Replace(start, end int, text string) *TextArea {
 // Index positions will be shifted to line up with character boundaries.
 func (t *TextArea) Select(start, end int) *TextArea {
 	// Clamp input values.
-	if start < 0 {
-		start = 0
-	}
-	if start > t.length {
-		start = t.length
-	}
-	if end < 0 {
-		end = 0
-	}
-	if end > t.length {
-		end = t.length
-	}
+	start = min(max(start, 0), t.length)
+	end = min(max(end, 0), t.length)
 	if end < start {
 		start, end = end, start
 	}
@@ -1327,9 +1317,7 @@ func (t *TextArea) extendLines(width, maxHeight int) {
 			if boundaries&uniseg.MaskLine == uniseg.LineMustBreak && (len(text) > 0 || uniseg.HasTrailingLineBreakInString(cluster)) {
 				// We must break over.
 				t.lineStarts = append(t.lineStarts, pos)
-				if lineWidth > t.widestLine {
-					t.widestLine = lineWidth
-				}
+				t.widestLine = max(t.widestLine, lineWidth)
 				lineWidth = 0
 				lastGraphemeBreak = [3]int{}
 				lastLineBreak = [3]int{}
@@ -1344,18 +1332,14 @@ func (t *TextArea) extendLines(width, maxHeight int) {
 				if lastGraphemeBreak != [3]int{} { // We have at least one character on each line.
 					// Break after last grapheme.
 					t.lineStarts = append(t.lineStarts, lastGraphemeBreak)
-					if lineWidth > t.widestLine {
-						t.widestLine = lineWidth
-					}
+					t.widestLine = max(t.widestLine, lineWidth)
 					lineWidth = clusterWidth
 					lastLineBreak = [3]int{}
 				}
 			} else { // t.wordWrap && lastLineBreak != [3]int{}
 				// Break after last line break opportunity.
 				t.lineStarts = append(t.lineStarts, lastLineBreak)
-				if lineWidth > t.widestLine {
-					t.widestLine = lineWidth
-				}
+				t.widestLine = max(t.widestLine, lineWidth)
 				lineWidth = widthSinceLineBreak
 				lastLineBreak = [3]int{}
 			}
@@ -1374,9 +1358,7 @@ func (t *TextArea) extendLines(width, maxHeight int) {
 		}
 	}
 
-	if lineWidth > t.widestLine {
-		t.widestLine = lineWidth
-	}
+	t.widestLine = max(t.widestLine, lineWidth)
 }
 
 // truncateLines truncates the trailing lines of the [TextArea.lineStarts]
@@ -1384,9 +1366,7 @@ func (t *TextArea) extendLines(width, maxHeight int) {
 // of 0 is assumed. If it is greater than the length of lineStarts, nothing
 // happens.
 func (t *TextArea) truncateLines(fromLine int) {
-	if fromLine < 0 {
-		fromLine = 0
-	}
+	fromLine = max(fromLine, 0)
 	if fromLine < len(t.lineStarts) {
 		t.lineStarts = t.lineStarts[:fromLine]
 	}
@@ -1916,10 +1896,7 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 			}
 		} else if !t.wrap { // This doesn't work on all terminals.
 			// Just scroll.
-			t.columnOffset--
-			if t.columnOffset < 0 {
-				t.columnOffset = 0
-			}
+			t.columnOffset = max(t.columnOffset-1, 0)
 		}
 	case tcell.KeyRight: // Move one grapheme cluster to the right.
 		if event.Modifiers()&tcell.ModAlt == 0 {
@@ -1993,10 +1970,7 @@ func (t *TextArea) handleKeyMsg(event KeyMsg) Cmd {
 			}
 		} else {
 			// Just scroll.
-			t.rowOffset--
-			if t.rowOffset < 0 {
-				t.rowOffset = 0
-			}
+			t.rowOffset = max(t.rowOffset-1, 0)
 		}
 	case tcell.KeyHome, tcell.KeyCtrlA: // Move to the start of the line.
 		t.moveCursor(t.cursor.row, 0)

@@ -172,10 +172,7 @@ func (s *ScrollBar) ScrollStep() int {
 
 // SetScrollStep sets scroll step used by wheel and arrow interactions.
 func (s *ScrollBar) SetScrollStep(step int) *ScrollBar {
-	if step < 1 {
-		step = 1
-	}
-	s.scrollStep = step
+	s.scrollStep = max(step, 1)
 	return s
 }
 

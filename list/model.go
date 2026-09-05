@@ -182,10 +182,7 @@ func (l *Model) Clear() *Model {
 
 // SetGap sets the number of blank rows between items.
 func (l *Model) SetGap(gap int) *Model {
-	if gap < 0 {
-		gap = 0
-	}
-	l.gap = gap
+	l.gap = max(gap, 0)
 	return l.invalidate()
 }
 
@@ -256,9 +253,7 @@ func (l *Model) Cursor() int {
 
 // SetCursor sets the currently selected item index.
 func (l *Model) SetCursor(index int) *Model {
-	if index < -1 {
-		index = -1
-	}
+	index = max(index, -1)
 	if l.cursor != index {
 		l.cursor = index
 		l.atEnd = false
@@ -841,10 +836,7 @@ func (l *Model) visibleItemCount(width int, height int) int {
 		count++
 	}
 	// Always move at least one item so navigation feels responsive.
-	if count == 0 {
-		return 1
-	}
-	return count
+	return max(count, 1)
 }
 
 func (l *Model) endScrollState(width int, height int) (int, int) {

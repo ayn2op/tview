@@ -88,11 +88,6 @@ func normalizeKeys(keys ...string) []string {
 }
 
 func normalizeKey(key string) string {
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return ""
-	}
-
 	parts := strings.Split(key, "+")
 	mods := make([]string, 0, len(parts))
 	primary := ""
@@ -150,8 +145,6 @@ func normalizePrimaryKey(key string) string {
 		return "pgup"
 	case "pagedown":
 		return "pgdn"
-	case "ctrl-c":
-		return "ctrl+c"
 	}
 
 	if strings.HasPrefix(strings.ToLower(key), "ctrl-") && len(key) > len("ctrl-") {
@@ -166,23 +159,16 @@ func normalizePrimaryKey(key string) string {
 }
 
 func uniqueOrdered(in []string) []string {
-	seen := make(map[string]struct{}, len(in))
 	out := make([]string, 0, len(in))
 	for _, value := range in {
-		if _, ok := seen[value]; ok {
-			continue
+		if !slices.Contains(out, value) {
+			out = append(out, value)
 		}
-		seen[value] = struct{}{}
-		out = append(out, value)
 	}
 	return out
 }
 
 func keyMsgString(msg KeyMsg) string {
-	if msg == nil {
-		return ""
-	}
-
 	key := msg.Key()
 	if key >= tcell.KeyCtrlA && key <= tcell.KeyCtrlZ {
 		return "ctrl+" + string(rune('a'+(key-tcell.KeyCtrlA)))
@@ -212,7 +198,7 @@ func keyMsgString(msg KeyMsg) string {
 	if len(mods) == 0 {
 		return primary
 	}
-	return strings.Join(append(uniqueOrdered(mods), primary), "+")
+	return strings.Join(append(mods, primary), "+")
 }
 
 func keyName(key tcell.Key) string {

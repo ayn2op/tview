@@ -51,20 +51,12 @@ func BorderSetPlain() BorderSet {
 }
 
 func BorderSetRound() BorderSet {
-	return BorderSet{
-		Top:         BoxDrawingsLightHorizontal,
-		Bottom:      BoxDrawingsLightHorizontal,
-		Left:        BoxDrawingsLightVertical,
-		Right:       BoxDrawingsLightVertical,
-		TopLeft:     BoxDrawingsLightArcDownAndRight,
-		TopRight:    BoxDrawingsLightArcDownAndLeft,
-		BottomLeft:  BoxDrawingsLightArcUpAndRight,
-		BottomRight: BoxDrawingsLightArcUpAndLeft,
-		TopT:        BoxDrawingsLightDownAndHorizontal,
-		BottomT:     BoxDrawingsLightUpAndHorizontal,
-		LeftT:       BoxDrawingsLightVerticalAndRight,
-		RightT:      BoxDrawingsLightVerticalAndLeft,
-	}
+	b := BorderSetPlain()
+	b.TopLeft = BoxDrawingsLightArcDownAndRight
+	b.TopRight = BoxDrawingsLightArcDownAndLeft
+	b.BottomLeft = BoxDrawingsLightArcUpAndRight
+	b.BottomRight = BoxDrawingsLightArcUpAndLeft
+	return b
 }
 
 func BorderSetThick() BorderSet {

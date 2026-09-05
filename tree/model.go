@@ -446,45 +446,27 @@ func (t *Model) View(screen tcell.Screen) {
 
 			// Text.
 			if current.tx+prefixWidth+markerWidth < width {
-				if node == t.currentNode {
-					posX := 0
-					for _, segment := range node.line {
-						if posX >= width-current.tx-prefixWidth-markerWidth {
-							break
-						}
-						style := tview.MergeStyle(segment.Style, node.selectedTextStyle)
-						_, _, segmentWidth := tview.PrintStyled(
-							screen,
-							segment.Text,
-							x+current.tx+prefixWidth+markerWidth+posX,
-							posY,
-							0,
-							width-current.tx-prefixWidth-markerWidth-posX,
-							tview.AlignmentLeft,
-							style,
-							false,
-						)
-						posX += segmentWidth
+				posX := 0
+				for _, segment := range node.line {
+					if posX >= width-current.tx-prefixWidth-markerWidth {
+						break
 					}
-				} else {
-					posX := 0
-					for _, segment := range node.line {
-						if posX >= width-current.tx-prefixWidth-markerWidth {
-							break
-						}
-						_, _, segmentWidth := tview.PrintStyled(
-							screen,
-							segment.Text,
-							x+current.tx+prefixWidth+markerWidth+posX,
-							posY,
-							0,
-							width-current.tx-prefixWidth-markerWidth-posX,
-							tview.AlignmentLeft,
-							segment.Style,
-							false,
-						)
-						posX += segmentWidth
+					style := segment.Style
+					if node == t.currentNode {
+						style = tview.MergeStyle(style, node.selectedTextStyle)
 					}
+					_, _, segmentWidth := tview.PrintStyled(
+						screen,
+						segment.Text,
+						x+current.tx+prefixWidth+markerWidth+posX,
+						posY,
+						0,
+						width-current.tx-prefixWidth-markerWidth-posX,
+						tview.AlignmentLeft,
+						style,
+						false,
+					)
+					posX += segmentWidth
 				}
 			}
 		}

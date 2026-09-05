@@ -1619,9 +1619,6 @@ func (t *TextArea) moveCursor(row, column int) {
 
 	// Iterate through this row until we find the position.
 	t.cursor.row, t.cursor.actualColumn = row, 0
-	if t.wrap {
-		t.cursor.actualColumn = 0
-	}
 	pos := t.lineStarts[row]
 	endPos := pos
 	var text string
@@ -1637,11 +1634,6 @@ func (t *TextArea) moveCursor(row, column int) {
 		t.cursor.actualColumn += clusterWidth
 	}
 
-	if column < 0 {
-		t.cursor.column = t.cursor.actualColumn
-	} else {
-		t.cursor.column = column
-	}
 	t.cursor.pos = pos
 	t.findCursor(true, row)
 }

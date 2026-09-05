@@ -538,48 +538,23 @@ ItemLoop:
 		// Draw border around model.
 		if m.borders {
 			borderSet := m.BorderSet()
+			printBorder := func(bx, by int, str string) {
+				if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
+					tview.PrintJoinedSemigraphics(screen, bx, by, str, borderStyle)
+				}
+			}
 			for bx := item.x; bx < item.x+item.w; bx++ { // Top/bottom lines.
-				if bx < 0 || bx >= screenWidth {
-					continue
-				}
-				by := item.y - 1
-				if by >= 0 && by < screenHeight {
-					tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.Top, borderStyle)
-				}
-				by = item.y + item.h
-				if by >= 0 && by < screenHeight {
-					tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.Bottom, borderStyle)
-				}
+				printBorder(bx, item.y-1, borderSet.Top)
+				printBorder(bx, item.y+item.h, borderSet.Bottom)
 			}
 			for by := item.y; by < item.y+item.h; by++ { // Left/right lines.
-				if by < 0 || by >= screenHeight {
-					continue
-				}
-				bx := item.x - 1
-				if bx >= 0 && bx < screenWidth {
-					tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.Left, borderStyle)
-				}
-				bx = item.x + item.w
-				if bx >= 0 && bx < screenWidth {
-					tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.Right, borderStyle)
-				}
+				printBorder(item.x-1, by, borderSet.Left)
+				printBorder(item.x+item.w, by, borderSet.Right)
 			}
-			bx, by := item.x-1, item.y-1 // Top-left corner.
-			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.TopLeft, borderStyle)
-			}
-			bx, by = item.x+item.w, item.y-1 // Top-right corner.
-			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.TopRight, borderStyle)
-			}
-			bx, by = item.x-1, item.y+item.h // Bottom-left corner.
-			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.BottomLeft, borderStyle)
-			}
-			bx, by = item.x+item.w, item.y+item.h // Bottom-right corner.
-			if bx >= 0 && bx < screenWidth && by >= 0 && by < screenHeight {
-				tview.PrintJoinedSemigraphics(screen, bx, by, borderSet.BottomRight, borderStyle)
-			}
+			printBorder(item.x-1, item.y-1, borderSet.TopLeft)
+			printBorder(item.x+item.w, item.y-1, borderSet.TopRight)
+			printBorder(item.x-1, item.y+item.h, borderSet.BottomLeft)
+			printBorder(item.x+item.w, item.y+item.h, borderSet.BottomRight)
 		}
 	}
 }

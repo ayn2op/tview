@@ -539,10 +539,7 @@ rebuild:
 		// Non-snap mode keeps the first partially visible item as the top anchor.
 		for i := range children {
 			child := children[i]
-			span := child.height
-			if l.gap > 0 {
-				span += l.gap
-			}
+			span := child.height + l.gap
 			if child.row <= 0 && child.row+span > 0 {
 				l.scroll.top = child.index
 				l.scroll.offset = -child.row
@@ -668,9 +665,7 @@ func (l *Model) insertChildren(children *[]drawnItem, width int, ah int) {
 	l.scroll.top--
 	for ah > 0 {
 		// Account for the gap between the inserted item and the current top.
-		if l.gap > 0 {
-			ah -= l.gap
-		}
+		ah -= l.gap
 		item := l.builder(l.scroll.top)
 		if item == nil {
 			break
@@ -742,10 +737,7 @@ func (l *Model) centerScrollState(width int, height int) (int, int, bool) {
 			break
 		}
 		prevHeight := l.itemHeight(prevItem, width)
-		span := prevHeight
-		if l.gap > 0 {
-			span += l.gap
-		}
+		span := prevHeight + l.gap
 		if remaining >= span {
 			remaining -= span
 			top = prevIndex
@@ -1235,10 +1227,7 @@ func (l *Model) indexAtPoint(x, y int) int {
 
 	row := y - l.lastRect.y
 	for _, child := range l.lastDraw {
-		span := child.height
-		if l.gap > 0 {
-			span += l.gap
-		}
+		span := child.height + l.gap
 		if row >= child.row && row < child.row+span {
 			return child.index
 		}

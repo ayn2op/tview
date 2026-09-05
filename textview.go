@@ -453,13 +453,7 @@ func (t *TextView) appendText(value string, style tcell.Style) {
 
 	lineIndex := len(t.lines) - 1
 	for len(value) > 0 {
-		nl := -1
-		for i := range len(value) {
-			if value[i] == '\n' {
-				nl = i
-				break
-			}
-		}
+		nl := strings.IndexByte(value, '\n')
 
 		if nl < 0 {
 			t.appendSegment(lineIndex, text.Segment{Text: value, Style: style})

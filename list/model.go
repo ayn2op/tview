@@ -777,29 +777,18 @@ func (l *Model) centerScrollState(width int, height int) (int, int, bool) {
 	return top, offset, true
 }
 
-func (l *Model) scrollByItems(delta, count int) {
+func (l *Model) scrollByItems(delta int) {
 	if l.builder == nil {
 		return
 	}
-	if count < 1 {
-		count = 1
-	}
 	if delta > 0 {
 		// Step the top index downward without going past the end.
-		for range count {
-			if l.builder(l.scroll.top+1) == nil {
-				break
-			}
+		if l.builder(l.scroll.top+1) != nil {
 			l.scroll.top++
 		}
-	} else {
+	} else if l.scroll.top > 0 {
 		// Step the top index upward without going below zero.
-		for range count {
-			if l.scroll.top <= 0 {
-				break
-			}
-			l.scroll.top--
-		}
+		l.scroll.top--
 	}
 	l.scroll.offset = 0
 	l.scroll.wantsCursor = false
@@ -962,7 +951,7 @@ func (l *Model) Update(msg tview.Msg) tview.Cmd {
 			return nil
 		case tview.MouseScrollUp:
 			if l.snapToItems {
-				l.scrollByItems(-1, 1)
+				l.scrollByItems(-1)
 			} else {
 				l.scroll.pending -= l.mouseScrollStep()
 				l.invalidate()
@@ -970,7 +959,7 @@ func (l *Model) Update(msg tview.Msg) tview.Cmd {
 			return nil
 		case tview.MouseScrollDown:
 			if l.snapToItems {
-				l.scrollByItems(1, 1)
+				l.scrollByItems(1)
 			} else {
 				l.scroll.pending += l.mouseScrollStep()
 				l.invalidate()

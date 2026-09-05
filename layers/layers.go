@@ -119,12 +119,7 @@ func (l *Layers) AddLayer(item tview.Model, opts ...Option) *Layers {
 		}
 	}
 	if newLayer.name != "" {
-		for index, layer := range l.layers {
-			if layer.name == newLayer.name {
-				l.layers = slices.Delete(l.layers, index, index+1)
-				break
-			}
-		}
+		l.RemoveLayer(newLayer.name)
 	}
 	l.layers = append(l.layers, newLayer)
 	return l

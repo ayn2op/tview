@@ -275,6 +275,75 @@ func (m *Model) SetOffset(rows, columns int) *Model {
 	return m
 }
 
+// layoutAxis computes sizes and positions for one grid axis. defs holds the
+// explicit track definitions, count the total number of tracks, available the
+// space to distribute, minimum the smallest size of any track, gap the space
+// between tracks, and bordered whether borders separate the tracks. Zero and
+// negative definitions (as well as undefined tracks) share the remaining space
+// proportionally, with zero counting as one share.
+func layoutAxis(defs []int, count, available, minimum, gap int, bordered bool) (pos, sizes []int) {
+	pos = make([]int, count)
+	sizes = make([]int, count)
+
+	remaining := available
+	proportional := 0
+	for index, def := range defs {
+		if def > 0 {
+			def = max(def, minimum)
+			remaining -= def
+			sizes[index] = def
+		} else if def == 0 {
+			proportional++
+		} else {
+			proportional += -def
+		}
+	}
+	if bordered {
+		remaining -= count + 1
+	} else {
+		remaining -= (count - 1) * gap
+	}
+	if count > len(defs) {
+		proportional += count - len(defs)
+	}
+	remaining = max(remaining, 0)
+
+	// Distribute proportional tracks.
+	for index := range count {
+		def := 0
+		if index < len(defs) {
+			def = defs[index]
+		}
+		if def > 0 {
+			continue // Not proportional. We already know the size.
+		} else if def == 0 {
+			def = 1
+		} else {
+			def = -def
+		}
+		abs := def * remaining / proportional
+		remaining -= abs
+		proportional -= def
+		abs = max(abs, minimum)
+		sizes[index] = abs
+	}
+
+	// Calculate track positions.
+	start := 0
+	if bordered {
+		start++
+	}
+	for index, size := range sizes {
+		pos[index] = start
+		axisGap := gap
+		if bordered {
+			axisGap = 1
+		}
+		start += size + axisGap
+	}
+	return pos, sizes
+}
+
 // View draws this model onto the screen.
 func (m *Model) View(screen tcell.Screen) {
 	m.Box.View(screen)
@@ -332,114 +401,8 @@ ItemLoop:
 	}
 
 	// Where are they located?
-	rowPos := make([]int, rows)
-	rowHeight := make([]int, rows)
-	columnPos := make([]int, columns)
-	columnWidth := make([]int, columns)
-
-	// How much space do we distribute?
-	remainingWidth := width
-	remainingHeight := height
-	proportionalWidth := 0
-	proportionalHeight := 0
-	for index, row := range m.rows {
-		if row > 0 {
-			row = max(row, m.minHeight)
-			remainingHeight -= row
-			rowHeight[index] = row
-		} else if row == 0 {
-			proportionalHeight++
-		} else {
-			proportionalHeight += -row
-		}
-	}
-	for index, column := range m.columns {
-		if column > 0 {
-			column = max(column, m.minWidth)
-			remainingWidth -= column
-			columnWidth[index] = column
-		} else if column == 0 {
-			proportionalWidth++
-		} else {
-			proportionalWidth += -column
-		}
-	}
-	if m.borders {
-		remainingHeight -= rows + 1
-		remainingWidth -= columns + 1
-	} else {
-		remainingHeight -= (rows - 1) * m.gapRows
-		remainingWidth -= (columns - 1) * m.gapColumns
-	}
-	if rows > len(m.rows) {
-		proportionalHeight += rows - len(m.rows)
-	}
-	if columns > len(m.columns) {
-		proportionalWidth += columns - len(m.columns)
-	}
-	remainingWidth = max(remainingWidth, 0)
-	remainingHeight = max(remainingHeight, 0)
-
-	// Distribute proportional rows/columns.
-	for index := range rows {
-		row := 0
-		if index < len(m.rows) {
-			row = m.rows[index]
-		}
-		if row > 0 {
-			continue // Not proportional. We already know the width.
-		} else if row == 0 {
-			row = 1
-		} else {
-			row = -row
-		}
-		rowAbs := row * remainingHeight / proportionalHeight
-		remainingHeight -= rowAbs
-		proportionalHeight -= row
-		rowAbs = max(rowAbs, m.minHeight)
-		rowHeight[index] = rowAbs
-	}
-	for index := range columns {
-		column := 0
-		if index < len(m.columns) {
-			column = m.columns[index]
-		}
-		if column > 0 {
-			continue // Not proportional. We already know the height.
-		} else if column == 0 {
-			column = 1
-		} else {
-			column = -column
-		}
-		columnAbs := column * remainingWidth / proportionalWidth
-		remainingWidth -= columnAbs
-		proportionalWidth -= column
-		columnAbs = max(columnAbs, m.minWidth)
-		columnWidth[index] = columnAbs
-	}
-
-	// Calculate row/column positions.
-	var columnX, rowY int
-	if m.borders {
-		columnX++
-		rowY++
-	}
-	for index, row := range rowHeight {
-		rowPos[index] = rowY
-		gap := m.gapRows
-		if m.borders {
-			gap = 1
-		}
-		rowY += row + gap
-	}
-	for index, column := range columnWidth {
-		columnPos[index] = columnX
-		gap := m.gapColumns
-		if m.borders {
-			gap = 1
-		}
-		columnX += column + gap
-	}
+	rowPos, rowHeight := layoutAxis(m.rows, rows, height, m.minHeight, m.gapRows, m.borders)
+	columnPos, columnWidth := layoutAxis(m.columns, columns, width, m.minWidth, m.gapColumns, m.borders)
 
 	// Calculate model positions.
 	var focus *item // The item which has focus.

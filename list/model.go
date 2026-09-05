@@ -424,7 +424,7 @@ rebuild:
 			break
 		}
 
-		itemHeight := l.itemHeight(item, usableWidth)
+		itemHeight := max(item.Height(usableWidth), 1)
 		children = append(children, drawnItem{
 			index:  i,
 			item:   item,
@@ -485,7 +485,7 @@ rebuild:
 			if item == nil {
 				break
 			}
-			itemHeight := l.itemHeight(item, usableWidth)
+			itemHeight := max(item.Height(usableWidth), 1)
 			nextRow := currentBottom + l.gap
 			if nextRow+itemHeight > height {
 				break
@@ -605,14 +605,6 @@ func (l *Model) View(screen tcell.Screen) {
 	}
 }
 
-func (l *Model) itemHeight(item Item, width int) int {
-	if item == nil {
-		return 0
-	}
-	height := max(item.Height(width), 1)
-	return height
-}
-
 func (l *Model) totalContentHeight(width int) int {
 	if l.builder == nil || width <= 0 {
 		return 0
@@ -626,7 +618,7 @@ func (l *Model) totalContentHeight(width int) int {
 		if i > 0 {
 			total += l.gap
 		}
-		total += l.itemHeight(item, width)
+		total += max(item.Height(width), 1)
 	}
 	return total
 }
@@ -645,7 +637,7 @@ func (l *Model) scrollBarMetrics(width int, viewport int, children []drawnItem, 
 		if i > 0 {
 			position += l.gap
 		}
-		position += l.itemHeight(item, width)
+		position += max(item.Height(width), 1)
 	}
 
 	position -= first.row
@@ -670,7 +662,7 @@ func (l *Model) insertChildren(children *[]drawnItem, width int, ah int) {
 		if item == nil {
 			break
 		}
-		height := l.itemHeight(item, width)
+		height := max(item.Height(width), 1)
 		ah -= height
 		entry := drawnItem{
 			index:  l.scroll.top,
@@ -721,7 +713,7 @@ func (l *Model) centerScrollState(width int, height int) (int, int, bool) {
 	if cursorItem == nil {
 		return 0, 0, false
 	}
-	cursorHeight := l.itemHeight(cursorItem, width)
+	cursorHeight := max(cursorItem.Height(width), 1)
 	// Compute the space above the cursor so its center aligns to the viewport center.
 	targetCenter := height / 2
 	desiredBefore := max(targetCenter-cursorHeight/2, 0)
@@ -736,7 +728,7 @@ func (l *Model) centerScrollState(width int, height int) (int, int, bool) {
 		if prevItem == nil {
 			break
 		}
-		prevHeight := l.itemHeight(prevItem, width)
+		prevHeight := max(prevItem.Height(width), 1)
 		span := prevHeight + l.gap
 		if remaining >= span {
 			remaining -= span
@@ -767,7 +759,7 @@ func (l *Model) centerScrollState(width int, height int) (int, int, bool) {
 		if item == nil {
 			return 0, 0, false
 		}
-		itemHeight := l.itemHeight(item, width)
+		itemHeight := max(item.Height(width), 1)
 		if ah+itemHeight >= height {
 			break
 		}
@@ -809,7 +801,7 @@ func (l *Model) visibleItemCount(width int, height int) int {
 		if count > 0 {
 			total += l.gap
 		}
-		itemHeight := l.itemHeight(item, width)
+		itemHeight := max(item.Height(width), 1)
 		if total+itemHeight > height {
 			break
 		}
@@ -851,7 +843,7 @@ func (l *Model) endScrollState(width int, height int) (int, int) {
 		if total > 0 {
 			total += l.gap
 		}
-		itemHeight := l.itemHeight(item, width)
+		itemHeight := max(item.Height(width), 1)
 		if total+itemHeight > height {
 			offset := max(total+itemHeight-height, 0)
 			return i, offset

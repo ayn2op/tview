@@ -120,7 +120,7 @@ func (b *Box) Update(msg Msg) Cmd {
 	return nil
 }
 
-func (b *Box) View(screen tcell.Screen) {
+func (b *Box) View(screen Screen) {
 	// Don't draw anything if there is no space.
 	if b.width <= 0 || b.height <= 0 {
 		return

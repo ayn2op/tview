@@ -177,11 +177,11 @@ func (c *Checkbox) SetDisabled(disabled bool) FormItem {
 }
 
 // View draws this model onto the screen.
-func (c *Checkbox) View(screen tcell.Screen) {
+func (c *Checkbox) View(screen Screen) {
 	c.view(screen, false)
 }
 
-func (c *Checkbox) view(screen tcell.Screen, focused bool) {
+func (c *Checkbox) view(screen Screen, focused bool) {
 	c.Box.View(screen)
 
 	// Prepare

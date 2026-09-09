@@ -657,7 +657,7 @@ func (t *TextView) layout() {
 }
 
 // View draws this model onto the screen.
-func (t *TextView) View(screen tcell.Screen) {
+func (t *TextView) View(screen Screen) {
 	t.Lock()
 	defer t.Unlock()
 	t.Box.View(screen)

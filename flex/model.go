@@ -4,7 +4,6 @@ import (
 	"slices"
 
 	"github.com/ayn2op/tview"
-	"github.com/gdamore/tcell/v3"
 )
 
 // Direction controls the direction of items.
@@ -175,7 +174,7 @@ func (m *Model) ResizeItem(p tview.Model, fixedSize, proportion int) *Model {
 }
 
 // View draws this model onto the screen.
-func (m *Model) View(screen tcell.Screen) {
+func (m *Model) View(screen tview.Screen) {
 	m.Box.View(screen)
 
 	// Calculate size and position of the items.

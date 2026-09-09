@@ -575,7 +575,7 @@ rebuild:
 }
 
 // View draws this model onto the screen.
-func (l *Model) View(screen tcell.Screen) {
+func (l *Model) View(screen tview.Screen) {
 	l.Box.View(screen)
 	x, y, width, height := l.lastRect.x, l.lastRect.y, l.lastRect.width, l.lastRect.height
 	contentWidth := width
@@ -1211,14 +1211,14 @@ func (l *Model) indexAtPoint(x, y int) int {
 var _ tview.Model = &Model{}
 
 type clippedScreen struct {
-	tcell.Screen
+	tview.Screen
 	x      int
 	y      int
 	width  int
 	height int
 }
 
-func newClippedScreen(screen tcell.Screen, x, y, width, height int) *clippedScreen {
+func newClippedScreen(screen tview.Screen, x, y, width, height int) *clippedScreen {
 	return &clippedScreen{
 		Screen: screen,
 		x:      x,
@@ -1280,7 +1280,7 @@ func (s *clippedScreen) ShowCursor(x int, y int) {
 // styledScreen merges a style into every cell drawn through it.
 // The list wraps the cursor item's screen with it so the selected item can be highlighted without rendering it differently from the rest.
 type styledScreen struct {
-	tcell.Screen
+	tview.Screen
 	style tcell.Style
 }
 

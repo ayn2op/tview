@@ -302,7 +302,7 @@ var SemigraphicJoints = map[string]string{
 
 // PrintJoinedSemigraphics prints a semigraphics string into the screen at the given
 // position with the given style, joining it with any existing semigraphics.
-func PrintJoinedSemigraphics(screen tcell.Screen, x, y int, str string, style tcell.Style) {
+func PrintJoinedSemigraphics(screen Screen, x, y int, str string, style tcell.Style) {
 	previous, _, _ := screen.Get(x, y)
 
 	var result string

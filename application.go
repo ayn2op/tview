@@ -46,7 +46,7 @@ const (
 
 type ApplicationOption func(*Application)
 
-func WithScreen(screen tcell.Screen) ApplicationOption {
+func WithScreen(screen Screen) ApplicationOption {
 	return func(a *Application) {
 		a.screen = screen
 		a.forceRedraw = true
@@ -76,7 +76,7 @@ type Application struct {
 	// forceRedraw requests a full clear before the next frame.
 	forceRedraw bool
 
-	screen             tcell.Screen
+	screen             Screen
 	disableCatchPanics bool
 }
 

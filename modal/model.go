@@ -81,7 +81,7 @@ func (m *Model) SetFocus(index int) *Model {
 	return m
 }
 
-func (m *Model) View(screen tcell.Screen) {
+func (m *Model) View(screen tview.Screen) {
 	x, y, availableWidth, availableHeight := m.Rect()
 	if availableWidth <= 0 || availableHeight <= 0 {
 		return

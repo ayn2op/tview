@@ -2,12 +2,14 @@ package tview
 
 import "github.com/gdamore/tcell/v3"
 
+type Screen = tcell.Screen
+
 // Model is the top-most interface for all graphical models.
 type Model interface {
 	// Update receives messages when this model has focus.
 	Update(Msg) Cmd
 	// View draws this model onto the screen.
-	View(tcell.Screen)
+	View(Screen)
 
 	// Rect returns the current position of the model, x, y, width, and
 	// height.

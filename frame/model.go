@@ -87,7 +87,7 @@ func (f *Model) SetBorders(top, bottom, header, footer, left, right int) *Model 
 }
 
 // View draws this model onto the screen.
-func (f *Model) View(screen tcell.Screen) {
+func (f *Model) View(screen tview.Screen) {
 	f.Box.View(screen)
 
 	// Calculate start positions.

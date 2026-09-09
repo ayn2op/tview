@@ -354,7 +354,7 @@ func (t *Model) scroll(rows []row, delta int) {
 }
 
 // View draws this model onto the screen.
-func (t *Model) View(screen tcell.Screen) {
+func (t *Model) View(screen tview.Screen) {
 	t.Box.View(screen)
 	rows := t.flatten()
 	if len(rows) == 0 {

@@ -161,7 +161,7 @@ func (i *InputField) SetMaskCharacter(mask rune) *InputField {
 }
 
 // View draws this model onto the screen.
-func (i *InputField) View(screen tcell.Screen) {
+func (i *InputField) View(screen Screen) {
 	i.Box.View(screen)
 
 	// Prepare

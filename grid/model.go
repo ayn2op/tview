@@ -345,7 +345,7 @@ func layoutAxis(defs []int, count, available, minimum, gap int, bordered bool) (
 }
 
 // View draws this model onto the screen.
-func (m *Model) View(screen tcell.Screen) {
+func (m *Model) View(screen tview.Screen) {
 	m.Box.View(screen)
 
 	x, y, width, height := m.InnerRect()

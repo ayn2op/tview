@@ -357,7 +357,7 @@ func (f *Form) GetFocusedItemIndex() (formItem, button int) {
 }
 
 // View draws this model onto the screen.
-func (f *Form) View(screen tcell.Screen) {
+func (f *Form) View(screen Screen) {
 	f.focusTarget()
 	f.Box.View(screen)
 
@@ -554,7 +554,7 @@ func (f *Form) View(screen tcell.Screen) {
 	}
 }
 
-func viewFormItem(screen tcell.Screen, item FormItem, focused bool) {
+func viewFormItem(screen Screen, item FormItem, focused bool) {
 	if focused {
 		screen.HideCursor()
 	}

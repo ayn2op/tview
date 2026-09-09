@@ -105,7 +105,7 @@ func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	return m.tabs[m.active].Update(msg)
 }
 
-func (m *Model) View(screen tcell.Screen) {
+func (m *Model) View(screen tview.Screen) {
 	m.Box.View(screen)
 
 	if len(m.tabs) == 0 {

@@ -333,7 +333,7 @@ func (s *ScrollBar) glyphForVertical(start, fillLen int) (string, tcell.Style) {
 }
 
 // View draws the scrollBar.
-func (s *ScrollBar) View(screen tcell.Screen) {
+func (s *ScrollBar) View(screen Screen) {
 	s.Box.View(screen)
 
 	x, y, _, height := s.InnerRect()

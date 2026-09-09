@@ -1101,7 +1101,7 @@ func (t *TextArea) replace(deleteStart, deleteEnd [3]int, insert string, continu
 }
 
 // View draws this model onto the screen.
-func (t *TextArea) View(screen tcell.Screen) {
+func (t *TextArea) View(screen Screen) {
 	t.Box.View(screen)
 
 	// Prepare
@@ -1257,7 +1257,7 @@ func (t *TextArea) View(screen tcell.Screen) {
 // drawPlaceholder draws the placeholder text into the given rectangle. It does
 // not do anything if the text area already contains text or if there is no
 // placeholder text.
-func (t *TextArea) drawPlaceholder(screen tcell.Screen, x, y, width, height int) {
+func (t *TextArea) drawPlaceholder(screen Screen, x, y, width, height int) {
 	// We use a TextView to draw the placeholder. It will take care of word
 	// wrapping etc.
 	textView := NewTextView().SetContent(text.Text{t.placeholder})

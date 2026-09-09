@@ -262,7 +262,7 @@ func (l *Layers) SetBackgroundLayerStyle(style tcell.Style) *Layers {
 }
 
 // View draws this model onto the screen.
-func (l *Layers) View(screen tcell.Screen) {
+func (l *Layers) View(screen tview.Screen) {
 	l.Box.View(screen)
 
 	overlayIndex := l.topVisibleEnabledOverlayIndex()
@@ -332,7 +332,7 @@ func (l *Layers) topVisibleEnabledOverlayIndex() int {
 }
 
 type overlayScreen struct {
-	tcell.Screen
+	tview.Screen
 	overlay tcell.Style
 }
 

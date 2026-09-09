@@ -91,7 +91,7 @@ func (m *Model) SetKeyMap(keyMap KeyMap) *Model {
 	return m
 }
 
-func (m *Model) View(screen tcell.Screen) {
+func (m *Model) View(screen tview.Screen) {
 	m.Box.View(screen)
 
 	if m.keyMap == nil {
@@ -309,7 +309,7 @@ func (m *Model) truncationTail(current text.Line, maxWidth int) text.Line {
 	return nil
 }
 
-func (m *Model) drawSegments(screen tcell.Screen, x, y, width int, segments text.Line) {
+func (m *Model) drawSegments(screen tview.Screen, x, y, width int, segments text.Line) {
 	if width <= 0 || len(segments) == 0 {
 		return
 	}

@@ -52,6 +52,14 @@ func (m *Model) Next() {
 	m.active = min(m.active+1, len(m.tabs)-1)
 }
 
+// Init initializes the active tab.
+func (m *Model) Init() tview.Cmd {
+	if len(m.tabs) == 0 {
+		return nil
+	}
+	return m.activateTab()
+}
+
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	if len(m.tabs) == 0 {
 		return m.Box.Update(msg)
@@ -137,7 +145,7 @@ func (m *Model) View(screen tview.Screen) {
 }
 
 func (m *Model) activateTab() tview.Cmd {
-	return m.tabs[m.active].Update(tview.InitMsg{})
+	return m.tabs[m.active].Init()
 }
 
 func (m *Model) tabAt(x, y int) (int, bool) {

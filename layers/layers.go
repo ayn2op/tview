@@ -292,6 +292,14 @@ func (l *Layers) View(screen tview.Screen) {
 	}
 }
 
+// Init initializes the top visible, enabled layer.
+func (l *Layers) Init() tview.Cmd {
+	if top := l.topVisibleEnabledLayer(); top != nil {
+		return top.item.Init()
+	}
+	return nil
+}
+
 // Update handles input events for this model.
 func (l *Layers) Update(msg tview.Msg) tview.Cmd {
 	if mouseMsg, ok := msg.(tview.MouseMsg); ok {

@@ -56,11 +56,6 @@ func compactCmds(cmds ...Cmd) []Cmd {
 	return slices.DeleteFunc(cmds, func(cmd Cmd) bool { return cmd == nil })
 }
 
-type InitMsg struct {
-	TerminalName    string
-	TerminalVersion string
-}
-
 type KeyMsg = *tcell.EventKey
 type ResizeMsg = *tcell.EventResize
 

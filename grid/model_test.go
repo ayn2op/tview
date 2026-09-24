@@ -3,7 +3,40 @@ package grid
 import (
 	"slices"
 	"testing"
+
+	"github.com/ayn2op/tview"
 )
+
+type initModel struct {
+	*tview.Box
+	calls int
+}
+
+func (m *initModel) Init() tview.Cmd {
+	m.calls++
+	return func() tview.Msg { return m }
+}
+
+func TestModelInit(t *testing.T) {
+	t.Run("focused child", func(t *testing.T) {
+		active := &initModel{Box: tview.NewBox()}
+		inactive := &initModel{Box: tview.NewBox()}
+		m := NewModel().AddItem(inactive, 0, 0, 1, 1, 0, 0, false).
+			AddItem(active, 0, 1, 1, 1, 0, 0, true)
+		cmd := m.Init()
+		if active.calls != 1 || inactive.calls != 0 {
+			t.Fatalf("Init calls: active=%d, inactive=%d", active.calls, inactive.calls)
+		}
+		if cmd == nil || cmd() != active {
+			t.Fatal("active child's startup command was not returned")
+		}
+	})
+	t.Run("empty", func(t *testing.T) {
+		if NewModel().Init() != nil {
+			t.Fatal("empty model returned a startup command")
+		}
+	})
+}
 
 func TestLayoutAxis(t *testing.T) {
 	for _, tt := range []struct {

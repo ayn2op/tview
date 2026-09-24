@@ -116,9 +116,8 @@ func (b *Box) InnerRect() (int, int, int, int) {
 
 var _ Model = (*Box)(nil)
 
-func (b *Box) Update(msg Msg) Cmd {
-	return nil
-}
+func (*Box) Init() Cmd          { return nil }
+func (*Box) Update(msg Msg) Cmd { return nil }
 
 func (b *Box) View(screen Screen) {
 	// Don't draw anything if there is no space.

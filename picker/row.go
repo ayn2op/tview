@@ -12,7 +12,8 @@ type row struct {
 	x, y, w, h int
 }
 
-func (r *row) Update(tview.Msg) tview.Cmd { return nil }
+func (*row) Init() tview.Cmd            { return nil }
+func (*row) Update(tview.Msg) tview.Cmd { return nil }
 
 func (r *row) View(screen tview.Screen) {
 	if r.w <= 0 {

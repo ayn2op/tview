@@ -120,11 +120,7 @@ func (a *Application) Run() error {
 
 	root := a.root
 	if root != nil {
-		terminalName, terminalVersion := a.screen.Terminal()
-		a.queueCmd(root.Update(InitMsg{
-			TerminalName:    terminalName,
-			TerminalVersion: terminalVersion,
-		}))
+		a.queueCmd(root.Init())
 		a.draw()
 	}
 

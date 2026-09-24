@@ -6,6 +6,8 @@ type Screen = tcell.Screen
 
 // Model is the top-most interface for all graphical models.
 type Model interface {
+	// Init initializes the model and returns an optional startup command.
+	Init() Cmd
 	// Update receives messages when this model has focus.
 	Update(Msg) Cmd
 	// View draws this model onto the screen.

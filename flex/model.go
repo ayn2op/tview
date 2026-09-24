@@ -245,6 +245,14 @@ func (m *Model) View(screen tview.Screen) {
 	}
 }
 
+// Init initializes the focused child.
+func (m *Model) Init() tview.Cmd {
+	if child := m.focusedItem(); child != nil {
+		return child.Init()
+	}
+	return nil
+}
+
 // Update handles input events for this model.
 func (m *Model) Update(msg tview.Msg) tview.Cmd {
 	switch msg := msg.(type) {

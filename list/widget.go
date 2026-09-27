@@ -1,0 +1,331 @@
+// Package list shows a scrollable list of items of varying height with a cursor.
+package list
+
+import (
+	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/keybind"
+	"github.com/ayn2op/tview/scrollbar"
+	"github.com/gdamore/tcell/v3"
+)
+
+// Item is an element in a list that reports how many rows it takes at a width.
+type Item interface {
+	tview.Element
+	Rows(width int) int
+}
+
+// ScrollBarVisibility is when a list shows its scroll bar.
+type ScrollBarVisibility uint8
+
+const (
+	// ScrollBarVisibilityAutomatic shows the scroll bar when the items do not fit.
+	ScrollBarVisibilityAutomatic ScrollBarVisibility = iota
+	ScrollBarVisibilityAlways
+	ScrollBarVisibilityNever
+)
+
+// Widget draws items, selected and scrolled as its SelectionState says, and turns keys and the mouse into Actions.
+type Widget struct {
+	selectionState *SelectionState
+	count          int
+	item           func(index int) Item
+	width, height  tview.Length
+	gap            int
+	selectedStyle  tcell.Style
+	scrollBar      scrollbar.Widget
+	visibility     ScrollBarVisibility
+	keybinds       Keybinds
+	focused        bool
+	onAction       func(Action) tview.Msg
+}
+
+var _ tview.Element = Widget{}
+
+// New returns a list of count items built by item, with selectionState as its cursor and scroll position, showing the scroll bar when they do not fit.
+func New(selectionState *SelectionState, count int, item func(index int) Item) Widget {
+	return Widget{
+		selectionState: selectionState,
+		count:          count,
+		item:           item,
+		width:          tview.Fill,
+		height:         tview.Fill,
+		scrollBar:      scrollbar.New(),
+		keybinds:       defaultKeybinds,
+	}
+}
+
+// Width sets the width of the list.
+func (w Widget) Width(width tview.Length) Widget {
+	w.width = width
+	return w
+}
+
+// Height sets the height of the list.
+func (w Widget) Height(height tview.Length) Widget {
+	w.height = height
+	return w
+}
+
+// Gap sets the number of empty rows between items.
+func (w Widget) Gap(gap int) Widget {
+	w.gap = gap
+	return w
+}
+
+// SelectedStyle sets the style merged into the selected item.
+func (w Widget) SelectedStyle(style tcell.Style) Widget {
+	w.selectedStyle = style
+	return w
+}
+
+// ScrollBar sets the scroll bar and when it is shown.
+func (w Widget) ScrollBar(scrollBar scrollbar.Widget, visibility ScrollBarVisibility) Widget {
+	w.scrollBar, w.visibility = scrollBar, visibility
+	return w
+}
+
+// Keybinds sets the keys that move the cursor and scroll.
+func (w Widget) Keybinds(keybinds Keybinds) Widget {
+	w.keybinds = keybinds
+	return w
+}
+
+// Focused sets whether the list receives keys.
+func (w Widget) Focused(focused bool) Widget {
+	w.focused = focused
+	return w
+}
+
+// OnAction makes the list interactive, turning keys and the mouse into the message f returns for the Action, which the model applies with SelectionState.Perform.
+func (w Widget) OnAction(f func(Action) tview.Msg) Widget {
+	w.onAction = f
+	return w
+}
+
+// Size returns the width and height of the list.
+func (w Widget) Size() (width, height tview.Length) {
+	return w.width, w.height
+}
+
+// view is the list laid out in an area.
+type view struct {
+	items, bar     tview.Rectangle
+	starts, sizes  []int
+	total          int
+	cursor, offset int
+}
+
+// maxOffset returns the largest scroll position, where the last row is at the bottom.
+func (v view) maxOffset() int {
+	return max(v.total-v.items.Height, 0)
+}
+
+func (w Widget) layout(width int) (starts, sizes []int, total int) {
+	starts, sizes = make([]int, w.count), make([]int, w.count)
+	for i := range w.count {
+		if i > 0 {
+			total += w.gap
+		}
+		starts[i], sizes[i] = total, w.item(i).Rows(width)
+		total += sizes[i]
+	}
+	return starts, sizes, total
+}
+
+// resolve lays the list out in area and works out the scroll position from the selection state.
+func (w Widget) resolve(area tview.Rectangle) view {
+	v := view{items: area}
+	// Lay out beside the scroll bar first: a list long enough to need it is then laid out once.
+	if area.Width > 1 && (w.visibility == ScrollBarVisibilityAlways || w.visibility == ScrollBarVisibilityAutomatic) {
+		v.items.Width--
+		v.starts, v.sizes, v.total = w.layout(v.items.Width)
+		if w.visibility == ScrollBarVisibilityAlways || v.total > area.Height {
+			v.bar = tview.Rectangle{X: area.X + v.items.Width, Y: area.Y, Width: 1, Height: area.Height}
+		} else {
+			v.items.Width++
+			v.starts, v.sizes, v.total = w.layout(v.items.Width)
+		}
+	} else {
+		v.starts, v.sizes, v.total = w.layout(area.Width)
+	}
+
+	c := w.selectionState
+	v.cursor = min(c.cursor, w.count-1)
+	v.offset = c.offset
+	switch {
+	case c.center && v.cursor >= 0:
+		v.offset = v.starts[v.cursor] + v.sizes[v.cursor]/2 - area.Height/2
+	case c.atEnd:
+		v.offset = v.maxOffset()
+	}
+	v.offset = min(max(v.offset, 0), v.maxOffset())
+	return v
+}
+
+// Draw draws the visible items, with the selected one in the selected style, and the scroll bar.
+func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
+	v := w.resolve(area)
+	clipped := newClippedScreen(screen, v.items.X, v.items.Y, v.items.Width, v.items.Height)
+	for i := range w.count {
+		top := v.items.Y + v.starts[i] - v.offset
+		if top >= v.items.Y+v.items.Height {
+			break
+		}
+		if top+v.sizes[i] <= v.items.Y {
+			continue
+		}
+		itemArea := tview.Rectangle{X: v.items.X, Y: top, Width: v.items.Width, Height: v.sizes[i]}
+		if i != v.cursor || w.selectedStyle == tcell.StyleDefault {
+			w.item(i).Draw(clipped, itemArea)
+			continue
+		}
+		styled := &styledScreen{Screen: clipped, style: w.selectedStyle}
+		for y := itemArea.Y; y < itemArea.Y+itemArea.Height; y++ {
+			for x := itemArea.X; x < itemArea.X+itemArea.Width; x++ {
+				styled.Put(x, y, " ", tcell.StyleDefault)
+			}
+		}
+		w.item(i).Draw(styled, itemArea)
+	}
+	if v.bar.Width > 0 {
+		w.bar(v).Draw(screen, v.bar)
+	}
+}
+
+// Handle turns the keybinds (while focused), the mouse wheel, clicks on items, and clicks and drags on the scroll bar into an Action once OnAction is set. Other messages pass through unchanged.
+func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
+	if w.onAction == nil {
+		return msg
+	}
+	v := w.resolve(area)
+	a := Action{cursor: v.cursor, offset: v.offset, grab: w.selectionState.grab}
+	center := false
+	switch m := msg.(type) {
+	case tview.KeyMsg:
+		if !w.focused {
+			return msg
+		}
+		k := w.keybinds
+		switch {
+		case keybind.Matches(m, k.SelectDown):
+			a.cursor, center = min(a.cursor+1, w.count-1), true
+		case keybind.Matches(m, k.SelectUp):
+			a.cursor, center = max(a.cursor-1, min(0, w.count-1)), true
+		case keybind.Matches(m, k.SelectTop):
+			a.cursor, center = min(0, w.count-1), true
+		case keybind.Matches(m, k.SelectBottom):
+			a.cursor, center = w.count-1, true
+		case keybind.Matches(m, k.ScrollDown):
+			a.offset++
+		case keybind.Matches(m, k.ScrollUp):
+			a.offset--
+		case keybind.Matches(m, k.ScrollTop):
+			a.offset = 0
+		case keybind.Matches(m, k.ScrollBottom):
+			a.offset = v.maxOffset()
+		default:
+			return msg
+		}
+	case tview.MouseMsg:
+		if !w.mouse(m, v, &a) {
+			return msg
+		}
+	default:
+		return msg
+	}
+	if center && a.cursor >= 0 {
+		a.offset = v.starts[a.cursor] + v.sizes[a.cursor]/2 - v.items.Height/2
+	}
+	a.offset = min(max(a.offset, 0), v.maxOffset())
+	a.atEnd = w.selectionState.trackEnd && a.offset == v.maxOffset()
+	return w.onAction(a)
+}
+
+// mouse applies m to a and reports whether the list used it.
+func (w Widget) mouse(m tview.MouseMsg, v view, a *Action) bool {
+	x, y := m.Position()
+	if a.grab >= 0 {
+		// Dragging the thumb follows the pointer anywhere until the button is released.
+		switch m.Action {
+		case tview.MouseMove:
+			a.offset = w.thumbOffset(v, y-v.bar.Y, a.grab)
+		case tview.MouseLeftUp:
+			a.grab = -1
+		}
+		return true
+	}
+	if v.bar.Contains(x, y) {
+		return w.barMouse(m.Action, v, y-v.bar.Y, a)
+	}
+	if !v.items.Contains(x, y) {
+		return false
+	}
+	switch m.Action {
+	case tview.MouseLeftClick:
+		row := y - v.items.Y + v.offset
+		for i := range w.count {
+			if row >= v.starts[i] && row < v.starts[i]+v.sizes[i] {
+				a.cursor = i
+			}
+		}
+	case tview.MouseScrollUp:
+		a.offset--
+	case tview.MouseScrollDown:
+		a.offset++
+	default:
+		return false
+	}
+	return true
+}
+
+// bar returns the scroll bar for the view.
+func (w Widget) bar(v view) scrollbar.Widget {
+	return w.scrollBar.Lengths(v.total, v.items.Height).Offset(v.offset)
+}
+
+// barMouse applies a mouse action at row of the scroll bar to a: the arrows scroll a row, the track pages, and the thumb starts a drag.
+func (w Widget) barMouse(action tview.MouseAction, v view, row int, a *Action) bool {
+	bar := w.bar(v)
+	if bar.HasStartArrow() {
+		row--
+	}
+	if row < 0 || row >= bar.TrackCells(v.bar.Height) {
+		// An arrow.
+		if action == tview.MouseLeftClick {
+			if row < 0 {
+				a.offset--
+			} else {
+				a.offset++
+			}
+		}
+		return true
+	}
+	thumbStart, thumbSize := bar.Thumb(v.bar.Height)
+	pos := row*scrollbar.Subcell + scrollbar.Subcell/2
+	onThumb := pos >= thumbStart && pos < thumbStart+thumbSize
+	switch {
+	case action == tview.MouseLeftDown && onThumb:
+		a.grab = pos - thumbStart
+	case action == tview.MouseLeftClick && pos < thumbStart:
+		a.offset -= v.items.Height
+	case action == tview.MouseLeftClick && !onThumb:
+		a.offset += v.items.Height
+	}
+	return true
+}
+
+// thumbOffset returns the scroll position for the thumb grabbed at grab when the pointer is at row of the scroll bar.
+func (w Widget) thumbOffset(v view, row, grab int) int {
+	bar := w.bar(v)
+	if bar.HasStartArrow() {
+		row--
+	}
+	cells := bar.TrackCells(v.bar.Height)
+	_, thumbSize := bar.Thumb(v.bar.Height)
+	travel := cells*scrollbar.Subcell - thumbSize
+	if travel <= 0 {
+		return v.offset
+	}
+	pos := min(max(row, 0), cells-1)*scrollbar.Subcell + scrollbar.Subcell/2
+	return min(max(pos-grab, 0), travel) * v.maxOffset() / travel
+}

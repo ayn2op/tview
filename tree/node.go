@@ -3,8 +3,7 @@ package tree
 import (
 	"slices"
 
-	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/text"
+	"github.com/ayn2op/tview/richtext"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -17,7 +16,7 @@ type Node struct {
 	children []*Node
 
 	// The item's text.
-	line text.Line
+	line richtext.Line
 
 	// The style of selected text.
 	selectedTextStyle tcell.Style
@@ -37,22 +36,16 @@ type Node struct {
 
 // NewNode returns a new tree node.
 func NewNode(value string) *Node {
-	textStyle := tcell.StyleDefault.Foreground(tview.Styles.PrimaryTextColor).Background(tview.Styles.PrimitiveBackgroundColor)
 	return &Node{
-		line:              text.NewLine(text.NewSegment(value, textStyle)),
+		line:              richtext.NewLine(richtext.NewSegment(value, tcell.StyleDefault)),
 		selectedTextStyle: tcell.StyleDefault.Reverse(true),
 		indent:            2,
 		expanded:          true,
-		expandable:        false,
 		selectable:        true,
 	}
 }
 
-// Walk traverses this node's subtree in depth-first, pre-order (NLR) order and
-// calls the provided callback function on each traversed node (which includes
-// this node) with the traversed node and its parent node (nil for this node).
-// The callback returns whether traversal should continue with the traversed
-// node's child nodes (true) or not recurse any deeper (false).
+// Walk traverses this node's subtree in depth-first, pre-order (NLR) order and calls the provided callback function on each traversed node (which includes this node) with the traversed node and its parent node (nil for this node). The callback returns whether traversal should continue with the traversed node's child nodes (true) or not recurse any deeper (false).
 func (n *Node) Walk(callback func(node, parent *Node) bool) *Node {
 	type entry struct{ node, parent *Node }
 	stack := []entry{{node: n}}
@@ -75,9 +68,7 @@ func (n *Node) Reference() any {
 	return n.reference
 }
 
-// SetReference allows you to store a reference of any type in this node. This
-// will allow you to establish a mapping between the Model hierarchy and your
-// internal tree structure.
+// SetReference allows you to store a reference of any type in this node. This will allow you to establish a mapping between the Model hierarchy and your internal tree structure.
 func (n *Node) SetReference(reference any) *Node {
 	n.reference = reference
 
@@ -96,12 +87,12 @@ func (n *Node) SetChildren(childNodes []*Node) *Node {
 }
 
 // Line returns the node's styled text line.
-func (n *Node) Line() text.Line {
+func (n *Node) Line() richtext.Line {
 	return n.line.Clone()
 }
 
 // SetLine sets the node's styled text line.
-func (n *Node) SetLine(line text.Line) *Node {
+func (n *Node) SetLine(line richtext.Line) *Node {
 	n.line = line.Clone()
 
 	return n
@@ -120,8 +111,7 @@ func (n *Node) AddChild(node *Node) *Node {
 	return n
 }
 
-// RemoveChild removes a child node from this node. If the child node cannot be
-// found, nothing happens.
+// RemoveChild removes a child node from this node. If the child node cannot be found, nothing happens.
 func (n *Node) RemoveChild(node *Node) *Node {
 	if index := slices.Index(n.children, node); index >= 0 {
 		n.children = slices.Delete(n.children, index, index+1)
@@ -129,8 +119,7 @@ func (n *Node) RemoveChild(node *Node) *Node {
 	return n
 }
 
-// SetSelectable sets a flag indicating whether this node can be selected by
-// the user.
+// SetSelectable sets a flag indicating whether this node can be selected by the user.
 func (n *Node) SetSelectable(selectable bool) *Node {
 	n.selectable = selectable
 	return n
@@ -147,14 +136,12 @@ func (n *Node) SetExpanded(expanded bool) *Node {
 	return n
 }
 
-// Expandable returns whether this node can be expanded even when there are
-// no loaded child nodes yet.
+// Expandable returns whether this node can be expanded even when there are no loaded child nodes yet.
 func (n *Node) Expandable() bool {
 	return n.expandable
 }
 
-// SetExpandable sets whether this node can be expanded even when there are no
-// loaded child nodes yet.
+// SetExpandable sets whether this node can be expanded even when there are no loaded child nodes yet.
 func (n *Node) SetExpandable(expandable bool) *Node {
 	n.expandable = expandable
 	return n
@@ -190,8 +177,7 @@ func (n *Node) CollapseAll() *Node {
 	return n
 }
 
-// SelectedTextStyle returns the text style for this node when it is
-// selected.
+// SelectedTextStyle returns the text style for this node when it is selected.
 func (n *Node) SelectedTextStyle() tcell.Style {
 	return n.selectedTextStyle
 }
@@ -202,10 +188,21 @@ func (n *Node) SetSelectedTextStyle(style tcell.Style) *Node {
 	return n
 }
 
-// SetIndent sets an additional indentation for this node's text. A value of 0
-// keeps the text as far left as possible with a minimum of line graphics. Any
-// value greater than that moves the text to the right.
+// SetIndent sets an additional indentation for this node's text. A value of 0 keeps the text as far left as possible with a minimum of line graphics. Any value greater than that moves the text to the right.
 func (n *Node) SetIndent(indent int) *Node {
 	n.indent = indent
 	return n
+}
+
+// PathTo returns the nodes from n to node, both included, or nil if node is not under n.
+func (n *Node) PathTo(node *Node) []*Node {
+	if n == node {
+		return []*Node{n}
+	}
+	for _, child := range n.children {
+		if path := child.PathTo(node); path != nil {
+			return append([]*Node{n}, path...)
+		}
+	}
+	return nil
 }

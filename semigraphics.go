@@ -2,8 +2,7 @@ package tview
 
 import "github.com/gdamore/tcell/v3"
 
-// Semigraphics provides easy access to Unicode characters for drawing.
-// Using strings with \u escapes to keep the source ASCII-safe.
+// Semigraphics provides easy access to Unicode characters for drawing. Using strings with \u escapes to keep the source ASCII-safe.
 const (
 	// General Punctuation U+2000-U+206F
 	SemigraphicsHorizontalEllipsis = "\u2026" // …
@@ -173,8 +172,7 @@ const (
 	BlockQuadrantUpperRightAndLowerLeftAndLowerRight = "\u259F" // ▟
 )
 
-// SemigraphicJoints maps pairs of semigraphics strings to the resulting joint.
-// All combinations for light and double lines are included.
+// SemigraphicJoints maps pairs of semigraphics strings to the resulting joint. All combinations for light and double lines are included.
 var SemigraphicJoints = map[string]string{
 	// ─ + │ = ┼
 	BoxDrawingsLightHorizontal + BoxDrawingsLightVertical: BoxDrawingsLightVerticalAndHorizontal,
@@ -300,8 +298,7 @@ var SemigraphicJoints = map[string]string{
 	BoxDrawingsDoubleHorizontal + BoxDrawingsDoubleVertical: BoxDrawingsDoubleVerticalAndHorizontal,
 }
 
-// PrintJoinedSemigraphics prints a semigraphics string into the screen at the given
-// position with the given style, joining it with any existing semigraphics.
+// PrintJoinedSemigraphics prints a semigraphics string into the screen at the given position with the given style, joining it with any existing semigraphics.
 func PrintJoinedSemigraphics(screen Screen, x, y int, str string, style tcell.Style) {
 	previous, _, _ := screen.Get(x, y)
 

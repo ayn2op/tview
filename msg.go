@@ -8,14 +8,14 @@ import (
 
 type Msg any
 
-// Cmd is a side effect requested by a model during input handling.
+// Cmd is work done outside Update, such as I/O, whose result comes back as a message.
 type Cmd func() Msg
 
-type rawMsg struct{ msg any }
+type rawMsg struct{ data any }
 
-// Raw is a command that writes the data to the underlying TTY without any formatting.
-func Raw(r any) Cmd {
-	return func() Msg { return rawMsg{msg: r} }
+// WriteRaw is a command that writes the data to the underlying TTY without any formatting.
+func WriteRaw(r any) Cmd {
+	return func() Msg { return rawMsg{data: r} }
 }
 
 type batchMsg []Cmd
@@ -56,8 +56,13 @@ func compactCmds(cmds ...Cmd) []Cmd {
 	return slices.DeleteFunc(cmds, func(cmd Cmd) bool { return cmd == nil })
 }
 
-type KeyMsg = *tcell.EventKey
-type ResizeMsg = *tcell.EventResize
+// Events from tcell that models receive as they are.
+type (
+	KeyMsg       = *tcell.EventKey
+	ResizeMsg    = *tcell.EventResize
+	ClipboardMsg = *tcell.EventClipboard
+	FocusMsg     = *tcell.EventFocus
+)
 
 type MouseMsg struct {
 	*tcell.EventMouse
@@ -82,14 +87,6 @@ func Suspend(cmd Cmd) Cmd {
 	return func() Msg { return suspendMsg(cmd) }
 }
 
-type setMouseCaptureMsg struct {
-	target Model
-}
-
-func SetMouseCapture(target Model) Cmd {
-	return func() Msg { return setMouseCaptureMsg{target: target} }
-}
-
 type setTitleMsg string
 
 func SetTitle(title string) Cmd {
@@ -98,6 +95,7 @@ func SetTitle(title string) Cmd {
 
 type getClipboardMsg struct{}
 
+// GetClipboard asks the terminal for the clipboard, which arrives as a ClipboardMsg.
 func GetClipboard() Cmd {
 	return func() Msg { return getClipboardMsg{} }
 }

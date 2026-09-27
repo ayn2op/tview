@@ -1,6 +1,6 @@
 package tview
 
-// BorderSet defines various borders used when models are drawn.
+// BorderSet is the characters a border is drawn with.
 type BorderSet struct {
 	Top         string
 	Bottom      string

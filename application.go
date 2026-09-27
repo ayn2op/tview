@@ -67,7 +67,6 @@ type Application struct {
 	doneOnce sync.Once
 
 	root                   Model
-	mouseCapturingModel    Model            // A model requested to capture future mouse messages.
 	lastMouseX, lastMouseY int              // The last position of the mouse.
 	mouseDownX, mouseDownY int              // The position of the mouse when a button was last pressed.
 	lastMouseClick         time.Time        // The time when a mouse button was last clicked.
@@ -96,6 +95,10 @@ func NewApplication(root Model, options ...ApplicationOption) *Application {
 
 // Run starts the application and thus the messages loop.
 func (a *Application) Run() error {
+	if a.root == nil {
+		return errors.New("root Model is nil")
+	}
+
 	var (
 		lastRedraw  time.Time   // The time the screen was last redrawn.
 		redrawTimer *time.Timer // A timer to schedule the next redraw.
@@ -112,17 +115,13 @@ func (a *Application) Run() error {
 		}
 		a.screen = screen
 	}
-
 	defer a.stop()
 
 	go a.handleEvents()
 	go a.handleCmds()
 
-	root := a.root
-	if root != nil {
-		a.queueCmd(root.Init())
-		a.draw()
-	}
+	a.queueCmd(a.root.Init())
+	a.draw()
 
 	var (
 		pasteBuffer strings.Builder
@@ -140,7 +139,7 @@ func (a *Application) Run() error {
 
 		case rawMsg:
 			if tty, ok := a.screen.Tty(); ok {
-				data := fmt.Append(nil, msg.msg)
+				data := fmt.Append(nil, msg.data)
 				_, _ = tty.Write(data)
 			}
 		case suspendMsg:
@@ -149,8 +148,6 @@ func (a *Application) Run() error {
 			if next != nil {
 				a.queueCmd(func() Msg { return next })
 			}
-		case setMouseCaptureMsg:
-			a.mouseCapturingModel = msg.target
 		case setTitleMsg:
 			a.screen.SetTitle(string(msg))
 		case notifyMsg:
@@ -167,26 +164,19 @@ func (a *Application) Run() error {
 				appendPasteKey(&pasteBuffer, msg)
 				break
 			}
-
-			// Pass other key events to the root model.
-			root := a.root
-			if root != nil {
-				a.queueCmd(root.Update(msg))
-			}
+			a.handle(msg)
 		case *tcell.EventPaste:
 			if msg.Start() {
 				pasting = true
 				pasteBuffer.Reset()
 			} else if msg.End() {
 				pasting = false
-				root := a.root
-				if root != nil && pasteBuffer.Len() > 0 {
-					a.queueCmd(root.Update(PasteMsg(pasteBuffer.String())))
+				if pasteBuffer.Len() > 0 {
+					a.handle(PasteMsg(pasteBuffer.String()))
 				}
 			}
 		case *tcell.EventResize:
-			// Resize events can imply terminal state changes even when size
-			// reports unchanged, so force one redraw pass.
+			// Resize events can imply terminal state changes even when size reports unchanged, so force one redraw pass.
 			a.forceRedraw = true
 			if time.Since(lastRedraw) < redrawPause {
 				if redrawTimer != nil {
@@ -197,9 +187,7 @@ func (a *Application) Run() error {
 				})
 			}
 			lastRedraw = time.Now()
-			if root := a.root; root != nil {
-				a.queueCmd(root.Update(msg))
-			}
+			a.queueCmd(a.root.Update(msg))
 		case *tcell.EventMouse:
 			isMouseDownAction := a.fireMouseActions(msg)
 			a.lastMouseButtons = msg.Buttons()
@@ -207,10 +195,7 @@ func (a *Application) Run() error {
 				a.mouseDownX, a.mouseDownY = msg.Position()
 			}
 		default:
-			root := a.root
-			if root != nil {
-				a.queueCmd(root.Update(msg))
-			}
+			a.queueCmd(a.root.Update(msg))
 		}
 
 		a.draw()
@@ -283,32 +268,14 @@ func (a *Application) execBatchMsg(msg batchMsg) {
 	wg.Wait()
 }
 
-// fireMouseActions analyzes the provided mouse event, derives mouse actions
-// from it and then forwards them to the corresponding models.
+// fireMouseActions derives mouse actions from the provided mouse event and passes them through the root's element.
 func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownAction bool) {
-	// We want to relay follow-up events to the same target model.
-	var targetPrimitive Model
-
-	// Helper function to fire a mouse action.
 	fire := func(action MouseAction) {
 		switch action {
 		case MouseLeftDown, MouseMiddleDown, MouseRightDown:
 			isMouseDownAction = true
 		}
-
-		// Determine the target model.
-		var model Model
-		if a.mouseCapturingModel != nil {
-			model = a.mouseCapturingModel
-			targetPrimitive = a.mouseCapturingModel
-		} else if targetPrimitive != nil {
-			model = targetPrimitive
-		} else {
-			model = a.root
-		}
-		if model != nil {
-			a.queueCmd(model.Update(MouseMsg{EventMouse: event, Action: action}))
-		}
+		a.handle(MouseMsg{EventMouse: event, Action: action})
 	}
 
 	x, y := event.Position()
@@ -384,23 +351,26 @@ func (a *Application) suspend(f func()) {
 
 func (a *Application) draw() {
 	screen := a.screen
-	root := a.root
-
-	if root == nil {
-		return
-	}
-
 	drawWidth, drawHeight := screen.Size()
-	root.SetRect(0, 0, drawWidth, drawHeight)
 
 	// tcell.Show emits only visual deltas; clear only when forced.
 	if a.forceRedraw {
 		screen.Clear()
 	}
-	root.View(screen)
+	// Each frame starts without a cursor, so only an element drawn in it can show one.
+	screen.HideCursor()
+	a.root.View().Draw(screen, Rectangle{Width: drawWidth, Height: drawHeight})
 	screen.Show()
 
 	a.forceRedraw = false
+}
+
+// handle passes an input message through the root's element before its Update.
+func (a *Application) handle(msg Msg) {
+	width, height := a.screen.Size()
+	if msg = a.root.View().Handle(msg, Rectangle{Width: width, Height: height}); msg != nil {
+		a.queueCmd(a.root.Update(msg))
+	}
 }
 
 func (a *Application) queueMsg(msg Msg) {

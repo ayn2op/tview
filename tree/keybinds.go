@@ -9,13 +9,8 @@ type Keybinds struct {
 	Top    keybind.Keybind
 	Bottom keybind.Keybind
 
-	MoveToParent    keybind.Keybind
-	MoveToLastChild keybind.Keybind
-
-	PageUp   keybind.Keybind
-	PageDown keybind.Keybind
-
-	Select keybind.Keybind
+	MoveToParent keybind.Keybind
+	Select       keybind.Keybind
 }
 
 func DefaultKeybinds() Keybinds {
@@ -25,21 +20,10 @@ func DefaultKeybinds() Keybinds {
 		Top:    keybind.NewSingleKeybind("home", "top"),
 		Bottom: keybind.NewSingleKeybind("end", "bot"),
 
-		MoveToParent:    keybind.NewSingleKeybind("K", "parent"),
-		MoveToLastChild: keybind.NewSingleKeybind("J", "last child"),
-
-		PageUp:   keybind.NewSingleKeybind("pgup", "page up"),
-		PageDown: keybind.NewSingleKeybind("pgdn", "page down"),
-
-		Select: keybind.NewSingleKeybind("enter", "select"),
+		MoveToParent: keybind.NewSingleKeybind("K", "parent"),
+		Select:       keybind.NewSingleKeybind("enter", "select"),
 	}
 }
 
-func (t *Model) Keybinds() Keybinds {
-	return t.keybinds
-}
-
-func (t *Model) SetKeybinds(keybinds Keybinds) *Model {
-	t.keybinds = keybinds
-	return t
-}
+// defaultKeybinds is built once so that New does not rebuild the keybinds on every View.
+var defaultKeybinds = DefaultKeybinds()

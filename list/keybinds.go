@@ -28,11 +28,5 @@ func DefaultKeybinds() Keybinds {
 	}
 }
 
-func (l *Model) Keybinds() Keybinds {
-	return l.keybinds
-}
-
-func (l *Model) SetKeybinds(keybinds Keybinds) *Model {
-	l.keybinds = keybinds
-	return l
-}
+// defaultKeybinds is built once so that New does not rebuild the keybinds on every View.
+var defaultKeybinds = DefaultKeybinds()

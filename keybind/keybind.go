@@ -12,46 +12,28 @@ type Keybind struct {
 	help Help
 }
 
-type Option func(*Keybind)
-
-func NewKeybind(options ...Option) Keybind {
-	k := &Keybind{}
-	for _, option := range options {
-		option(k)
-	}
-	return *k
+// New returns a keybind for keys, without help.
+func New(keys ...string) Keybind {
+	return Keybind{keys: normalizeKeys(keys...)}
 }
 
+// NewSingleKeybind returns a keybind for key, with key and desc as its help.
 func NewSingleKeybind(key, desc string) Keybind {
-	return NewKeybind(WithKeys(key), WithHelp(key, desc))
+	return New(key).WithHelp(key, desc)
 }
 
-func WithKeys(keys ...string) Option {
-	return func(k *Keybind) {
-		k.keys = normalizeKeys(keys...)
-	}
-}
-
-func WithHelp(key, desc string) Option {
-	return func(k *Keybind) {
-		k.help = Help{Key: key, Desc: desc}
-	}
+// WithHelp returns k with key and desc as its help.
+func (k Keybind) WithHelp(key, desc string) Keybind {
+	k.help = Help{Key: key, Desc: desc}
+	return k
 }
 
 func (k Keybind) Keys() []string {
 	return k.keys
 }
 
-func (k *Keybind) SetKeys(keys ...string) {
-	k.keys = normalizeKeys(keys...)
-}
-
 func (k Keybind) Help() Help {
 	return k.help
-}
-
-func (k *Keybind) SetHelp(key, desc string) {
-	k.help = Help{Key: key, Desc: desc}
 }
 
 type Help struct {

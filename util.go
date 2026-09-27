@@ -1,8 +1,8 @@
 package tview
 
 import (
-	"github.com/ayn2op/tview/internal/grapheme"
 	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
 )
 
 type Alignment int
@@ -13,126 +13,51 @@ const (
 	AlignmentRight
 )
 
-// Print prints text onto the screen into the given box at (x,y,maxWidth,1),
-// not exceeding that box. The screen's background color will not be changed.
-//
-// Returns the number of actual bytes of the text printed and the actual width
-// used for the printed runes.
-func Print(screen Screen, text string, x, y, maxWidth int, alignment Alignment, color tcell.Color) (int, int) {
-	start, end, width := PrintStyled(screen, text, x, y, 0, maxWidth, alignment, tcell.StyleDefault.Foreground(color), true)
-	return end - start, width
-}
-
-// PrintWithStyle prints text onto the screen into the given box at
-// (x,y,maxWidth,1), not exceeding that box, using the provided style.
-//
-// Returns the number of actual bytes of the text printed and the actual width
-// used for the printed runes.
-func PrintWithStyle(screen Screen, text string, x, y, maxWidth int, alignment Alignment, style tcell.Style) (int, int) {
-	start, end, width := PrintStyled(screen, text, x, y, 0, maxWidth, alignment, style, false)
-	return end - start, width
-}
-
-// PrintStyled works like [Print] but it takes a style instead of just a
-// foreground color. The skipWidth parameter specifies the number of cells
-// skipped at the beginning of the text. It returns the start index, end index
-// (exclusively), and screen width of the text actually printed. If
-// maintainBackground is "true", the existing screen background is not changed
-// (i.e. the style's background color is ignored).
-func PrintStyled(screen Screen, text string, x, y, skipWidth, maxWidth int, alignment Alignment, style tcell.Style, maintainBackground bool) (start, end, printedWidth int) {
-	totalWidth, totalHeight := screen.Size()
-	if maxWidth <= 0 || len(text) == 0 || y < 0 || y >= totalHeight {
-		return 0, 0, 0
+// Print draws text on row y from x, at most width cells wide and aligned within them, and returns the width it drew. Text too wide for a right or center alignment loses its start, or both ends.
+func Print(screen Screen, text string, x, y, width int, alignment Alignment, style tcell.Style) int {
+	if width <= 0 {
+		return 0
 	}
-
-	// If we don't overwrite the background, we use the default color.
-	if maintainBackground {
-		style = style.Background(tcell.ColorDefault)
-	}
-
-	// Skip beginning and measure width.
-	var textWidth int
-	state := grapheme.NewState()
-	newState := state
-	str := text
-	for len(str) > 0 {
-		_, str, state = grapheme.Step(str, state)
-		if skipWidth > 0 {
-			skipWidth -= state.Width()
-			text = str
-			newState = state
-			start += state.Length()
-		} else {
-			textWidth += state.Width()
-		}
-	}
-	state = newState
-
-	// Reduce all alignments to AlignLeft.
+	textWidth := uniseg.StringWidth(text)
+	cut := 0
 	switch alignment {
 	case AlignmentRight:
-		// Chop off characters on the left until it fits.
-		for len(text) > 0 && textWidth > maxWidth {
-			_, text, state = grapheme.Step(text, state)
-			textWidth -= state.Width()
-			start += state.Length()
-		}
-		x, maxWidth = x+maxWidth-textWidth, textWidth
+		cut = textWidth - width
 	case AlignmentCenter:
-		// Chop off characters on the left until it fits.
-		subtracted := (textWidth - maxWidth) / 2
-		for len(text) > 0 && subtracted > 0 {
-			_, text, state = grapheme.Step(text, state)
-			subtracted -= state.Width()
-			textWidth -= state.Width()
-			start += state.Length()
-		}
-		if textWidth < maxWidth {
-			x, maxWidth = x+maxWidth/2-textWidth/2, textWidth
+		cut = (textWidth - width) / 2
+	}
+	state := -1
+	for cut > 0 && text != "" {
+		var w int
+		_, text, w, state = uniseg.FirstGraphemeClusterInString(text, state)
+		cut -= w
+		textWidth -= w
+	}
+	if textWidth < width {
+		switch alignment {
+		case AlignmentRight:
+			x += width - textWidth
+		case AlignmentCenter:
+			x += width/2 - textWidth/2
 		}
 	}
 
-	// Draw left-aligned text.
-	end = start
-	rightBorder := x + maxWidth
-	for len(text) > 0 && x < rightBorder && x < totalWidth {
-		var c string
-		c, text, state = grapheme.Step(text, state)
-		if c == "" {
+	drawn := 0
+	for text != "" {
+		var cluster string
+		var w int
+		cluster, text, w, state = uniseg.FirstGraphemeClusterInString(text, state)
+		if drawn+w > width {
 			break
 		}
-		width := state.Width()
-
-		if width > 0 {
-			finalStyle := style
-			if maintainBackground {
-				backgroundColor := finalStyle.GetBackground()
-				if backgroundColor == tcell.ColorDefault {
-					_, existingStyle, _ := screen.Get(x, y)
-					background := existingStyle.GetBackground()
-					finalStyle = finalStyle.Background(background)
-				}
-			}
-			for offset := width - 1; offset >= 0; offset-- {
-				// To avoid undesired effects, we populate all cells.
-				if offset == 0 {
-					screen.Put(x+offset, y, c, finalStyle)
-				} else {
-					screen.Put(x+offset, y, " ", finalStyle)
-				}
-			}
+		// Fill the cells a wide cluster covers, then put the cluster in the first.
+		for i := w - 1; i > 0; i-- {
+			screen.Put(x+drawn+i, y, " ", style)
 		}
-
-		x += width
-		end += state.Length()
-		printedWidth += width
+		if w > 0 {
+			screen.Put(x+drawn, y, cluster, style)
+		}
+		drawn += w
 	}
-
-	return start, end, printedWidth
-}
-
-// ModelInRect reports whether x,y is inside m's rectangle.
-func ModelInRect(m Model, x, y int) bool {
-	rectX, rectY, width, height := m.Rect()
-	return x >= rectX && x < rectX+width && y >= rectY && y < rectY+height
+	return drawn
 }

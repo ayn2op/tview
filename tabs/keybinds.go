@@ -5,10 +5,13 @@ import (
 	"github.com/ayn2op/tview/keybind"
 )
 
+// Keybinds are the keys that switch tabs.
 type Keybinds struct {
 	Previous keybind.Keybind
 	Next     keybind.Keybind
 }
+
+var _ help.KeyMap = Keybinds{}
 
 func DefaultKeybinds() Keybinds {
 	return Keybinds{
@@ -17,53 +20,13 @@ func DefaultKeybinds() Keybinds {
 	}
 }
 
-func (m *Model) Keybinds() Keybinds {
-	return m.keybinds
+// defaultKeybinds is built once so that New does not rebuild the keybinds on every View.
+var defaultKeybinds = DefaultKeybinds()
+
+func (k Keybinds) ShortHelp() []keybind.Keybind {
+	return []keybind.Keybind{k.Previous, k.Next}
 }
 
-func (m *Model) SetKeybinds(keybinds Keybinds) *Model {
-	m.keybinds = keybinds
-	return m
-}
-
-var _ help.KeyMap = (*Model)(nil)
-
-func (m *Model) ShortHelp() []keybind.Keybind {
-	if len(m.tabs) == 0 {
-		return nil
-	}
-
-	var short []keybind.Keybind
-	if m.canPrevious() {
-		short = append(short, m.keybinds.Previous)
-	}
-	if m.canNext() {
-		short = append(short, m.keybinds.Next)
-	}
-	if activeKeyMap, ok := m.tabs[m.active].(help.KeyMap); ok {
-		short = append(short, activeKeyMap.ShortHelp()...)
-	}
-	return short
-}
-
-func (m *Model) FullHelp() [][]keybind.Keybind {
-	if len(m.tabs) == 0 {
-		return nil
-	}
-
-	var nav []keybind.Keybind
-	if m.canPrevious() {
-		nav = append(nav, m.keybinds.Previous)
-	}
-	if m.canNext() {
-		nav = append(nav, m.keybinds.Next)
-	}
-	var full [][]keybind.Keybind
-	if len(nav) > 0 {
-		full = append(full, nav)
-	}
-	if activeKeyMap, ok := m.tabs[m.active].(help.KeyMap); ok {
-		full = append(full, activeKeyMap.FullHelp()...)
-	}
-	return full
+func (k Keybinds) FullHelp() [][]keybind.Keybind {
+	return [][]keybind.Keybind{{k.Previous, k.Next}}
 }

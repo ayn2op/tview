@@ -44,29 +44,34 @@ const (
 	MouseScrollRight
 )
 
-type ApplicationOption func(*Application)
+type applicationOptions struct {
+	screen             Screen
+	disableCatchPanics bool
+}
+
+type ApplicationOption func(*applicationOptions)
 
 func WithScreen(screen Screen) ApplicationOption {
-	return func(a *Application) {
-		a.screen = screen
-		a.forceRedraw = true
+	return func(c *applicationOptions) {
+		c.screen = screen
 	}
 }
 
 func WithoutCatchPanics() ApplicationOption {
-	return func(a *Application) {
-		a.disableCatchPanics = true
+	return func(c *applicationOptions) {
+		c.disableCatchPanics = true
 	}
 }
 
-// Application represents the top node of an application.
-type Application struct {
+// Application runs a model: it starts it, changes it with each message, and draws it.
+type Application[M Model[M]] struct {
 	msgs     chan Msg
 	cmds     chan Cmd
 	done     chan struct{}
 	doneOnce sync.Once
 
-	root                   Model
+	model M
+
 	lastMouseX, lastMouseY int              // The last position of the mouse.
 	mouseDownX, mouseDownY int              // The position of the mouse when a button was last pressed.
 	lastMouseClick         time.Time        // The time when a mouse button was last clicked.
@@ -79,26 +84,27 @@ type Application struct {
 	disableCatchPanics bool
 }
 
-// NewApplication creates an application with root as its top-level model.
-func NewApplication(root Model, options ...ApplicationOption) *Application {
-	a := &Application{
-		msgs: make(chan Msg),
-		cmds: make(chan Cmd),
-		done: make(chan struct{}),
-		root: root,
-	}
+// NewApplication creates an application that runs model.
+func NewApplication[M Model[M]](model M, options ...ApplicationOption) *Application[M] {
+	var opts applicationOptions
 	for _, option := range options {
-		option(a)
+		option(&opts)
 	}
-	return a
+	return &Application[M]{
+		msgs:  make(chan Msg),
+		cmds:  make(chan Cmd),
+		done:  make(chan struct{}),
+		model: model,
+
+		// A screen given by an option may hold content from before, so the first frame clears it.
+		forceRedraw:        opts.screen != nil,
+		screen:             opts.screen,
+		disableCatchPanics: opts.disableCatchPanics,
+	}
 }
 
 // Run starts the application and thus the messages loop.
-func (a *Application) Run() error {
-	if a.root == nil {
-		return errors.New("root Model is nil")
-	}
-
+func (a *Application[M]) Run() error {
 	var (
 		lastRedraw  time.Time   // The time the screen was last redrawn.
 		redrawTimer *time.Timer // A timer to schedule the next redraw.
@@ -120,7 +126,7 @@ func (a *Application) Run() error {
 	go a.handleEvents()
 	go a.handleCmds()
 
-	a.queueCmd(a.root.Init())
+	a.queueCmd(a.model.Init())
 	a.draw()
 
 	var (
@@ -187,7 +193,7 @@ func (a *Application) Run() error {
 				})
 			}
 			lastRedraw = time.Now()
-			a.queueCmd(a.root.Update(msg))
+			a.updateModel(msg)
 		case *tcell.EventMouse:
 			isMouseDownAction := a.fireMouseActions(msg)
 			a.lastMouseButtons = msg.Buttons()
@@ -195,7 +201,7 @@ func (a *Application) Run() error {
 				a.mouseDownX, a.mouseDownY = msg.Position()
 			}
 		default:
-			a.queueCmd(a.root.Update(msg))
+			a.updateModel(msg)
 		}
 
 		a.draw()
@@ -214,13 +220,13 @@ func appendPasteKey(buffer *strings.Builder, msg KeyMsg) {
 	}
 }
 
-func (a *Application) handleEvents() {
+func (a *Application[M]) handleEvents() {
 	for event := range a.screen.EventQ() {
 		a.queueMsg(event)
 	}
 }
 
-func (a *Application) handleCmds() {
+func (a *Application[M]) handleCmds() {
 	for {
 		select {
 		case <-a.done:
@@ -231,7 +237,7 @@ func (a *Application) handleCmds() {
 	}
 }
 
-func (a *Application) execCmd(cmd Cmd) {
+func (a *Application[M]) execCmd(cmd Cmd) {
 	if !a.disableCatchPanics {
 		defer func() {
 			if r := recover(); r != nil {
@@ -252,13 +258,13 @@ func (a *Application) execCmd(cmd Cmd) {
 	}
 }
 
-func (a *Application) execSequenceMsg(msg sequenceMsg) {
+func (a *Application[M]) execSequenceMsg(msg sequenceMsg) {
 	for _, cmd := range msg {
 		a.execCmd(cmd)
 	}
 }
 
-func (a *Application) execBatchMsg(msg batchMsg) {
+func (a *Application[M]) execBatchMsg(msg batchMsg) {
 	var wg sync.WaitGroup
 	for _, cmd := range msg {
 		wg.Go(func() {
@@ -269,7 +275,7 @@ func (a *Application) execBatchMsg(msg batchMsg) {
 }
 
 // fireMouseActions derives mouse actions from the provided mouse event and passes them through the root's element.
-func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownAction bool) {
+func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (isMouseDownAction bool) {
 	fire := func(action MouseAction) {
 		switch action {
 		case MouseLeftDown, MouseMiddleDown, MouseRightDown:
@@ -332,7 +338,7 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (isMouseDownActi
 }
 
 // stop finalizes the active screen and leaves terminal UI mode.
-func (a *Application) stop() {
+func (a *Application[M]) stop() {
 	a.doneOnce.Do(func() {
 		a.screen.Fini()
 		a.screen = nil
@@ -340,7 +346,7 @@ func (a *Application) stop() {
 	})
 }
 
-func (a *Application) suspend(f func()) {
+func (a *Application[M]) suspend(f func()) {
 	screen := a.screen
 	if screen.Suspend() != nil {
 		return
@@ -349,7 +355,7 @@ func (a *Application) suspend(f func()) {
 	screen.Resume()
 }
 
-func (a *Application) draw() {
+func (a *Application[M]) draw() {
 	screen := a.screen
 	drawWidth, drawHeight := screen.Size()
 
@@ -359,21 +365,28 @@ func (a *Application) draw() {
 	}
 	// Each frame starts without a cursor, so only an element drawn in it can show one.
 	screen.HideCursor()
-	a.root.View().Draw(screen, Rectangle{Width: drawWidth, Height: drawHeight})
+	a.model.View().Draw(screen, Rectangle{Width: drawWidth, Height: drawHeight})
 	screen.Show()
 
 	a.forceRedraw = false
 }
 
-// handle passes an input message through the root's element before its Update.
-func (a *Application) handle(msg Msg) {
+// handle passes an input message through the model's element before updating the model with it.
+func (a *Application[M]) handle(msg Msg) {
 	width, height := a.screen.Size()
-	if msg = a.root.View().Handle(msg, Rectangle{Width: width, Height: height}); msg != nil {
-		a.queueCmd(a.root.Update(msg))
+	if msg = a.model.View().Handle(msg, Rectangle{Width: width, Height: height}); msg != nil {
+		a.updateModel(msg)
 	}
 }
 
-func (a *Application) queueMsg(msg Msg) {
+// updateModel replaces the model with the one its Update returns for msg and queues the returned command.
+func (a *Application[M]) updateModel(msg Msg) {
+	var cmd Cmd
+	a.model, cmd = a.model.Update(msg)
+	a.queueCmd(cmd)
+}
+
+func (a *Application[M]) queueMsg(msg Msg) {
 	if msg == nil {
 		return
 	}
@@ -383,7 +396,7 @@ func (a *Application) queueMsg(msg Msg) {
 	}
 }
 
-func (a *Application) queueCmd(cmd Cmd) {
+func (a *Application[M]) queueCmd(cmd Cmd) {
 	if cmd == nil {
 		return
 	}

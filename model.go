@@ -4,13 +4,15 @@ import "github.com/gdamore/tcell/v3"
 
 type Screen = tcell.Screen
 
-// Model is the state of an application or a part of it, how messages change it, and how it is shown.
-type Model interface {
+// Model is the state of an application or a part of it, how messages change it, and how it is shown. M is the model's own type, so that Update returns it without a type assertion.
+//
+// Implement Model with value receivers and treat the model as immutable: only Update produces a changed model, by returning it. Init and View work on a copy, so changes they make are lost.
+type Model[M any] interface {
 	// Init returns a command to run when the model starts, or nil.
 	Init() Cmd
-	// Update changes the model in response to a message and returns a command to run, or nil.
-	Update(Msg) Cmd
-	// View returns the element that draws this model.
+	// Update returns the model changed in response to a message and a command to run, or nil.
+	Update(Msg) (M, Cmd)
+	// View returns the element that draws the model.
 	View() Element
 }
 

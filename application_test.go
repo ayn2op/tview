@@ -42,12 +42,14 @@ type cursorModel struct {
 	x, y int
 }
 
-func (*cursorModel) Init() Cmd                       { return nil }
-func (*cursorModel) Update(Msg) Cmd                  { return nil }
-func (m *cursorModel) View() Element                 { return m }
-func (*cursorModel) Handle(msg Msg, _ Rectangle) Msg { return msg }
+var _ Model[cursorModel] = cursorModel{}
 
-func (m *cursorModel) Draw(screen Screen, area Rectangle) {
+func (cursorModel) Init() Cmd                       { return nil }
+func (m cursorModel) Update(Msg) (cursorModel, Cmd) { return m, nil }
+func (m cursorModel) View() Element                 { return m }
+func (cursorModel) Handle(msg Msg, _ Rectangle) Msg { return msg }
+
+func (m cursorModel) Draw(screen Screen, area Rectangle) {
 	if m.x >= 0 {
 		screen.ShowCursor(m.x, m.y)
 	}
@@ -66,23 +68,15 @@ func TestApplicationDraw(t *testing.T) {
 
 	t.Run("hides a cursor from an earlier frame", func(t *testing.T) {
 		screen.ShowCursor(1, 1)
-		NewApplication(&cursorModel{x: -1}, WithScreen(screen)).draw()
+		NewApplication(cursorModel{x: -1}, WithScreen(screen)).draw()
 		if screen.x != -1 || screen.y != -1 {
 			t.Fatalf("cursor at %d, %d, want hidden", screen.x, screen.y)
 		}
 	})
 	t.Run("keeps a cursor shown in the frame", func(t *testing.T) {
-		NewApplication(&cursorModel{x: 2, y: 1}, WithScreen(screen)).draw()
+		NewApplication(cursorModel{x: 2, y: 1}, WithScreen(screen)).draw()
 		if screen.x != 2 || screen.y != 1 {
 			t.Fatalf("cursor at %d, %d, want 2, 1", screen.x, screen.y)
-		}
-	})
-}
-
-func TestApplicationRun(t *testing.T) {
-	t.Run("nil root", func(t *testing.T) {
-		if err := NewApplication(nil).Run(); err == nil {
-			t.Fatal("Run returned no error")
 		}
 	})
 }

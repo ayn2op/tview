@@ -7,14 +7,13 @@ import (
 	"github.com/ayn2op/tview/button"
 	"github.com/ayn2op/tview/center"
 	"github.com/ayn2op/tview/column"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/ayn2op/tview/richtext"
 	"github.com/ayn2op/tview/row"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
 
-// Widget is a message with buttons. The Next and Previous keybinds move the focus between the buttons, the Press keybind or a click presses one, and the Cancel keybind cancels.
+// Widget is a message with buttons. ActionNext and ActionPrevious move the focus between the buttons, ActionPress or a click presses one, and ActionCancel cancels.
 type Widget struct {
 	text                  string
 	buttons               []string
@@ -22,7 +21,7 @@ type Widget struct {
 	background, textColor tcell.Color
 	buttonStyle           tcell.Style
 	activatedStyle        tcell.Style
-	keybinds              Keybinds
+	keybind               func(tview.KeyMsg) (Action, bool)
 	onFocus               func(index int) tview.Msg
 	onDone                func(index int, label string) tview.Msg
 }
@@ -33,7 +32,7 @@ var _ tview.Element = Widget{}
 func New() Widget {
 	return Widget{
 		activatedStyle: tcell.StyleDefault.Reverse(true),
-		keybinds:       defaultKeybinds,
+		keybind:        DefaultKeybind,
 	}
 }
 
@@ -55,9 +54,9 @@ func (w Widget) Focus(index int) Widget {
 	return w
 }
 
-// Keybinds sets the keys the dialog responds to.
-func (w Widget) Keybinds(keybinds Keybinds) Widget {
-	w.keybinds = keybinds
+// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+	w.keybind = f
 	return w
 }
 
@@ -116,7 +115,7 @@ func (w Widget) layout(area tview.Rectangle) (tview.Element, tview.Rectangle) {
 			FocusedStyle(w.activatedStyle).
 			Width(tview.Fixed(uniseg.StringWidth(label) + 4)).
 			Height(tview.Fixed(1)).
-			Keybinds(w.keybinds.Keybinds).
+			Keybind(noKeys).
 			Focused(i == w.focus)
 		if w.onDone != nil {
 			b = b.OnClick(w.onDone(i, label))
@@ -143,22 +142,19 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	dialog.Draw(screen, rect)
 }
 
-// Handle turns the Next and Previous keybinds into the OnFocus message, the Cancel keybind into the OnDone message for canceling, and the Press keybind or a click on a button into its OnDone message. Other messages pass through unchanged.
+// Handle turns ActionNext and ActionPrevious into the OnFocus message, ActionCancel into the OnDone message for canceling, and ActionPress or a click on a button into its OnDone message. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if key, ok := msg.(tview.KeyMsg); ok && len(w.buttons) > 0 {
+		action, _ := w.keybind(key)
 		switch {
-		case keybind.Matches(key, w.keybinds.Next):
-			if w.onFocus != nil {
-				return w.onFocus((w.focus + 1) % len(w.buttons))
-			}
-		case keybind.Matches(key, w.keybinds.Previous):
-			if w.onFocus != nil {
-				return w.onFocus((w.focus + len(w.buttons) - 1) % len(w.buttons))
-			}
-		case keybind.Matches(key, w.keybinds.Cancel):
-			if w.onDone != nil {
-				return w.onDone(-1, "")
-			}
+		case action == ActionNext && w.onFocus != nil:
+			return w.onFocus((w.focus + 1) % len(w.buttons))
+		case action == ActionPrevious && w.onFocus != nil:
+			return w.onFocus((w.focus + len(w.buttons) - 1) % len(w.buttons))
+		case action == ActionPress && w.onDone != nil && w.focus >= 0 && w.focus < len(w.buttons):
+			return w.onDone(w.focus, w.buttons[w.focus])
+		case action == ActionCancel && w.onDone != nil:
+			return w.onDone(-1, "")
 		}
 	}
 	dialog, rect := w.layout(area)

@@ -80,3 +80,44 @@ func TestApplicationDraw(t *testing.T) {
 		}
 	})
 }
+
+// lengthModel's element turns a string into its length, and Update quits on an int, keeping it.
+type lengthModel struct {
+	got *int
+}
+
+func (lengthModel) Init() Cmd { return func() Msg { return "abc" } }
+func (m lengthModel) Update(msg Msg) (lengthModel, Cmd) {
+	if n, ok := msg.(int); ok {
+		*m.got = n
+		return m, Quit()
+	}
+	return m, nil
+}
+func (m lengthModel) View() Element        { return m }
+func (lengthModel) Draw(Screen, Rectangle) {}
+func (lengthModel) Handle(msg Msg, _ Rectangle) Msg {
+	if s, ok := msg.(string); ok {
+		return len(s)
+	}
+	return msg
+}
+
+func TestApplicationRun(t *testing.T) {
+	t.Run("passes messages from commands through the element", func(t *testing.T) {
+		screen, err := tcell.NewTerminfoScreenFromTty(vt.NewMockTerm(vt.MockOptSize{X: 4, Y: 2}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := screen.Init(); err != nil {
+			t.Fatal(err)
+		}
+		var got int
+		if err := NewApplication(lengthModel{got: &got}, WithScreen(screen)).Run(); err != nil {
+			t.Fatal(err)
+		}
+		if got != 3 {
+			t.Fatalf("got %d, want 3", got)
+		}
+	})
+}

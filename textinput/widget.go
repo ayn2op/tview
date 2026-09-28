@@ -6,19 +6,18 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/grapheme"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
 
-// Widget draws EditState and turns typing into Actions.
+// Widget draws EditState and turns typing into Changes.
 type Widget struct {
 	editState *EditState
 	width     tview.Length
 	style     tcell.Style
 	mask      string
-	keybinds  Keybinds
-	onAction  func(Action) tview.Msg
+	keybind   func(tview.KeyMsg) (Action, bool)
+	onChange  func(Change) tview.Msg
 	onSubmit  tview.Msg
 	focused   bool
 }
@@ -30,7 +29,7 @@ func New(editState *EditState) Widget {
 	return Widget{
 		editState: editState,
 		width:     tview.Fill,
-		keybinds:  defaultKeybinds,
+		keybind:   DefaultKeybind,
 	}
 }
 
@@ -52,15 +51,15 @@ func (w Widget) Mask(mask string) Widget {
 	return w
 }
 
-// Keybinds sets the keys the text input edits with.
-func (w Widget) Keybinds(keybinds Keybinds) Widget {
-	w.keybinds = keybinds
+// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+	w.keybind = f
 	return w
 }
 
-// OnAction turns typing into the message f returns for the Action, which the model applies with EditState.Perform.
-func (w Widget) OnAction(f func(Action) tview.Msg) Widget {
-	w.onAction = f
+// OnChange turns typing into the message f returns for the Change, which the model applies with EditState.Apply.
+func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
+	w.onChange = f
 	return w
 }
 
@@ -122,19 +121,26 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle turns editing keys and paste into an Action while focused, and the Submit keybind into the OnSubmit message. Other messages pass through unchanged.
+// Handle turns editing keys and paste into a Change while focused, and ActionSubmit into the OnSubmit message. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
-	if !w.focused || w.onAction == nil {
+	if !w.focused || w.onChange == nil {
 		return msg
 	}
 	value, cursor := w.editState.value, w.editState.cursor
 	switch m := msg.(type) {
 	case tview.KeyMsg:
-		if w.onSubmit != nil && keybind.Matches(m, w.keybinds.Submit) {
+		action, ok := w.keybind(m)
+		switch {
+		case ok && action == ActionSubmit:
+			if w.onSubmit == nil {
+				return msg
+			}
 			return w.onSubmit
-		}
-		var ok bool
-		if value, cursor, ok = w.edit(m, value, cursor); !ok {
+		case ok:
+			value, cursor = edit(action, value, cursor)
+		case m.Key() == tcell.KeyRune && m.Modifiers()&^tcell.ModShift == 0:
+			value, cursor = value[:cursor]+m.Str()+value[cursor:], cursor+len(m.Str())
+		default:
 			return msg
 		}
 	case tview.PasteMsg:
@@ -143,28 +149,25 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	default:
 		return msg
 	}
-	return w.onAction(Action{value: value, cursor: cursor, offset: w.scroll(value, cursor, w.editState.offset, area.Width)})
+	return w.onChange(Change{value: value, cursor: cursor, offset: w.scroll(value, cursor, w.editState.offset, area.Width)})
 }
 
-// edit applies key to value and cursor, and reports whether it is an editing key.
-func (w Widget) edit(key tview.KeyMsg, value string, cursor int) (string, int, bool) {
-	k := w.keybinds
-	switch {
-	case keybind.Matches(key, k.Backspace):
+// edit applies action to value and cursor.
+func edit(action Action, value string, cursor int) (string, int) {
+	switch action {
+	case ActionBackspace:
 		start := grapheme.Previous(value, cursor)
-		return value[:start] + value[cursor:], start, true
-	case keybind.Matches(key, k.Delete):
-		return value[:cursor] + value[grapheme.Next(value, cursor):], cursor, true
-	case keybind.Matches(key, k.Left):
-		return value, grapheme.Previous(value, cursor), true
-	case keybind.Matches(key, k.Right):
-		return value, grapheme.Next(value, cursor), true
-	case keybind.Matches(key, k.Home):
-		return value, 0, true
-	case keybind.Matches(key, k.End):
-		return value, len(value), true
-	case key.Key() == tcell.KeyRune && key.Modifiers()&^tcell.ModShift == 0:
-		return value[:cursor] + key.Str() + value[cursor:], cursor + len(key.Str()), true
+		return value[:start] + value[cursor:], start
+	case ActionDelete:
+		return value[:cursor] + value[grapheme.Next(value, cursor):], cursor
+	case ActionLeft:
+		return value, grapheme.Previous(value, cursor)
+	case ActionRight:
+		return value, grapheme.Next(value, cursor)
+	case ActionHome:
+		return value, 0
+	case ActionEnd:
+		return value, len(value)
 	}
-	return value, cursor, false
+	return value, cursor
 }

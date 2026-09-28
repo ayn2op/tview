@@ -5,7 +5,6 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -30,8 +29,8 @@ func TestWidgetHandle(t *testing.T) {
 		{"click outside", button, outside, outside},
 		{"enter unfocused", button, enter, enter},
 		{"enter focused", button.Focused(true), enter, pressMsg{}},
-		{"enter rebound away", button.Focused(true).Keybinds(Keybinds{Press: keybind.NewSingleKeybind("p", "press")}), enter, enter},
-		{"rebound key", button.Focused(true).Keybinds(Keybinds{Press: keybind.NewSingleKeybind("p", "press")}), tcell.NewEventKey(tcell.KeyRune, "p", tcell.ModNone), pressMsg{}},
+		{"enter rebound away", button.Focused(true).Keybind(pressOnP), enter, enter},
+		{"rebound key", button.Focused(true).Keybind(pressOnP), tcell.NewEventKey(tcell.KeyRune, "p", tcell.ModNone), pressMsg{}},
 		{"disabled", button.Disabled(true), inside, inside},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -66,4 +65,8 @@ func TestWidgetDraw(t *testing.T) {
 			}
 		})
 	}
+}
+
+func pressOnP(key tview.KeyMsg) (Action, bool) {
+	return ActionPress, key.Str() == "p"
 }

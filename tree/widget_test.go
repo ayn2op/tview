@@ -18,7 +18,7 @@ func testTree() map[string]*Node {
 }
 
 func interactive(root *Node, selectionState *SelectionState) Widget {
-	return New(root, selectionState).TopLevel(1).Markers(Markers{}).Focused(true).OnAction(func(a Action) tview.Msg { return a })
+	return New(root, selectionState).TopLevel(1).Markers(Markers{}).Focused(true).OnChange(func(a Change) tview.Msg { return a })
 }
 
 func TestWidgetDraw(t *testing.T) {
@@ -35,11 +35,11 @@ func TestWidgetDraw(t *testing.T) {
 func TestWidgetHandle(t *testing.T) {
 	area := tview.Rectangle{Width: 6, Height: 3}
 	key := func(k tcell.Key, str string) tview.KeyMsg { return tcell.NewEventKey(k, str, tcell.ModNone) }
-	// send passes msg through the tree and applies the Action it produces, if any, returning the other result.
+	// send passes msg through the tree and applies the Change it produces, if any, returning the other result.
 	send := func(nodes map[string]*Node, selectionState *SelectionState, msg tview.Msg) tview.Msg {
 		out := interactive(nodes["root"], selectionState).Handle(msg, area)
-		if action, ok := out.(Action); ok {
-			selectionState.Perform(action)
+		if change, ok := out.(Change); ok {
+			selectionState.Apply(change)
 			return nil
 		}
 		return out
@@ -77,6 +77,25 @@ func TestWidgetHandle(t *testing.T) {
 		click := tview.MouseMsg{EventMouse: tcell.NewEventMouse(1, 1, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftClick}
 		if got := send(nodes, &selectionState, click); got != (SelectedMsg{Node: nodes["a1"]}) {
 			t.Fatalf("got %v", got)
+		}
+	})
+	t.Run("down action selects the next node", func(t *testing.T) {
+		nodes := testTree()
+		var selectionState SelectionState
+		selectionState.SetCurrentNode(nodes["a"])
+		send(nodes, &selectionState, ActionMsg(ActionDown))
+		if selectionState.CurrentNode() != nodes["a1"] {
+			t.Fatalf("current = %v", selectionState.CurrentNode().Line())
+		}
+	})
+	t.Run("unfocused passes keys and actions through", func(t *testing.T) {
+		nodes := testTree()
+		var selectionState SelectionState
+		down := key(tcell.KeyDown, "")
+		for _, msg := range []tview.Msg{down, ActionMsg(ActionDown)} {
+			if got := interactive(nodes["root"], &selectionState).Focused(false).Handle(msg, area); got != msg {
+				t.Fatalf("got %v, want %v", got, msg)
+			}
 		}
 	})
 	t.Run("collapsed children are skipped", func(t *testing.T) {

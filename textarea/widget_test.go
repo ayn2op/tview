@@ -10,16 +10,16 @@ import (
 
 func key(k tcell.Key, str string) tview.KeyMsg { return tcell.NewEventKey(k, str, tcell.ModNone) }
 
-// apply sends msgs through a focused text area showing editState in area, applying each Action, and returns the editState.
+// apply sends msgs through a focused text area showing editState in area, applying each Change, and returns the editState.
 func apply(t *testing.T, editState EditState, area tview.Rectangle, msgs ...tview.Msg) EditState {
 	t.Helper()
 	for _, msg := range msgs {
-		out := New(&editState).Focused(true).OnAction(func(a Action) tview.Msg { return a }).Handle(msg, area)
-		action, ok := out.(Action)
+		out := New(&editState).Focused(true).OnChange(func(a Change) tview.Msg { return a }).Handle(msg, area)
+		change, ok := out.(Change)
 		if !ok {
-			t.Fatalf("%v: got %v, want an Action", msg, out)
+			t.Fatalf("%v: got %v, want a Change", msg, out)
 		}
-		editState.Perform(action)
+		editState.Apply(change)
 	}
 	return editState
 }
@@ -55,7 +55,7 @@ func TestWidgetHandle(t *testing.T) {
 	})
 	t.Run("passes other keys and unfocused input through", func(t *testing.T) {
 		editState := NewEditState("x")
-		w := New(&editState).OnAction(func(a Action) tview.Msg { return a })
+		w := New(&editState).OnChange(func(a Change) tview.Msg { return a })
 		tab := key(tcell.KeyTab, "")
 		if got := w.Focused(true).Handle(tab, area); got != tab {
 			t.Fatalf("got %v", got)

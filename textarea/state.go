@@ -1,6 +1,6 @@
 package textarea
 
-// EditState holds a text area's value, cursor, how far it is scrolled, and earlier values for Undo. The model owns it and applies the Actions a text area produces with Perform.
+// EditState holds a text area's value, cursor, how far it is scrolled, and earlier values for Undo. The model owns it and applies the Changes a text area produces with Apply.
 type EditState struct {
 	value string
 	// cursor is the byte offset of the cursor in value, always at a grapheme boundary.
@@ -55,16 +55,16 @@ func (s *EditState) save() {
 	s.history = append(s.history, snapshot{value: s.value, cursor: s.cursor})
 }
 
-// Action is a change to EditState produced by a text area, such as typing or moving the cursor.
-type Action struct {
+// Change is an update to EditState produced by a text area, such as typing or moving the cursor.
+type Change struct {
 	value       string
 	cursor, row int
 }
 
-// Perform applies action, remembering the previous value for Undo if it changes.
-func (s *EditState) Perform(action Action) {
-	if action.value != s.value {
+// Apply applies change, remembering the previous value for Undo if it changes.
+func (s *EditState) Apply(change Change) {
+	if change.value != s.value {
 		s.save()
 	}
-	s.value, s.cursor, s.row = action.value, action.cursor, action.row
+	s.value, s.cursor, s.row = change.value, change.cursor, change.row
 }

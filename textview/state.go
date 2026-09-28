@@ -1,6 +1,6 @@
 package textview
 
-// ScrollState is how far a text view is scrolled. The model owns it and applies the Actions a text view produces with Perform.
+// ScrollState is how far a text view is scrolled. The model owns it and applies the Changes a text view produces with Apply.
 type ScrollState struct {
 	row, column int
 	// followEnd keeps the view scrolled to the last line as text is added.
@@ -12,13 +12,12 @@ func (s *ScrollState) ScrollToEnd() {
 	s.followEnd = true
 }
 
-// Action is a change to ScrollState produced by a text view, such as scrolling.
-type Action struct {
+// Change is an update to ScrollState produced by a text view, such as scrolling.
+type Change struct {
 	row, column int
 	followEnd   bool
 }
 
-// Perform applies action.
-func (s *ScrollState) Perform(action Action) {
-	s.row, s.column, s.followEnd = action.row, action.column, action.followEnd
+func (s *ScrollState) Apply(change Change) {
+	s.row, s.column, s.followEnd = change.row, change.column, change.followEnd
 }

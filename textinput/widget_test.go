@@ -5,7 +5,6 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -17,16 +16,16 @@ func key(k tcell.Key, str string, mods tcell.ModMask) tview.KeyMsg {
 
 func typed(str string) tview.KeyMsg { return key(tcell.KeyRune, str, tcell.ModNone) }
 
-// apply sends msgs through a focused text input showing editState in area, applying each Action, and returns the editState.
+// apply sends msgs through a focused text input showing editState in area, applying each Change, and returns the editState.
 func apply(t *testing.T, editState EditState, area tview.Rectangle, msgs ...tview.Msg) EditState {
 	t.Helper()
 	for _, msg := range msgs {
-		out := New(&editState).Focused(true).OnAction(func(a Action) tview.Msg { return a }).Handle(msg, area)
-		action, ok := out.(Action)
+		out := New(&editState).Focused(true).OnChange(func(a Change) tview.Msg { return a }).Handle(msg, area)
+		change, ok := out.(Change)
 		if !ok {
-			t.Fatalf("%v: got %v, want an Action", msg, out)
+			t.Fatalf("%v: got %v, want a Change", msg, out)
 		}
-		editState.Perform(action)
+		editState.Apply(change)
 	}
 	return editState
 }
@@ -55,15 +54,14 @@ func TestWidgetHandle(t *testing.T) {
 	}
 
 	t.Run("rebound key", func(t *testing.T) {
-		keybinds := DefaultKeybinds()
-		keybinds.Left = keybind.NewSingleKeybind("ctrl+b", "left")
+		leftOnCtrlB := func(key tview.KeyMsg) (Action, bool) { return ActionLeft, key.Key() == tcell.KeyCtrlB }
 		editState := NewEditState("ab")
-		out := New(&editState).Keybinds(keybinds).Focused(true).OnAction(func(a Action) tview.Msg { return a }).Handle(key(tcell.KeyCtrlB, "", tcell.ModCtrl), area)
-		action, ok := out.(Action)
+		out := New(&editState).Keybind(leftOnCtrlB).Focused(true).OnChange(func(a Change) tview.Msg { return a }).Handle(key(tcell.KeyCtrlB, "", tcell.ModCtrl), area)
+		change, ok := out.(Change)
 		if !ok {
-			t.Fatalf("got %v, want an Action", out)
+			t.Fatalf("got %v, want a Change", out)
 		}
-		if editState.Perform(action); editState.cursor != 1 {
+		if editState.Apply(change); editState.cursor != 1 {
 			t.Fatalf("cursor = %d, want 1", editState.cursor)
 		}
 	})
@@ -77,13 +75,13 @@ func TestWidgetHandle(t *testing.T) {
 	t.Run("enter submits", func(t *testing.T) {
 		editState := NewEditState("x")
 		enter := key(tcell.KeyEnter, "", tcell.ModNone)
-		if got := New(&editState).Focused(true).OnAction(func(a Action) tview.Msg { return a }).OnSubmit(submitMsg{}).Handle(enter, area); got != (submitMsg{}) {
+		if got := New(&editState).Focused(true).OnChange(func(a Change) tview.Msg { return a }).OnSubmit(submitMsg{}).Handle(enter, area); got != (submitMsg{}) {
 			t.Fatalf("got %v", got)
 		}
 	})
 	t.Run("passes other keys and unfocused input through", func(t *testing.T) {
 		editState := NewEditState("x")
-		w := New(&editState).OnAction(func(a Action) tview.Msg { return a })
+		w := New(&editState).OnChange(func(a Change) tview.Msg { return a })
 		for _, msg := range []tview.Msg{key(tcell.KeyUp, "", tcell.ModNone), key(tcell.KeyRune, "l", tcell.ModCtrl)} {
 			if got := w.Focused(true).Handle(msg, area); got != msg {
 				t.Fatalf("focused %v: got %v", msg, got)

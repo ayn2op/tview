@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -41,14 +42,12 @@ type Help struct {
 	Desc string
 }
 
-type KeyMsg = *tcell.EventKey
-
-func Matches(msg KeyMsg, keybinds ...Keybind) bool {
+func Matches(msg tview.KeyMsg, keybinds ...Keybind) bool {
 	if msg == nil {
 		return false
 	}
 
-	key := keyMsgString(msg)
+	key := String(msg)
 	for _, keybind := range keybinds {
 		if slices.Contains(keybind.keys, key) {
 			return true
@@ -150,7 +149,8 @@ func uniqueOrdered(in []string) []string {
 	return out
 }
 
-func keyMsgString(msg KeyMsg) string {
+// String returns the name of the key msg is, in the form keybinds are written, such as "ctrl+home".
+func String(msg tview.KeyMsg) string {
 	key := msg.Key()
 	if key >= tcell.KeyCtrlA && key <= tcell.KeyCtrlZ {
 		return "ctrl+" + string(rune('a'+(key-tcell.KeyCtrlA)))

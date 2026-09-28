@@ -5,7 +5,6 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/box"
 	"github.com/ayn2op/tview/column"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/ayn2op/tview/list"
 	"github.com/ayn2op/tview/row"
 	"github.com/ayn2op/tview/scrollbar"
@@ -22,10 +21,11 @@ const inputHeight = 2
 type Widget struct {
 	items               Items
 	searchState         *SearchState
-	keybinds            Keybinds
+	keybind             func(tview.KeyMsg) (Action, bool)
+	listKeybind         func(tview.KeyMsg) (list.Action, bool)
 	scrollBar           scrollbar.Widget
 	scrollBarVisibility list.ScrollBarVisibility
-	onAction            func(Action) tview.Msg
+	onChange            func(Change) tview.Msg
 	onSelect            func(Item) tview.Msg
 	onCancel            tview.Msg
 }
@@ -34,12 +34,18 @@ var _ tview.Element = Widget{}
 
 // New returns a picker of items, with searchState as its query, the matches, and the selection.
 func New(items Items, searchState *SearchState) Widget {
-	return Widget{items: items, searchState: searchState, keybinds: defaultKeybinds, scrollBar: scrollbar.New()}
+	return Widget{items: items, searchState: searchState, keybind: DefaultKeybind, listKeybind: list.DefaultKeybind, scrollBar: scrollbar.New()}
 }
 
-// Keybinds sets the keybinds of the picker.
-func (w Widget) Keybinds(keybinds Keybinds) Widget {
-	w.keybinds = keybinds
+// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+	w.keybind = f
+	return w
+}
+
+// ListKeybind sets the function that turns keys into the list's Actions, list.DefaultKeybind unless set.
+func (w Widget) ListKeybind(f func(tview.KeyMsg) (list.Action, bool)) Widget {
+	w.listKeybind = f
 	return w
 }
 
@@ -49,9 +55,9 @@ func (w Widget) ScrollBar(scrollBar scrollbar.Widget, visibility list.ScrollBarV
 	return w
 }
 
-// OnAction sets the function that turns a change to the search state into a message.
-func (w Widget) OnAction(onAction func(Action) tview.Msg) Widget {
-	w.onAction = onAction
+// OnChange sets the function that turns a change to the search state into a message.
+func (w Widget) OnChange(onChange func(Change) tview.Msg) Widget {
+	w.onChange = onChange
 	return w
 }
 
@@ -72,18 +78,20 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	w.layout().Draw(screen, area)
 }
 
-// Handle returns the OnSelect and OnCancel messages for their keybinds, sends the list's keybinds to the list, and passes other messages to the query and the list.
+// Handle returns the OnSelect and OnCancel messages for their Actions, sends the list's keys to the list, and passes other messages to the query and the list.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if key, ok := msg.(tview.KeyMsg); ok {
+		action, ok := w.keybind(key)
 		switch {
-		case keybind.Matches(key, w.keybinds.Select):
+		case ok && action == ActionSelect:
 			if item, ok := w.searchState.Selected(w.items); ok && w.onSelect != nil {
 				return w.onSelect(item)
 			}
 			return nil
-		case keybind.Matches(key, w.keybinds.Cancel):
+		case ok && action == ActionCancel:
 			return w.onCancel
-		case keybind.Matches(key, w.keybinds.moves()...):
+		}
+		if _, ok := w.listKeybind(key); ok {
 			area.Y, area.Height = area.Y+inputHeight, max(area.Height-inputHeight, 0)
 			return w.listView().Handle(msg, area)
 		}
@@ -94,7 +102,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 func (w Widget) layout() tview.Element {
 	query := textinput.New(&w.searchState.query).
 		Focused(true).
-		OnAction(w.queryAction)
+		OnChange(w.queryChange)
 	// A line below the query separates it from the list.
 	var line tview.BorderSet
 	line.Bottom = tview.BoxDrawingsLightHorizontal
@@ -108,33 +116,33 @@ func (w Widget) listView() list.Widget {
 	return list.New(&s.list, s.count(items), func(i int) list.Item { return entry(items[s.index(i)].Text) }).
 		SelectedStyle(tcell.StyleDefault.Reverse(true)).
 		ScrollBar(w.scrollBar, w.scrollBarVisibility).
-		Keybinds(w.keybinds.Keybinds).
+		Keybind(w.listKeybind).
 		Focused(true).
-		OnAction(func(a list.Action) tview.Msg { return w.action(Action{list: a}) })
+		OnChange(func(a list.Change) tview.Msg { return w.change(Change{list: a}) })
 }
 
-// queryAction turns an edit of the query into an Action, matching the items against the query if the edit changed it.
-func (w Widget) queryAction(a textinput.Action) tview.Msg {
+// queryChange turns an edit of the query into a Change, matching the items against the query if the edit changed it.
+func (w Widget) queryChange(a textinput.Change) tview.Msg {
 	query := w.searchState.query
 	before := query.Value()
-	query.Perform(a)
-	action := Action{query: a, isQuery: true}
+	query.Apply(a)
+	change := Change{query: a, isQuery: true}
 	if value := query.Value(); value != before {
 		count := len(w.items)
 		if value != "" {
 			for _, match := range fuzzy.FindFrom(value, w.items) {
-				action.matches = append(action.matches, match.Index)
+				change.matches = append(change.matches, match.Index)
 			}
-			count = len(action.matches)
+			count = len(change.matches)
 		}
-		action.filtered, action.cursor = true, min(0, count-1)
+		change.filtered, change.cursor = true, min(0, count-1)
 	}
-	return w.action(action)
+	return w.change(change)
 }
 
-func (w Widget) action(a Action) tview.Msg {
-	if w.onAction == nil {
+func (w Widget) change(a Change) tview.Msg {
+	if w.onChange == nil {
 		return nil
 	}
-	return w.onAction(a)
+	return w.onChange(a)
 }

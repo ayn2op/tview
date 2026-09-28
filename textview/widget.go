@@ -3,13 +3,12 @@ package textview
 
 import (
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/ayn2op/tview/richtext"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
 
-// Widget draws text and, with a ScrollState, turns scroll input into Actions.
+// Widget draws text and, with a ScrollState, turns scroll input into Changes.
 type Widget struct {
 	text          richtext.Text
 	scrollState   *ScrollState
@@ -18,14 +17,14 @@ type Widget struct {
 	wordWrap      bool
 	alignment     tview.Alignment
 	style         tcell.Style
-	keybinds      Keybinds
-	onAction      func(Action) tview.Msg
+	keybind       func(tview.KeyMsg) (Action, bool)
+	onChange      func(Change) tview.Msg
 	focused       bool
 }
 
 var _ tview.Element = Widget{}
 
-// New returns a text view of text that wraps on words and fills its parent. It scrolls only once ScrollState and OnAction are set.
+// New returns a text view of text that wraps on words and fills its parent. It scrolls only once ScrollState and OnChange are set.
 func New(text richtext.Text) Widget {
 	return Widget{
 		text:      text,
@@ -34,7 +33,7 @@ func New(text richtext.Text) Widget {
 		wrap:      true,
 		wordWrap:  true,
 		alignment: tview.AlignmentLeft,
-		keybinds:  defaultKeybinds,
+		keybind:   DefaultKeybind,
 	}
 }
 
@@ -74,9 +73,9 @@ func (w Widget) Style(style tcell.Style) Widget {
 	return w
 }
 
-// Keybinds sets the keys the text view scrolls with.
-func (w Widget) Keybinds(keybinds Keybinds) Widget {
-	w.keybinds = keybinds
+// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+	w.keybind = f
 	return w
 }
 
@@ -86,9 +85,9 @@ func (w Widget) ScrollState(scrollState *ScrollState) Widget {
 	return w
 }
 
-// OnAction makes the text view scrollable, turning scroll input into the message f returns for the Action, which the model applies with ScrollState.Perform.
-func (w Widget) OnAction(f func(Action) tview.Msg) Widget {
-	w.onAction = f
+// OnChange makes the text view scrollable, turning scroll input into the message f returns for the Change, which the model applies with ScrollState.Apply.
+func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
+	w.onChange = f
 	return w
 }
 
@@ -213,9 +212,9 @@ func (w Widget) scroll() ScrollState {
 	return *w.scrollState
 }
 
-// Handle turns scroll keys (while focused) and mouse scrolling within area into an Action once ScrollState and OnAction are set. Other messages pass through unchanged.
+// Handle turns scroll keys (while focused) and mouse scrolling within area into a Change once ScrollState and OnChange are set. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
-	if w.scrollState == nil || w.onAction == nil {
+	if w.scrollState == nil || w.onChange == nil {
 		return msg
 	}
 	l := w.layout(area.Width)
@@ -226,23 +225,26 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		if !w.focused {
 			return msg
 		}
-		k := w.keybinds
-		switch {
-		case keybind.Matches(m, k.Top):
+		action, ok := w.keybind(m)
+		if !ok {
+			return msg
+		}
+		switch action {
+		case ActionTop:
 			row, column, followEnd = 0, 0, false
-		case keybind.Matches(m, k.Bottom):
+		case ActionBottom:
 			column, followEnd = 0, true
-		case keybind.Matches(m, k.Down):
+		case ActionDown:
 			row++
-		case keybind.Matches(m, k.Up):
+		case ActionUp:
 			row, followEnd = row-1, false
-		case keybind.Matches(m, k.Left):
+		case ActionLeft:
 			column--
-		case keybind.Matches(m, k.Right):
+		case ActionRight:
 			column++
-		case keybind.Matches(m, k.PageDown):
+		case ActionPageDown:
 			row += area.Height
-		case keybind.Matches(m, k.PageUp):
+		case ActionPageUp:
 			row, followEnd = row-area.Height, false
 		default:
 			return msg
@@ -268,5 +270,5 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	}
 	// Store the position clamped to what is visible, so scrolling back does not first work through overshoot.
 	row, column = w.clamp(l, area, row, column, false)
-	return w.onAction(Action{row: row, column: column, followEnd: followEnd})
+	return w.onChange(Change{row: row, column: column, followEnd: followEnd})
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/ayn2op/tview/richtext"
 	"github.com/gdamore/tcell/v3"
 )
@@ -55,12 +54,12 @@ func TestWidgetHandle(t *testing.T) {
 		text := lines("1", "2", "3", "4", "5")
 		var scroll ScrollState
 		for _, k := range keys {
-			msg := New(text).ScrollState(&scroll).OnAction(func(a Action) tview.Msg { return a }).Focused(true).Handle(k, area)
-			action, ok := msg.(Action)
+			msg := New(text).ScrollState(&scroll).OnChange(func(a Change) tview.Msg { return a }).Focused(true).Handle(k, area)
+			change, ok := msg.(Change)
 			if !ok {
-				t.Fatalf("key %v: got %v, want an Action", k.Name(), msg)
+				t.Fatalf("key %v: got %v, want a Change", k.Name(), msg)
 			}
-			scroll.Perform(action)
+			scroll.Apply(change)
 		}
 		row, _ := New(text).clamp(New(text).layout(area.Width), area, scroll.row, scroll.column, scroll.followEnd)
 		return row
@@ -89,23 +88,22 @@ func TestWidgetHandle(t *testing.T) {
 	t.Run("modified letters pass through", func(t *testing.T) {
 		var scroll ScrollState
 		ctrlH := tcell.NewEventKey(tcell.KeyRune, "h", tcell.ModCtrl)
-		if got := New(lines("1", "2", "3")).ScrollState(&scroll).OnAction(func(a Action) tview.Msg { return a }).Focused(true).Handle(ctrlH, area); got != ctrlH {
+		if got := New(lines("1", "2", "3")).ScrollState(&scroll).OnChange(func(a Change) tview.Msg { return a }).Focused(true).Handle(ctrlH, area); got != ctrlH {
 			t.Fatalf("got %v", got)
 		}
 	})
 	t.Run("rebound key", func(t *testing.T) {
-		keybinds := DefaultKeybinds()
-		keybinds.Down = keybind.NewSingleKeybind("n", "down")
+		downOnN := func(key tview.KeyMsg) (Action, bool) { return ActionDown, key.Str() == "n" }
 		var scroll ScrollState
-		view := New(lines("1", "2", "3")).ScrollState(&scroll).Keybinds(keybinds).OnAction(func(a Action) tview.Msg { return a }).Focused(true)
-		if _, ok := view.Handle(key(tcell.KeyRune, "n"), area).(Action); !ok {
+		view := New(lines("1", "2", "3")).ScrollState(&scroll).Keybind(downOnN).OnChange(func(a Change) tview.Msg { return a }).Focused(true)
+		if _, ok := view.Handle(key(tcell.KeyRune, "n"), area).(Change); !ok {
 			t.Fatal("n did not scroll")
 		}
 		if j := key(tcell.KeyRune, "j"); view.Handle(j, area) != j {
 			t.Fatal("j still scrolls")
 		}
 	})
-	t.Run("not scrollable without OnAction", func(t *testing.T) {
+	t.Run("not scrollable without OnChange", func(t *testing.T) {
 		var scroll ScrollState
 		down := key(tcell.KeyDown, "")
 		if got := New(lines("1", "2", "3")).ScrollState(&scroll).Focused(true).Handle(down, area); got != down {
@@ -114,14 +112,14 @@ func TestWidgetHandle(t *testing.T) {
 	})
 	t.Run("not scrollable without ScrollState", func(t *testing.T) {
 		down := key(tcell.KeyDown, "")
-		if got := New(lines("1", "2", "3")).OnAction(func(a Action) tview.Msg { return a }).Focused(true).Handle(down, area); got != down {
+		if got := New(lines("1", "2", "3")).OnChange(func(a Change) tview.Msg { return a }).Focused(true).Handle(down, area); got != down {
 			t.Fatalf("got %v", got)
 		}
 	})
 	t.Run("keys pass through unfocused", func(t *testing.T) {
 		var scroll ScrollState
 		down := key(tcell.KeyDown, "")
-		if got := New(lines("1", "2", "3")).ScrollState(&scroll).OnAction(func(a Action) tview.Msg { return a }).Handle(down, area); got != down {
+		if got := New(lines("1", "2", "3")).ScrollState(&scroll).OnChange(func(a Change) tview.Msg { return a }).Handle(down, area); got != down {
 			t.Fatalf("got %v", got)
 		}
 	})

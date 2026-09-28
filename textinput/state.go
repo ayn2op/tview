@@ -1,6 +1,6 @@
 package textinput
 
-// EditState holds a text input's value, cursor, and how far it is scrolled. The model owns it and applies the Actions a text input produces with Perform.
+// EditState holds a text input's value, cursor, and how far it is scrolled. The model owns it and applies the Changes a text input produces with Apply.
 type EditState struct {
 	value string
 	// cursor is the byte offset of the cursor in value, always at a grapheme boundary.
@@ -24,13 +24,12 @@ func (s *EditState) SetValue(value string) {
 	s.value, s.cursor = value, len(value)
 }
 
-// Action is a change to EditState produced by a text input, such as typing or moving the cursor.
-type Action struct {
+// Change is an update to EditState produced by a text input, such as typing or moving the cursor.
+type Change struct {
 	value          string
 	cursor, offset int
 }
 
-// Perform applies action.
-func (s *EditState) Perform(action Action) {
-	s.value, s.cursor, s.offset = action.value, action.cursor, action.offset
+func (s *EditState) Apply(change Change) {
+	s.value, s.cursor, s.offset = change.value, change.cursor, change.offset
 }

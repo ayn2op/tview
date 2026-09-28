@@ -30,6 +30,6 @@ func (r Rectangle) Contains(x, y int) bool {
 type Element interface {
 	// Draw draws the element onto the screen within the given area.
 	Draw(Screen, Rectangle)
-	// Handle translates an input message received within the given area into the message passed to Update. It returns nil to drop the message.
+	// Handle translates a message, such as input received within the given area, into the message passed to Update. It returns nil to drop the message.
 	Handle(Msg, Rectangle) Msg
 }

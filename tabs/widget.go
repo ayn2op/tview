@@ -3,7 +3,6 @@ package tabs
 
 import (
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -12,7 +11,7 @@ type Widget struct {
 	labels   []string
 	active   int
 	content  tview.Element
-	keybinds Keybinds
+	keybind  func(tview.KeyMsg) (Action, bool)
 	onSelect func(index int) tview.Msg
 }
 
@@ -20,7 +19,7 @@ var _ tview.Element = Widget{}
 
 // New returns tabs with labels.
 func New(labels ...string) Widget {
-	return Widget{labels: labels, keybinds: defaultKeybinds}
+	return Widget{labels: labels, keybind: DefaultKeybind}
 }
 
 // Active sets the index of the active tab.
@@ -35,9 +34,9 @@ func (w Widget) Content(content tview.Element) Widget {
 	return w
 }
 
-// Keybinds sets the keys that switch tabs.
-func (w Widget) Keybinds(keybinds Keybinds) Widget {
-	w.keybinds = keybinds
+// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+	w.keybind = f
 	return w
 }
 
@@ -63,14 +62,15 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle turns the tab keybinds and clicks and scrolling on the labels into the OnSelect message, and passes other messages to the content below the labels.
+// Handle turns tab Actions and clicks and scrolling on the labels into the OnSelect message, and passes other messages to the content below the labels.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	switch msg := msg.(type) {
 	case tview.KeyMsg:
+		action, ok := w.keybind(msg)
 		switch {
-		case keybind.Matches(msg, w.keybinds.Previous) && w.active > 0:
+		case ok && action == ActionPrevious && w.active > 0:
 			return w.selectTab(w.active - 1)
-		case keybind.Matches(msg, w.keybinds.Next) && w.active < len(w.labels)-1:
+		case ok && action == ActionNext && w.active < len(w.labels)-1:
 			return w.selectTab(w.active + 1)
 		}
 	case tview.MouseMsg:

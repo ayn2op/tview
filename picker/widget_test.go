@@ -12,15 +12,15 @@ type cancelMsg struct{}
 func TestWidgetHandle(t *testing.T) {
 	area := tview.Rectangle{Width: 20, Height: 5}
 	items := Items{{Text: "apple"}, {Text: "banana"}}
-	// send handles msg the way a model does: it performs the Action the picker produced and returns any other message.
+	// send handles msg the way a model does: it applies the Change the picker produced and returns any other message.
 	send := func(s *SearchState, msg tview.Msg) tview.Msg {
 		msg = New(items, s).
-			OnAction(func(a Action) tview.Msg { return a }).
+			OnChange(func(a Change) tview.Msg { return a }).
 			OnSelect(func(item Item) tview.Msg { return item }).
 			OnCancel(cancelMsg{}).
 			Handle(msg, area)
-		if a, ok := msg.(Action); ok {
-			s.Perform(a)
+		if a, ok := msg.(Change); ok {
+			s.Apply(a)
 			return nil
 		}
 		return msg

@@ -3,7 +3,6 @@ package list
 
 import (
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/ayn2op/tview/scrollbar"
 	"github.com/gdamore/tcell/v3"
 )
@@ -24,7 +23,7 @@ const (
 	ScrollBarVisibilityNever
 )
 
-// Widget draws items, selected and scrolled as its SelectionState says, and turns keys and the mouse into Actions.
+// Widget draws items, selected and scrolled as its SelectionState says, and turns keys and the mouse into Changes.
 type Widget struct {
 	selectionState *SelectionState
 	count          int
@@ -34,9 +33,9 @@ type Widget struct {
 	selectedStyle  tcell.Style
 	scrollBar      scrollbar.Widget
 	visibility     ScrollBarVisibility
-	keybinds       Keybinds
+	keybind        func(tview.KeyMsg) (Action, bool)
 	focused        bool
-	onAction       func(Action) tview.Msg
+	onChange       func(Change) tview.Msg
 }
 
 var _ tview.Element = Widget{}
@@ -50,7 +49,7 @@ func New(selectionState *SelectionState, count int, item func(index int) Item) W
 		width:          tview.Fill,
 		height:         tview.Fill,
 		scrollBar:      scrollbar.New(),
-		keybinds:       defaultKeybinds,
+		keybind:        DefaultKeybind,
 	}
 }
 
@@ -84,9 +83,9 @@ func (w Widget) ScrollBar(scrollBar scrollbar.Widget, visibility ScrollBarVisibi
 	return w
 }
 
-// Keybinds sets the keys that move the cursor and scroll.
-func (w Widget) Keybinds(keybinds Keybinds) Widget {
-	w.keybinds = keybinds
+// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+	w.keybind = f
 	return w
 }
 
@@ -96,9 +95,9 @@ func (w Widget) Focused(focused bool) Widget {
 	return w
 }
 
-// OnAction makes the list interactive, turning keys and the mouse into the message f returns for the Action, which the model applies with SelectionState.Perform.
-func (w Widget) OnAction(f func(Action) tview.Msg) Widget {
-	w.onAction = f
+// OnChange makes the list interactive, turning keys and the mouse into the message f returns for the Change, which the model applies with SelectionState.Apply.
+func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
+	w.onChange = f
 	return w
 }
 
@@ -192,36 +191,40 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle turns the keybinds (while focused), the mouse wheel, clicks on items, and clicks and drags on the scroll bar into an Action once OnAction is set. Other messages pass through unchanged.
+// Handle turns keys and ActionMsgs (while focused), the mouse wheel, clicks on items, and clicks and drags on the scroll bar into a Change once OnChange is set. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
-	if w.onAction == nil {
+	if w.onChange == nil {
 		return msg
 	}
+	if key, ok := msg.(tview.KeyMsg); ok && w.focused {
+		if action, ok := w.keybind(key); ok {
+			msg = ActionMsg(action)
+		}
+	}
 	v := w.resolve(area)
-	a := Action{cursor: v.cursor, offset: v.offset, grab: w.selectionState.grab}
+	a := Change{cursor: v.cursor, offset: v.offset, grab: w.selectionState.grab}
 	center := false
 	switch m := msg.(type) {
-	case tview.KeyMsg:
+	case ActionMsg:
 		if !w.focused {
 			return msg
 		}
-		k := w.keybinds
-		switch {
-		case keybind.Matches(m, k.SelectDown):
+		switch Action(m) {
+		case ActionSelectDown:
 			a.cursor, center = min(a.cursor+1, w.count-1), true
-		case keybind.Matches(m, k.SelectUp):
+		case ActionSelectUp:
 			a.cursor, center = max(a.cursor-1, min(0, w.count-1)), true
-		case keybind.Matches(m, k.SelectTop):
+		case ActionSelectTop:
 			a.cursor, center = min(0, w.count-1), true
-		case keybind.Matches(m, k.SelectBottom):
+		case ActionSelectBottom:
 			a.cursor, center = w.count-1, true
-		case keybind.Matches(m, k.ScrollDown):
+		case ActionScrollDown:
 			a.offset++
-		case keybind.Matches(m, k.ScrollUp):
+		case ActionScrollUp:
 			a.offset--
-		case keybind.Matches(m, k.ScrollTop):
+		case ActionScrollTop:
 			a.offset = 0
-		case keybind.Matches(m, k.ScrollBottom):
+		case ActionScrollBottom:
 			a.offset = v.maxOffset()
 		default:
 			return msg
@@ -238,11 +241,11 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	}
 	a.offset = min(max(a.offset, 0), v.maxOffset())
 	a.atEnd = w.selectionState.trackEnd && a.offset == v.maxOffset()
-	return w.onAction(a)
+	return w.onChange(a)
 }
 
 // mouse applies m to a and reports whether the list used it.
-func (w Widget) mouse(m tview.MouseMsg, v view, a *Action) bool {
+func (w Widget) mouse(m tview.MouseMsg, v view, a *Change) bool {
 	x, y := m.Position()
 	if a.grab >= 0 {
 		// Dragging the thumb follows the pointer anywhere until the button is released.
@@ -284,7 +287,7 @@ func (w Widget) bar(v view) scrollbar.Widget {
 }
 
 // barMouse applies a mouse action at row of the scroll bar to a: the arrows scroll a row, the track pages, and the thumb starts a drag.
-func (w Widget) barMouse(action tview.MouseAction, v view, row int, a *Action) bool {
+func (w Widget) barMouse(action tview.MouseAction, v view, row int, a *Change) bool {
 	bar := w.bar(v)
 	if bar.HasStartArrow() {
 		row--

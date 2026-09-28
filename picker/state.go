@@ -5,7 +5,7 @@ import (
 	"github.com/ayn2op/tview/textinput"
 )
 
-// SearchState is a picker's query, the items that match it, and the selection among them. The model owns it and applies the Actions a picker produces with Perform.
+// SearchState is a picker's query, the items that match it, and the selection among them. The model owns it and applies the Changes a picker produces with Apply.
 type SearchState struct {
 	query textinput.EditState
 	list  list.SelectionState
@@ -53,26 +53,25 @@ func (s *SearchState) index(i int) int {
 	return s.matches[i]
 }
 
-// Action is a change to SearchState produced by a picker, such as typing in the query or moving the selection.
-type Action struct {
-	query   textinput.Action
+// Change is an update to SearchState produced by a picker, such as typing in the query or moving the selection.
+type Change struct {
+	query   textinput.Change
 	matches []int
-	list    list.Action
+	list    list.Change
 	isQuery bool
 	// filtered is set when the query changed, so matches and cursor are for the new query.
 	filtered bool
 	cursor   int
 }
 
-// Perform applies action.
-func (s *SearchState) Perform(action Action) {
-	if !action.isQuery {
-		s.list.Perform(action.list)
+func (s *SearchState) Apply(change Change) {
+	if !change.isQuery {
+		s.list.Apply(change.list)
 		return
 	}
-	s.query.Perform(action.query)
-	if action.filtered {
-		s.matches = action.matches
-		s.list.SetCursor(action.cursor)
+	s.query.Apply(change.query)
+	if change.filtered {
+		s.matches = change.matches
+		s.list.SetCursor(change.cursor)
 	}
 }

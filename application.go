@@ -201,7 +201,8 @@ func (a *Application[M]) Run() error {
 				a.mouseDownX, a.mouseDownY = msg.Position()
 			}
 		default:
-			a.updateModel(msg)
+			// Messages from commands reach the element too, so widgets can handle ones like tree.ActionMsg.
+			a.handle(msg)
 		}
 
 		a.draw()
@@ -371,7 +372,7 @@ func (a *Application[M]) draw() {
 	a.forceRedraw = false
 }
 
-// handle passes an input message through the model's element before updating the model with it.
+// handle passes a message through the model's element before updating the model with it.
 func (a *Application[M]) handle(msg Msg) {
 	width, height := a.screen.Size()
 	if msg = a.model.View().Handle(msg, Rectangle{Width: width, Height: height}); msg != nil {

@@ -3,7 +3,6 @@ package button
 
 import (
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -14,7 +13,7 @@ type Widget struct {
 	style         tcell.Style
 	focusedStyle  tcell.Style
 	disabledStyle tcell.Style
-	keybinds      Keybinds
+	keybind       func(tview.KeyMsg) (Action, bool)
 	onClick       tview.Msg
 	disabled      bool
 	focused       bool
@@ -27,7 +26,7 @@ func New() Widget {
 	return Widget{
 		width:         tview.Fill,
 		height:        tview.Fill,
-		keybinds:      defaultKeybinds,
+		keybind:       DefaultKeybind,
 		focusedStyle:  tcell.StyleDefault.Reverse(true),
 		disabledStyle: tcell.StyleDefault.Dim(true),
 	}
@@ -69,9 +68,9 @@ func (w Widget) DisabledStyle(style tcell.Style) Widget {
 	return w
 }
 
-// Keybinds sets the keys that press the button while it is focused.
-func (w Widget) Keybinds(keybinds Keybinds) Widget {
-	w.keybinds = keybinds
+// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+	w.keybind = f
 	return w
 }
 
@@ -87,7 +86,7 @@ func (w Widget) Disabled(disabled bool) Widget {
 	return w
 }
 
-// Focused sets whether the button has the focus, so the Press keybind presses it and it is drawn with the focused style.
+// Focused sets whether the button has the focus, so ActionPress presses it and it is drawn with the focused style.
 func (w Widget) Focused(focused bool) Widget {
 	w.focused = focused
 	return w
@@ -117,14 +116,14 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle returns the OnClick message for a left click within area, or for the Press keybind while focused. Other messages pass through unchanged.
+// Handle returns the OnClick message for a left click within area, or for ActionPress while focused. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if w.disabled || w.onClick == nil {
 		return msg
 	}
 	switch m := msg.(type) {
 	case tview.KeyMsg:
-		if w.focused && keybind.Matches(m, w.keybinds.Press) {
+		if action, ok := w.keybind(m); w.focused && ok && action == ActionPress {
 			return w.onClick
 		}
 	case tview.MouseMsg:

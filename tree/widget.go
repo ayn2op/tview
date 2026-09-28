@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/keybind"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -16,7 +15,7 @@ type Markers struct {
 	Leaf      string
 }
 
-// Widget draws the nodes under a root and turns keys and the mouse into Actions.
+// Widget draws the nodes under a root and turns keys and the mouse into Changes.
 type Widget struct {
 	root           *Node
 	selectionState *SelectionState
@@ -26,9 +25,9 @@ type Widget struct {
 	graphics       bool
 	graphicsSet    tview.BorderSet
 	graphicsStyle  tcell.Style
-	keybinds       Keybinds
+	keybind        func(tview.KeyMsg) (Action, bool)
 	focused        bool
-	onAction       func(Action) tview.Msg
+	onChange       func(Change) tview.Msg
 }
 
 var _ tview.Element = Widget{}
@@ -38,7 +37,7 @@ type SelectedMsg struct {
 	Node *Node
 }
 
-// New returns a tree of the nodes under root, with selectionState as its current node and scroll position, that draws lines between nodes and fills its parent. It is interactive only once OnAction is set.
+// New returns a tree of the nodes under root, with selectionState as its current node and scroll position, that draws lines between nodes and fills its parent. It is interactive only once OnChange is set.
 func New(root *Node, selectionState *SelectionState) Widget {
 	return Widget{
 		root:           root,
@@ -48,7 +47,7 @@ func New(root *Node, selectionState *SelectionState) Widget {
 		markers:        Markers{Expanded: "▾ ", Collapsed: "▸ "},
 		graphics:       true,
 		graphicsSet:    tview.BorderSetPlain(),
-		keybinds:       defaultKeybinds,
+		keybind:        DefaultKeybind,
 	}
 }
 
@@ -94,9 +93,9 @@ func (w Widget) GraphicsStyle(style tcell.Style) Widget {
 	return w
 }
 
-// Keybinds sets the keys that move the cursor and select nodes.
-func (w Widget) Keybinds(keybinds Keybinds) Widget {
-	w.keybinds = keybinds
+// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+	w.keybind = f
 	return w
 }
 
@@ -106,9 +105,9 @@ func (w Widget) Focused(focused bool) Widget {
 	return w
 }
 
-// OnAction makes the tree interactive, turning keys and the mouse into the message f returns for the Action, which the model applies with SelectionState.Perform. The Select keybind and clicks return a SelectedMsg instead.
-func (w Widget) OnAction(f func(Action) tview.Msg) Widget {
-	w.onAction = f
+// OnChange makes the tree interactive, turning keys and the mouse into the message f returns for the Change, which the model applies with SelectionState.Apply. ActionSelect and clicks return a SelectedMsg instead.
+func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
+	w.onChange = f
 	return w
 }
 
@@ -254,36 +253,40 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle turns the keybinds (while focused) and the mouse within area into an Action once OnAction is set, and the Select keybind and clicks on nodes into a SelectedMsg. Other messages pass through unchanged.
+// Handle turns keys and ActionMsgs (while focused) and the mouse within area into a Change once OnChange is set, and ActionSelect and clicks on nodes into a SelectedMsg. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
-	if w.onAction == nil {
+	if w.onChange == nil {
 		return msg
 	}
+	if key, ok := msg.(tview.KeyMsg); ok && w.focused {
+		if action, ok := w.keybind(key); ok {
+			msg = ActionMsg(action)
+		}
+	}
 	v := w.resolve(area.Height)
-	a := Action{current: v.node(v.current), offset: v.offset, dragging: w.selectionState.dragging, dragY: w.selectionState.dragY}
+	a := Change{current: v.node(v.current), offset: v.offset, dragging: w.selectionState.dragging, dragY: w.selectionState.dragY}
 	center := false
 	switch m := msg.(type) {
-	case tview.KeyMsg:
+	case ActionMsg:
 		if !w.focused {
 			return msg
 		}
-		k := w.keybinds
-		switch {
-		case keybind.Matches(m, k.Down):
+		switch Action(m) {
+		case ActionDown:
 			a.current, center = v.node(v.step(v.current, 1)), true
-		case keybind.Matches(m, k.Up):
+		case ActionUp:
 			a.current, center = v.node(v.step(v.current, -1)), true
-		case keybind.Matches(m, k.Top):
+		case ActionTop:
 			a.current, center = v.node(v.step(-1, 1)), true
-		case keybind.Matches(m, k.Bottom):
+		case ActionBottom:
 			a.current, center = v.node(v.step(len(v.rows), -1)), true
-		case keybind.Matches(m, k.MoveToParent):
+		case ActionMoveToParent:
 			if v.current >= 0 {
 				if parent := v.rows[v.current].parent; parent >= 0 && v.rows[parent].node.selectable {
 					a.current, center = v.rows[parent].node, true
 				}
 			}
-		case keybind.Matches(m, k.Select):
+		case ActionSelect:
 			if a.current == nil {
 				return nil
 			}
@@ -324,7 +327,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		a.offset = index - v.height/2
 	}
 	a.offset = v.clamp(a.offset)
-	return w.onAction(a)
+	return w.onChange(a)
 }
 
 // step returns the next selectable row after index in direction, or index if there is none.

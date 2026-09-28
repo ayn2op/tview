@@ -1,6 +1,6 @@
 package list
 
-// SelectionState holds a list's cursor and scroll position. The model owns it and applies the Actions a list produces with Perform.
+// SelectionState holds a list's cursor and scroll position. The model owns it and applies the Changes a list produces with Apply.
 type SelectionState struct {
 	// cursor is the selected item, or -1 for none.
 	cursor int
@@ -41,14 +41,13 @@ func (s *SelectionState) ScrollToEnd() {
 	s.atEnd, s.center = true, false
 }
 
-// Action is a change to SelectionState produced by a list, such as moving the cursor or scrolling.
-type Action struct {
+// Change is an update to SelectionState produced by a list, such as moving the cursor or scrolling.
+type Change struct {
 	cursor, offset, grab int
 	atEnd                bool
 }
 
-// Perform applies action.
-func (s *SelectionState) Perform(action Action) {
-	s.cursor, s.offset, s.grab, s.atEnd = action.cursor, action.offset, action.grab, action.atEnd
+func (s *SelectionState) Apply(change Change) {
+	s.cursor, s.offset, s.grab, s.atEnd = change.cursor, change.offset, change.grab, change.atEnd
 	s.center = false
 }

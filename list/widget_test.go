@@ -25,19 +25,19 @@ func (row) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }
 func numbers(selectionState *SelectionState, count int) Widget {
 	return New(selectionState, count, func(i int) Item { return row(strconv.Itoa(i)) }).
 		Focused(true).
-		OnAction(func(a Action) tview.Msg { return a })
+		OnChange(func(a Change) tview.Msg { return a })
 }
 
-// apply sends msgs through a list of count rows in area, applying each Action.
+// apply sends msgs through a list of count rows in area, applying each Change.
 func apply(t *testing.T, selectionState SelectionState, count int, area tview.Rectangle, msgs ...tview.Msg) SelectionState {
 	t.Helper()
 	for _, msg := range msgs {
 		out := numbers(&selectionState, count).Handle(msg, area)
-		action, ok := out.(Action)
+		change, ok := out.(Change)
 		if !ok {
-			t.Fatalf("%v: got %v, want an Action", msg, out)
+			t.Fatalf("%v: got %v, want a Change", msg, out)
 		}
-		selectionState.Perform(action)
+		selectionState.Apply(change)
 	}
 	return selectionState
 }
@@ -54,6 +54,12 @@ func TestWidgetHandle(t *testing.T) {
 		got := apply(t, NewSelectionState(), 10, area, key(tcell.KeyDown), key(tcell.KeyDown), key(tcell.KeyDown), key(tcell.KeyDown), key(tcell.KeyDown))
 		if got.cursor != 4 || got.offset != 2 {
 			t.Fatalf("cursor %d offset %d, want 4 and 2", got.cursor, got.offset)
+		}
+	})
+	t.Run("actions do what their keys do", func(t *testing.T) {
+		got := apply(t, NewSelectionState(), 10, area, ActionMsg(ActionSelectBottom), ActionMsg(ActionScrollTop))
+		if got.cursor != 9 || got.offset != 0 {
+			t.Fatalf("cursor %d offset %d, want 9 and 0", got.cursor, got.offset)
 		}
 	})
 	t.Run("wheel scrolls without moving the cursor", func(t *testing.T) {
@@ -84,7 +90,7 @@ func TestWidgetHandle(t *testing.T) {
 		selectionState := NewSelectionState()
 		bar := scrollbar.New().Arrows(scrollbar.ArrowsBoth)
 		msg := numbers(&selectionState, 10).ScrollBar(bar, ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftClick), area)
-		if a, ok := msg.(Action); !ok || a.offset != 1 {
+		if a, ok := msg.(Change); !ok || a.offset != 1 {
 			t.Fatalf("got %v, want offset 1", msg)
 		}
 	})

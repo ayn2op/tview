@@ -2,6 +2,8 @@
 package scrollbar
 
 import (
+	"math/bits"
+
 	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
 )
@@ -13,14 +15,15 @@ const Subcell = 8
 type Arrows uint8
 
 const (
-	ArrowsNone Arrows = iota
-	ArrowsStart
+	ArrowsStart Arrows = 1 << iota
 	ArrowsEnd
-	ArrowsBoth
+
+	ArrowsNone Arrows = 0
+	ArrowsBoth        = ArrowsStart | ArrowsEnd
 )
 
-func (a Arrows) start() bool { return a == ArrowsStart || a == ArrowsBoth }
-func (a Arrows) end() bool   { return a == ArrowsEnd || a == ArrowsBoth }
+func (a Arrows) start() bool { return a&ArrowsStart != 0 }
+func (a Arrows) end() bool   { return a&ArrowsEnd != 0 }
 
 // GlyphSet is the characters a scroll bar is drawn with: the track, the arrows, and the thumb at each eighth of a cell from the bottom (Lower) and the top (Upper).
 type GlyphSet struct {
@@ -130,14 +133,7 @@ func (w Widget) HasStartArrow() bool {
 
 // TrackCells returns the number of cells of a scroll bar length cells long that are not arrows.
 func (w Widget) TrackCells(length int) int {
-	arrows := 0
-	if w.arrows.start() {
-		arrows++
-	}
-	if w.arrows.end() {
-		arrows++
-	}
-	return max(length-arrows, 0)
+	return max(length-bits.OnesCount8(uint8(w.arrows)), 0)
 }
 
 // Thumb returns where the thumb starts and how long it is, in subcells of the track of a scroll bar length cells long.

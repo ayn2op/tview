@@ -60,6 +60,18 @@ func (w Widget) ShortSeparator(separator string) Widget {
 	return w
 }
 
+// FullSeparator sets the separator between columns in the full help.
+func (w Widget) FullSeparator(separator string) Widget {
+	w.fullSeparator = separator
+	return w
+}
+
+// Ellipsis sets the symbol shown when keybinds are cut off for width.
+func (w Widget) Ellipsis(ellipsis string) Widget {
+	w.ellipsis = ellipsis
+	return w
+}
+
 // Styles sets the styles of keys, descriptions, separators, and the ellipsis.
 func (w Widget) Styles(styles Styles) Widget {
 	w.styles = styles

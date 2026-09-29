@@ -3,19 +3,56 @@ package flex
 
 import "github.com/ayn2op/tview"
 
-// Layout lays out Children along one axis, left to right if Horizontal and top to bottom otherwise.
-type Layout struct {
-	Horizontal    bool
-	Width, Height tview.Length
-	Spacing       int
-	Children      []tview.Element
+// Widget lays out its children along one axis. Children take their width and height from tview.SizeOf.
+type Widget struct {
+	horizontal    bool
+	width, height tview.Length
+	spacing       int
+	children      []tview.Element
 }
 
-// Size returns the width and height of the layout, resolving Shrink to the size of the fixed-size children.
-func (l Layout) Size() (width, height tview.Length) {
-	width, height = l.Width, l.Height
+var _ tview.Element = Widget{}
+
+// New returns children laid out left to right if horizontal and top to bottom otherwise, skipping nil ones. It fills its parent in both directions by default.
+func New(horizontal bool, children ...tview.Element) Widget {
+	w := Widget{horizontal: horizontal, width: tview.Fill, height: tview.Fill}
+	for _, child := range children {
+		w = w.Push(child)
+	}
+	return w
+}
+
+// Push adds child after the others, unless it is nil.
+func (w Widget) Push(child tview.Element) Widget {
+	if child != nil {
+		w.children = append(w.children[:len(w.children):len(w.children)], child)
+	}
+	return w
+}
+
+// Width sets the width of the layout.
+func (w Widget) Width(width tview.Length) Widget {
+	w.width = width
+	return w
+}
+
+// Height sets the height of the layout.
+func (w Widget) Height(height tview.Length) Widget {
+	w.height = height
+	return w
+}
+
+// Spacing sets the number of cells between children.
+func (w Widget) Spacing(spacing int) Widget {
+	w.spacing = spacing
+	return w
+}
+
+// Size returns the width and height of the layout, resolving tview.Shrink to the size of its fixed-size children.
+func (w Widget) Size() (width, height tview.Length) {
+	width, height = w.width, w.height
 	if width.IsShrink() || height.IsShrink() {
-		contentWidth, contentHeight := l.contentSize()
+		contentWidth, contentHeight := w.contentSize()
 		if width.IsShrink() {
 			width = tview.Fixed(contentWidth)
 		}
@@ -27,57 +64,57 @@ func (l Layout) Size() (width, height tview.Length) {
 }
 
 // contentSize returns the space the fixed-size children need: their sum along the axis plus spacing, and their maximum across it.
-func (l Layout) contentSize() (width, height int) {
+func (w Widget) contentSize() (width, height int) {
 	var along, across int
-	for _, child := range l.Children {
-		childAlong, childAcross := l.axes(child)
+	for _, child := range w.children {
+		childAlong, childAcross := w.axes(child)
 		along += childAlong.Cells()
 		across = max(across, childAcross.Cells())
 	}
-	along += l.Spacing * max(len(l.Children)-1, 0)
-	if l.Horizontal {
+	along += w.spacing * max(len(w.children)-1, 0)
+	if w.horizontal {
 		return along, across
 	}
 	return across, along
 }
 
 // axes returns the length of child along the layout's axis and across it.
-func (l Layout) axes(child tview.Element) (along, across tview.Length) {
+func (w Widget) axes(child tview.Element) (along, across tview.Length) {
 	width, height := tview.SizeOf(child)
-	if l.Horizontal {
+	if w.horizontal {
 		return width, height
 	}
 	return height, width
 }
 
 // Draw draws each child in its area.
-func (l Layout) Draw(screen tview.Screen, area tview.Rectangle) {
-	for i, childArea := range l.Areas(area) {
-		l.Children[i].Draw(screen, childArea)
+func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
+	for i, childArea := range w.areas(area) {
+		w.children[i].Draw(screen, childArea)
 	}
 }
 
 // Handle passes msg through each child in turn, with the child's area. It stops when a child drops the message.
-func (l Layout) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
-	for i, childArea := range l.Areas(area) {
-		if msg = l.Children[i].Handle(msg, childArea); msg == nil {
+func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
+	for i, childArea := range w.areas(area) {
+		if msg = w.children[i].Handle(msg, childArea); msg == nil {
 			return nil
 		}
 	}
 	return msg
 }
 
-// Areas returns the area of each child within area.
-func (l Layout) Areas(area tview.Rectangle) []tview.Rectangle {
+// areas returns the area of each child within area.
+func (w Widget) areas(area tview.Rectangle) []tview.Rectangle {
 	length := area.Height
-	if l.Horizontal {
+	if w.horizontal {
 		length = area.Width
 	}
 
-	lengths := make([]tview.Length, len(l.Children))
-	free, portions := length-l.Spacing*max(len(l.Children)-1, 0), 0
-	for i, child := range l.Children {
-		lengths[i], _ = l.axes(child)
+	lengths := make([]tview.Length, len(w.children))
+	free, portions := length-w.spacing*max(len(w.children)-1, 0), 0
+	for i, child := range w.children {
+		lengths[i], _ = w.axes(child)
 		if lengths[i].Cells() > 0 {
 			free -= lengths[i].Cells()
 		} else {
@@ -86,7 +123,7 @@ func (l Layout) Areas(area tview.Rectangle) []tview.Rectangle {
 	}
 	free = max(free, 0)
 
-	areas := make([]tview.Rectangle, len(l.Children))
+	areas := make([]tview.Rectangle, len(w.children))
 	pos := 0
 	for i, childLength := range lengths {
 		size := childLength.Cells()
@@ -97,12 +134,12 @@ func (l Layout) Areas(area tview.Rectangle) []tview.Rectangle {
 			portions -= childLength.Portion()
 		}
 		size = max(min(size, length-pos), 0)
-		if l.Horizontal {
+		if w.horizontal {
 			areas[i] = tview.Rectangle{X: area.X + pos, Y: area.Y, Width: size, Height: area.Height}
 		} else {
 			areas[i] = tview.Rectangle{X: area.X, Y: area.Y + pos, Width: area.Width, Height: size}
 		}
-		pos = min(pos+size+l.Spacing, length)
+		pos = min(pos+size+w.spacing, length)
 	}
 	return areas
 }

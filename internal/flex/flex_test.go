@@ -31,64 +31,64 @@ func (s sized) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 func wide(width tview.Length) tview.Element  { return sized{width: width, height: tview.Fill} }
 func tall(height tview.Length) tview.Element { return sized{width: tview.Fill, height: height} }
 
-func TestLayoutAreas(t *testing.T) {
+func TestWidgetAreas(t *testing.T) {
 	area := tview.Rectangle{X: 1, Y: 2, Width: 10, Height: 4}
 	for _, tt := range []struct {
 		name   string
-		layout Layout
+		layout Widget
 		want   []tview.Rectangle
 	}{
-		{"row portions", Layout{Horizontal: true, Children: []tview.Element{wide(tview.Fill), wide(tview.FillPortion(2)), wide(tview.Fill)}}, []tview.Rectangle{
+		{"row portions", New(true, wide(tview.Fill), wide(tview.FillPortion(2)), wide(tview.Fill)), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 2, Height: 4},
 			{X: 3, Y: 2, Width: 5, Height: 4},
 			{X: 8, Y: 2, Width: 3, Height: 4},
 		}},
-		{"row fixed", Layout{Horizontal: true, Children: []tview.Element{wide(tview.Fixed(3)), wide(tview.Fill)}}, []tview.Rectangle{
+		{"row fixed", New(true, wide(tview.Fixed(3)), wide(tview.Fill)), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 3, Height: 4},
 			{X: 4, Y: 2, Width: 7, Height: 4},
 		}},
-		{"row spacing", Layout{Horizontal: true, Spacing: 2, Children: []tview.Element{wide(tview.Fill), wide(tview.Fill)}}, []tview.Rectangle{
+		{"row spacing", New(true, wide(tview.Fill), wide(tview.Fill)).Spacing(2), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 4, Height: 4},
 			{X: 7, Y: 2, Width: 4, Height: 4},
 		}},
-		{"column overflow", Layout{Children: []tview.Element{tall(tview.Fixed(3)), tall(tview.Fixed(3)), tall(tview.Fill)}}, []tview.Rectangle{
+		{"column overflow", New(false, tall(tview.Fixed(3)), tall(tview.Fixed(3)), tall(tview.Fill)), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 10, Height: 3},
 			{X: 1, Y: 5, Width: 10, Height: 1},
 			{X: 1, Y: 6, Width: 10, Height: 0},
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.layout.Areas(area); !slices.Equal(got, tt.want) {
+			if got := tt.layout.areas(area); !slices.Equal(got, tt.want) {
 				t.Fatalf("got %+v, want %+v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestLayoutSize(t *testing.T) {
+func TestWidgetSize(t *testing.T) {
 	t.Run("shrink fits fixed children", func(t *testing.T) {
-		l := Layout{Horizontal: true, Width: tview.Shrink, Height: tview.Shrink, Spacing: 1, Children: []tview.Element{
+		l := New(true,
 			sized{width: tview.Fixed(2), height: tview.Fixed(1)},
 			sized{width: tview.Fixed(3), height: tview.Fixed(2)},
-		}}
+		).Width(tview.Shrink).Height(tview.Shrink).Spacing(1)
 		if width, height := l.Size(); width != tview.Fixed(6) || height != tview.Fixed(2) {
 			t.Fatalf("size = %+v x %+v", width, height)
 		}
 	})
 	t.Run("keeps other lengths", func(t *testing.T) {
-		l := Layout{Width: tview.Fill, Height: tview.Fixed(3)}
+		l := New(false).Height(tview.Fixed(3))
 		if width, height := l.Size(); width != tview.Fill || height != tview.Fixed(3) {
 			t.Fatalf("size = %+v x %+v", width, height)
 		}
 	})
 }
 
-func TestLayoutHandle(t *testing.T) {
+func TestWidgetHandle(t *testing.T) {
 	var left, right tview.Rectangle
-	l := Layout{Horizontal: true, Children: []tview.Element{
+	l := New(true,
 		sized{width: tview.Fill, height: tview.Fill, area: &left},
 		sized{width: tview.Fill, height: tview.Fill, area: &right},
-	}}
+	)
 	area := tview.Rectangle{Width: 10, Height: 1}
 	t.Run("child areas", func(t *testing.T) {
 		enter := tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModNone)

@@ -185,37 +185,12 @@ func String(msg tview.KeyMsg) string {
 
 func keyName(key tcell.Key) string {
 	switch key {
-	case tcell.KeyEnter:
-		return "enter"
-	case tcell.KeyEscape:
-		return "esc"
-	case tcell.KeyTab:
-		return "tab"
 	case tcell.KeyBacktab:
 		return "shift+tab"
-	case tcell.KeyHome:
-		return "home"
-	case tcell.KeyEnd:
-		return "end"
-	case tcell.KeyUp:
-		return "up"
-	case tcell.KeyDown:
-		return "down"
-	case tcell.KeyLeft:
-		return "left"
-	case tcell.KeyRight:
-		return "right"
-	case tcell.KeyPgUp:
-		return "pgup"
-	case tcell.KeyPgDn:
-		return "pgdn"
-	case tcell.KeyDelete:
-		return "delete"
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
+	case tcell.KeyBackspace2:
 		return "backspace"
-	case tcell.KeyInsert:
-		return "insert"
-	default:
-		return ""
+	case tcell.KeyEnter, tcell.KeyEscape, tcell.KeyTab, tcell.KeyHome, tcell.KeyEnd, tcell.KeyUp, tcell.KeyDown, tcell.KeyLeft, tcell.KeyRight, tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyDelete, tcell.KeyBackspace, tcell.KeyInsert:
+		return strings.ToLower(tcell.KeyNames[key])
 	}
+	return ""
 }

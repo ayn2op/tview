@@ -9,35 +9,18 @@ import (
 // clippedScreen drops drawing outside a rectangle, so items partly scrolled out of view are cut off.
 type clippedScreen struct {
 	tview.Screen
-	x      int
-	y      int
-	width  int
-	height int
-}
-
-func newClippedScreen(screen tview.Screen, x, y, width, height int) *clippedScreen {
-	return &clippedScreen{
-		Screen: screen,
-		x:      x,
-		y:      y,
-		width:  width,
-		height: height,
-	}
-}
-
-func (s *clippedScreen) inBounds(x, y int) bool {
-	return x >= s.x && x < s.x+s.width && y >= s.y && y < s.y+s.height
+	area tview.Rectangle
 }
 
 func (s *clippedScreen) SetContent(x int, y int, primary rune, combining []rune, style tcell.Style) {
-	if !s.inBounds(x, y) {
+	if !s.area.Contains(x, y) {
 		return
 	}
 	s.Screen.SetContent(x, y, primary, combining, style)
 }
 
 func (s *clippedScreen) Put(x int, y int, str string, style tcell.Style) (string, int) {
-	if !s.inBounds(x, y) {
+	if !s.area.Contains(x, y) {
 		return str, 0
 	}
 	return s.Screen.Put(x, y, str, style)
@@ -48,7 +31,7 @@ func (s *clippedScreen) PutStr(x int, y int, str string) {
 }
 
 func (s *clippedScreen) PutStrStyled(x int, y int, str string, style tcell.Style) {
-	if y < s.y || y >= s.y+s.height {
+	if y < s.area.Y || y >= s.area.Y+s.area.Height {
 		return
 	}
 
@@ -56,10 +39,10 @@ func (s *clippedScreen) PutStrStyled(x int, y int, str string, style tcell.Style
 	for gr.Next() {
 		cluster := gr.Str()
 		width := max(uniseg.StringWidth(cluster), 1)
-		if x >= s.x+s.width {
+		if x >= s.area.X+s.area.Width {
 			return
 		}
-		if x >= s.x && x+width <= s.x+s.width {
+		if x >= s.area.X && x+width <= s.area.X+s.area.Width {
 			s.Screen.Put(x, y, cluster, style)
 		}
 		x += width
@@ -67,7 +50,7 @@ func (s *clippedScreen) PutStrStyled(x int, y int, str string, style tcell.Style
 }
 
 func (s *clippedScreen) ShowCursor(x int, y int) {
-	if !s.inBounds(x, y) {
+	if !s.area.Contains(x, y) {
 		s.Screen.ShowCursor(-1, -1)
 		return
 	}

@@ -1,4 +1,4 @@
-// Package image draws images with half blocks, two pixels per cell.
+// Package image draws images with half-block characters or kitty's graphics protocol.
 package image
 
 import (
@@ -10,51 +10,59 @@ import (
 	"github.com/gdamore/tcell/v3/color"
 )
 
-// minAlpha is the least opacity drawn, so the faint edges of transparent images do not show as dark cells.
+// Pixels less opaque than minAlpha are drawn as transparent, so antialiased edges do not show as dark cells.
 const minAlpha = 50
 
-// Widget draws an image scaled to fit its area, keeping the aspect ratio.
+// Widget draws an image scaled to fit its area, preserving its aspect ratio.
 type Widget struct {
 	src   image.Image
 	width int
+	kitty int
 }
 
 var _ tview.Element = Widget{}
 
-// New draws src at one pixel per column.
+// New returns a widget that draws src at one pixel per column.
 func New(src image.Image) Widget {
 	return Widget{src: src}
 }
 
-// Width sets the width in cells, which the height follows.
+// Width sets the width in cells; the height follows from the aspect ratio.
 func (w Widget) Width(cells int) Widget {
 	w.width = cells
 	return w
 }
 
-// Size returns the width and the height that keeps the aspect ratio.
+// Size returns the width and the height that preserves the aspect ratio.
 func (w Widget) Size() (width, height tview.Length) {
-	b := w.src.Bounds()
-	if b.Empty() {
-		return tview.Fixed(0), tview.Fixed(0)
-	}
-	cells := w.width
-	if cells == 0 {
-		cells = b.Dx()
-	}
-	return tview.Fixed(cells), tview.Fixed((cells*b.Dy()/b.Dx() + 1) / 2)
+	cols, rows := w.cells()
+	return tview.Fixed(cols), tview.Fixed(rows)
 }
 
-// Draw draws the image from the top-left corner of area. Transparent pixels leave the cell beneath.
+func (w Widget) cells() (cols, rows int) {
+	b := w.src.Bounds()
+	if b.Empty() {
+		return 0, 0
+	}
+	cols = w.width
+	if cols == 0 {
+		cols = b.Dx()
+	}
+	return cols, (cols*b.Dy()/b.Dx() + 1) / 2
+}
+
+// Draw draws the image at the top-left corner of area.
+// Transparent pixels leave the underlying cells untouched.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
+	if w.kitty != 0 {
+		w.drawPlaceholders(screen, area)
+		return
+	}
 	b := w.src.Bounds()
 	if b.Empty() {
 		return
 	}
 	width := min(area.Width, area.Height*2*b.Dx()/b.Dy())
-	if width <= 0 {
-		return
-	}
 	height := width * b.Dy() / b.Dx()
 	pixel := func(x, y int) color.Color {
 		if y >= height {

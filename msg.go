@@ -93,6 +93,18 @@ func SetTitle(title string) Cmd {
 	return func() Msg { return setTitleMsg(title) }
 }
 
+type requestTerminalInfoMsg struct{}
+
+// TerminalInfoMsg holds the terminal's name and version, which are empty if unknown.
+type TerminalInfoMsg struct {
+	Name, Version string
+}
+
+// RequestTerminalInfo asks for the terminal's name and version, which arrive as a TerminalInfoMsg.
+func RequestTerminalInfo() Cmd {
+	return func() Msg { return requestTerminalInfoMsg{} }
+}
+
 type getClipboardMsg struct{}
 
 // GetClipboard asks the terminal for the clipboard, which arrives as a ClipboardMsg.

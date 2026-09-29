@@ -159,6 +159,10 @@ func (a *Application[M]) Run() error {
 		case notifyMsg:
 			a.screen.ShowNotification(msg.title, msg.body)
 
+		case requestTerminalInfoMsg:
+			name, version := a.screen.Terminal()
+			a.handle(TerminalInfoMsg{Name: name, Version: version})
+
 		case getClipboardMsg:
 			a.screen.GetClipboard()
 		case setClipboardMsg:

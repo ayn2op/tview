@@ -97,7 +97,7 @@ func TestWidgetDraw(t *testing.T) {
 		{"the last tab stays at the end", tabs.Arrows("◀", "▶").Active(2), 9, "◀o three "},
 		{"the active tab is centered", tabs.Arrows("◀", "▶").Active(1), 9, "◀e two t▶"},
 		{"the active tab is centered without arrows", tabs.Active(1), 7, "e two t"},
-		{"labels aligned left with padding and a divider", New("a", "b").Alignment(tview.AlignmentLeft).Padding("[", "]").Divider("|"), 9, "[a]|[b]  "},
+		{"labels aligned left with padding and a separator", New("a", "b").Alignment(tview.AlignmentLeft).Padding("[", "]").Separator("|"), 9, "[a]|[b]  "},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			screen := screentest.New(t, tt.width, 1)

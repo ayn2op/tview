@@ -14,7 +14,7 @@ type Widget struct {
 	content                        tview.Element
 	style, activeStyle, arrowStyle tcell.Style
 	alignment                      tview.Alignment
-	divider                        string
+	separator                      string
 	paddingLeft, paddingRight      string
 	arrowStart, arrowEnd           string
 	clickableArrows, wrap          bool
@@ -24,14 +24,14 @@ type Widget struct {
 
 var _ tview.Element = Widget{}
 
-// New returns centered tabs with labels divided by a space, the active one reversed, and no arrows.
+// New returns centered tabs with labels separated by a space, the active one reversed, and no arrows.
 func New(labels ...string) Widget {
 	return Widget{
 		labels:          labels,
 		activeStyle:     tcell.StyleDefault.Reverse(true),
 		arrowStyle:      tcell.StyleDefault.Dim(true),
 		alignment:       tview.AlignmentCenter,
-		divider:         " ",
+		separator:       " ",
 		clickableArrows: true,
 		keybind:         DefaultKeybind,
 	}
@@ -67,9 +67,9 @@ func (w Widget) Alignment(alignment tview.Alignment) Widget {
 	return w
 }
 
-// Divider sets the text drawn between labels.
-func (w Widget) Divider(divider string) Widget {
-	w.divider = divider
+// Separator sets the text drawn between labels.
+func (w Widget) Separator(separator string) Widget {
+	w.separator = separator
 	return w
 }
 
@@ -128,7 +128,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		}
 		l.print(screen, w.paddingLeft+label+w.paddingRight, l.xs[i], l.widths[i], area.Y, style)
 		if i < len(w.labels)-1 {
-			l.print(screen, w.divider, l.xs[i+1]-l.gap, l.gap, area.Y, w.style)
+			l.print(screen, w.separator, l.xs[i+1]-l.gap, l.gap, area.Y, w.style)
 		}
 	}
 	if l.startArrow {
@@ -208,7 +208,7 @@ func contentArea(area tview.Rectangle) tview.Rectangle {
 
 // layout is where the labels are drawn on the first row of an area.
 type layout struct {
-	// xs and widths are where each padded label starts and how wide it is, with gap cells between labels for the divider.
+	// xs and widths are where each padded label starts and how wide it is, with gap cells between labels for the separator.
 	xs, widths []int
 	gap        int
 	// left and right bound the columns the labels are drawn in, the rest of the row is kept for the arrows.
@@ -219,8 +219,8 @@ type layout struct {
 
 // layout places the labels in area by the alignment, or when they do not fit, centers the active one without scrolling past the first or last label.
 func (w Widget) layout(area tview.Rectangle) layout {
-	l := layout{gap: uniseg.StringWidth(w.divider), left: area.X, right: area.X + area.Width}
-	stripWidth := -l.gap // no divider after the last label
+	l := layout{gap: uniseg.StringWidth(w.separator), left: area.X, right: area.X + area.Width}
+	stripWidth := -l.gap // no separator after the last label
 	for _, label := range w.labels {
 		width := uniseg.StringWidth(w.paddingLeft + label + w.paddingRight)
 		l.xs, l.widths = append(l.xs, stripWidth+l.gap), append(l.widths, width)

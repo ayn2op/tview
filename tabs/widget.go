@@ -4,22 +4,37 @@ package tabs
 import (
 	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
 )
 
-// Widget draws the tab labels, centered on the first row, above the content of the active tab. The model owns the tabs and switches between them.
+// Widget draws the tab labels on the first row above the content of the active tab. Labels too wide for the row scroll to center the active one. The model owns the tabs and switches between them.
 type Widget struct {
-	labels   []string
-	active   int
-	content  tview.Element
-	keybind  func(tview.KeyMsg) (Action, bool)
-	onSelect func(index int) tview.Msg
+	labels                         []string
+	active                         int
+	content                        tview.Element
+	style, activeStyle, arrowStyle tcell.Style
+	alignment                      tview.Alignment
+	divider                        string
+	paddingLeft, paddingRight      string
+	arrowStart, arrowEnd           string
+	clickableArrows, wrap          bool
+	keybind                        func(tview.KeyMsg) (Action, bool)
+	onSelect                       func(index int) tview.Msg
 }
 
 var _ tview.Element = Widget{}
 
-// New returns tabs with labels.
+// New returns centered tabs with labels divided by a space, the active one reversed, and no arrows.
 func New(labels ...string) Widget {
-	return Widget{labels: labels, keybind: DefaultKeybind}
+	return Widget{
+		labels:          labels,
+		activeStyle:     tcell.StyleDefault.Reverse(true),
+		arrowStyle:      tcell.StyleDefault.Dim(true),
+		alignment:       tview.AlignmentCenter,
+		divider:         " ",
+		clickableArrows: true,
+		keybind:         DefaultKeybind,
+	}
 }
 
 // Active sets the index of the active tab.
@@ -31,6 +46,60 @@ func (w Widget) Active(index int) Widget {
 // Content sets the element of the active tab.
 func (w Widget) Content(content tview.Element) Widget {
 	w.content = content
+	return w
+}
+
+// Style sets the style of the row and of the labels of inactive tabs.
+func (w Widget) Style(style tcell.Style) Widget {
+	w.style = style
+	return w
+}
+
+// ActiveStyle sets the style of the label of the active tab.
+func (w Widget) ActiveStyle(style tcell.Style) Widget {
+	w.activeStyle = style
+	return w
+}
+
+// Alignment sets where labels that fit are placed in the row.
+func (w Widget) Alignment(alignment tview.Alignment) Widget {
+	w.alignment = alignment
+	return w
+}
+
+// Divider sets the text drawn between labels.
+func (w Widget) Divider(divider string) Widget {
+	w.divider = divider
+	return w
+}
+
+// Padding sets the text drawn on either side of each label, in the style of the label.
+func (w Widget) Padding(left, right string) Widget {
+	w.paddingLeft, w.paddingRight = left, right
+	return w
+}
+
+// Arrows sets the arrows drawn at the start and end of the row while labels are hidden past them, such as "◀" and "▶". An empty string draws no arrow at that end.
+func (w Widget) Arrows(start, end string) Widget {
+	w.arrowStart, w.arrowEnd = start, end
+	return w
+}
+
+// ClickableArrows sets whether clicking an arrow selects the neighbor of the active tab, true unless set.
+func (w Widget) ClickableArrows(clickable bool) Widget {
+	w.clickableArrows = clickable
+	return w
+}
+
+// ArrowStyle sets the style of the arrows.
+func (w Widget) ArrowStyle(style tcell.Style) Widget {
+	w.arrowStyle = style
+	return w
+}
+
+// Wrap sets whether moving past the last tab selects the first and past the first selects the last.
+func (w Widget) Wrap(wrap bool) Widget {
+	w.wrap = wrap
 	return w
 }
 
@@ -48,49 +117,78 @@ func (w Widget) OnSelect(onSelect func(index int) tview.Msg) Widget {
 
 // Draw draws the labels on the first row of area, highlighting the active one, and the content below them.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
-	x := area.X + w.stripOffset(area.Width)
+	l := w.layout(area)
+	for x := area.X; x < area.X+area.Width; x++ {
+		screen.Put(x, area.Y, " ", w.style)
+	}
 	for i, label := range w.labels {
-		style := tcell.StyleDefault
+		style := w.style
 		if i == w.active {
-			style = style.Reverse(true)
+			style = w.activeStyle
 		}
-		tview.Print(screen, label, x, area.Y, len(label), tview.AlignmentLeft, style)
-		x += len(label) + 1
+		l.print(screen, w.paddingLeft+label+w.paddingRight, l.xs[i], l.widths[i], area.Y, style)
+		if i < len(w.labels)-1 {
+			l.print(screen, w.divider, l.xs[i+1]-l.gap, l.gap, area.Y, w.style)
+		}
+	}
+	if l.startArrow {
+		tview.Print(screen, w.arrowStart, area.X, area.Y, l.left-area.X, tview.AlignmentLeft, w.arrowStyle)
+	}
+	if l.endArrow {
+		tview.Print(screen, w.arrowEnd, l.right, area.Y, area.X+area.Width-l.right, tview.AlignmentLeft, w.arrowStyle)
 	}
 	if w.content != nil {
 		w.content.Draw(screen, contentArea(area))
 	}
 }
 
-// Handle turns tab Actions and clicks and scrolling on the labels into the OnSelect message, and passes other messages to the content below the labels.
+// Handle turns tab Actions, clicks on the labels, and scrolling over the row of labels into the OnSelect message, and passes other messages to the content below the labels.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	switch msg := msg.(type) {
 	case tview.KeyMsg:
-		action, ok := w.keybind(msg)
-		switch {
-		case ok && action == ActionPrevious && w.active > 0:
-			return w.selectTab(w.active - 1)
-		case ok && action == ActionNext && w.active < len(w.labels)-1:
-			return w.selectTab(w.active + 1)
+		if action, ok := w.keybind(msg); ok {
+			delta := 1
+			if action == ActionPrevious {
+				delta = -1
+			}
+			if tab, ok := w.step(delta); ok {
+				return w.selectTab(tab)
+			}
 		}
 	case tview.MouseMsg:
 		x, y := msg.Position()
-		if tab, ok := w.tabAt(area, x, y); ok {
-			switch msg.Action {
-			case tview.MouseLeftClick:
-				return w.selectTab(tab)
-			case tview.MouseScrollUp, tview.MouseScrollLeft:
-				return w.selectTab(max(w.active-1, 0))
-			case tview.MouseScrollDown, tview.MouseScrollRight:
-				return w.selectTab(min(w.active+1, len(w.labels)-1))
-			}
-			return nil
+		if y != area.Y || !area.Contains(x, y) {
+			break
 		}
+		switch msg.Action {
+		case tview.MouseLeftClick:
+			if tab, ok := w.tabAt(area, x); ok {
+				return w.selectTab(tab)
+			}
+		case tview.MouseScrollUp, tview.MouseScrollLeft:
+			if tab, ok := w.step(-1); ok {
+				return w.selectTab(tab)
+			}
+		case tview.MouseScrollDown, tview.MouseScrollRight:
+			if tab, ok := w.step(1); ok {
+				return w.selectTab(tab)
+			}
+		}
+		return nil
 	}
 	if w.content == nil {
 		return msg
 	}
 	return w.content.Handle(msg, contentArea(area))
+}
+
+// step returns the tab delta tabs from the active one, wrapping around the ends when Wrap is set, and whether there is one.
+func (w Widget) step(delta int) (int, bool) {
+	next := w.active + delta
+	if w.wrap && len(w.labels) > 0 {
+		return (next + len(w.labels)) % len(w.labels), true
+	}
+	return next, next >= 0 && next < len(w.labels)
 }
 
 // selectTab returns the OnSelect message for index, or nil if index is already active.
@@ -108,26 +206,77 @@ func contentArea(area tview.Rectangle) tview.Rectangle {
 	return area
 }
 
-// tabAt returns the tab whose label is at x, y in area, whose first row holds the labels.
-func (w Widget) tabAt(area tview.Rectangle, x, y int) (int, bool) {
-	if y != area.Y || x < area.X || x >= area.X+area.Width {
-		return 0, false
-	}
-	start := area.X + w.stripOffset(area.Width)
-	for i, label := range w.labels {
-		if x >= start && x < start+len(label) {
-			return i, true
-		}
-		start += len(label) + 1
-	}
-	return 0, false
+// layout is where the labels are drawn on the first row of an area.
+type layout struct {
+	// xs and widths are where each padded label starts and how wide it is, with gap cells between labels for the divider.
+	xs, widths []int
+	gap        int
+	// left and right bound the columns the labels are drawn in, the rest of the row is kept for the arrows.
+	left, right int
+	// startArrow and endArrow are set while labels are hidden past an arrow.
+	startArrow, endArrow bool
 }
 
-// stripOffset returns where the labels, separated by a single space, start so that they are centered as a group within width.
-func (w Widget) stripOffset(width int) int {
-	stripWidth := -1 // no trailing space after the last label
+// layout places the labels in area by the alignment, or when they do not fit, centers the active one without scrolling past the first or last label.
+func (w Widget) layout(area tview.Rectangle) layout {
+	l := layout{gap: uniseg.StringWidth(w.divider), left: area.X, right: area.X + area.Width}
+	stripWidth := -l.gap // no divider after the last label
 	for _, label := range w.labels {
-		stripWidth += len(label) + 1
+		width := uniseg.StringWidth(w.paddingLeft + label + w.paddingRight)
+		l.xs, l.widths = append(l.xs, stripWidth+l.gap), append(l.widths, width)
+		stripWidth += width + l.gap
 	}
-	return max((width-stripWidth)/2, 0)
+	offset := l.left
+	switch {
+	case stripWidth > area.Width:
+		l.left += uniseg.StringWidth(w.arrowStart)
+		l.right -= uniseg.StringWidth(w.arrowEnd)
+		width := l.right - l.left
+		center := l.xs[w.active] + l.widths[w.active]/2
+		offset = l.left - min(max(center-width/2, 0), stripWidth-width)
+	case w.alignment == tview.AlignmentCenter:
+		offset += (area.Width - stripWidth) / 2
+	case w.alignment == tview.AlignmentRight:
+		offset += area.Width - stripWidth
+	}
+	for i := range l.xs {
+		l.xs[i] += offset
+	}
+	if last := len(l.xs) - 1; last >= 0 {
+		l.startArrow = l.xs[0] < l.left
+		l.endArrow = l.xs[last]+l.widths[last] > l.right
+	}
+	return l
+}
+
+// print draws text, width cells wide from x, on row y, cut to the columns the labels are drawn in.
+func (l layout) print(screen tview.Screen, text string, x, width, y int, style tcell.Style) {
+	// Right alignment cuts the start of text that begins before the columns, center alignment both ends.
+	end := x + width
+	alignment := tview.AlignmentLeft
+	switch {
+	case x < l.left && end > l.right:
+		alignment = tview.AlignmentCenter
+	case x < l.left:
+		alignment = tview.AlignmentRight
+	}
+	from, to := max(x, l.left), min(end, l.right)
+	tview.Print(screen, text, from, y, to-from, alignment, style)
+}
+
+// tabAt returns the tab whose label is at column x of the first row of area, or the neighbor of the active tab past an arrow.
+func (w Widget) tabAt(area tview.Rectangle, x int) (int, bool) {
+	l := w.layout(area)
+	switch {
+	case x < l.left:
+		return w.active - 1, l.startArrow && w.clickableArrows
+	case x >= l.right:
+		return w.active + 1, l.endArrow && w.clickableArrows
+	}
+	for i, start := range l.xs {
+		if x >= start && x < start+l.widths[i] {
+			return i, true
+		}
+	}
+	return 0, false
 }

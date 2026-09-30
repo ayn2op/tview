@@ -18,7 +18,7 @@ func testTree() map[string]*Node {
 }
 
 func interactive(root *Node, selectionState *SelectionState) Widget {
-	return New(root, selectionState).TopLevel(1).Markers(Markers{}).Focused(true).OnChange(func(a Change) tview.Msg { return a })
+	return New(root, selectionState).TopLevel(1).Markers(Markers{}).Focused(true).OnChange(func(a Change) tview.Msg { return a }).OnSelect(func(n *Node) tview.Msg { return n })
 }
 
 func TestWidgetDraw(t *testing.T) {
@@ -67,7 +67,7 @@ func TestWidgetHandle(t *testing.T) {
 		nodes := testTree()
 		var selectionState SelectionState
 		selectionState.SetCurrentNode(nodes["b"])
-		if got := send(nodes, &selectionState, key(tcell.KeyEnter, "")); got != (SelectedMsg{Node: nodes["b"]}) {
+		if got := send(nodes, &selectionState, key(tcell.KeyEnter, "")); got != nodes["b"] {
 			t.Fatalf("got %v", got)
 		}
 	})
@@ -75,7 +75,7 @@ func TestWidgetHandle(t *testing.T) {
 		nodes := testTree()
 		var selectionState SelectionState
 		click := tview.MouseMsg{EventMouse: tcell.NewEventMouse(1, 1, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftClick}
-		if got := send(nodes, &selectionState, click); got != (SelectedMsg{Node: nodes["a1"]}) {
+		if got := send(nodes, &selectionState, click); got != nodes["a1"] {
 			t.Fatalf("got %v", got)
 		}
 	})

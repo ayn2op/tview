@@ -28,14 +28,10 @@ type Widget struct {
 	keybind        func(tview.KeyMsg) (Action, bool)
 	focused        bool
 	onChange       func(Change) tview.Msg
+	onSelect       func(*Node) tview.Msg
 }
 
 var _ tview.Element = Widget{}
-
-// SelectedMsg is emitted when the user selects a node.
-type SelectedMsg struct {
-	Node *Node
-}
 
 // New returns a tree of the nodes under root, with selectionState as its current node and scroll position, that draws lines between nodes and fills its parent. It is interactive only once OnChange is set.
 func New(root *Node, selectionState *SelectionState) Widget {
@@ -105,9 +101,15 @@ func (w Widget) Focused(focused bool) Widget {
 	return w
 }
 
-// OnChange makes the tree interactive, turning keys and the mouse into the message f returns for the Change, which the model applies with SelectionState.Apply. ActionSelect and clicks return a SelectedMsg instead.
+// OnChange makes the tree interactive, turning keys and the mouse into the message f returns for the Change, which the model applies with SelectionState.Apply.
 func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
 	w.onChange = f
+	return w
+}
+
+// OnSelect sets the function that turns a node selected with ActionSelect or a click into a message.
+func (w Widget) OnSelect(f func(*Node) tview.Msg) Widget {
+	w.onSelect = f
 	return w
 }
 
@@ -253,7 +255,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle turns keys and ActionMsgs (while focused) and the mouse within area into a Change once OnChange is set, and ActionSelect and clicks on nodes into a SelectedMsg. Other messages pass through unchanged.
+// Handle turns keys and ActionMsgs (while focused) and the mouse within area into a Change once OnChange is set, and ActionSelect and clicks on nodes into the OnSelect message. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if w.onChange == nil {
 		return msg
@@ -287,10 +289,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 				}
 			}
 		case ActionSelect:
-			if a.current == nil {
-				return nil
-			}
-			return SelectedMsg{Node: a.current}
+			return w.selectNode(a.current)
 		default:
 			return msg
 		}
@@ -310,7 +309,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 			a.dragging = false
 		case tview.MouseLeftClick:
 			if node := v.node(v.offset + y - area.Y); node != nil && node.selectable {
-				return SelectedMsg{Node: node}
+				return w.selectNode(node)
 			}
 			return nil
 		case tview.MouseScrollUp:
@@ -338,4 +337,12 @@ func (v view) step(index, direction int) int {
 		}
 	}
 	return index
+}
+
+// selectNode returns the OnSelect message for node, or nil if node is nil or OnSelect is not set.
+func (w Widget) selectNode(node *Node) tview.Msg {
+	if node == nil || w.onSelect == nil {
+		return nil
+	}
+	return w.onSelect(node)
 }

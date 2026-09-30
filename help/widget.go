@@ -130,11 +130,7 @@ func (w Widget) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) rich
 		candidate := append(out.Clone(), sep)
 		candidate = append(candidate, items[i]...)
 		if maxWidth > 0 && candidate.Width() > maxWidth {
-			tail := w.truncationTail(out, maxWidth)
-			if len(tail) > 0 {
-				out = append(out, tail...)
-			}
-			return out
+			return append(out, w.truncationTail(out, maxWidth)...)
 		}
 		out = candidate
 	}
@@ -242,10 +238,6 @@ func (w Widget) truncationTail(current richtext.Line, maxWidth int) richtext.Lin
 }
 
 func (w Widget) drawSegments(screen tview.Screen, x, y, width int, segments richtext.Line) {
-	if width <= 0 || len(segments) == 0 {
-		return
-	}
-
 	cursor := x
 	remaining := width
 	for _, s := range segments {

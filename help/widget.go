@@ -123,11 +123,7 @@ func (w Widget) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) rich
 		return nil
 	}
 
-	sepText := w.shortSeparator
-	if sepText == "" {
-		sepText = " "
-	}
-	sep := richtext.Segment{Text: sepText, Style: w.styles.ShortSeparator}
+	sep := richtext.Segment{Text: cmp.Or(w.shortSeparator, " "), Style: w.styles.ShortSeparator}
 
 	out := items[0].Clone()
 	for i := 1; i < len(items); i++ {

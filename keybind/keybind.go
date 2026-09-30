@@ -48,12 +48,7 @@ func Matches(msg tview.KeyMsg, keybinds ...Keybind) bool {
 	}
 
 	key := String(msg)
-	for _, keybind := range keybinds {
-		if slices.Contains(keybind.keys, key) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(keybinds, func(k Keybind) bool { return slices.Contains(k.keys, key) })
 }
 
 func normalizeKeys(keys ...string) []string {

@@ -234,10 +234,7 @@ func (w Widget) truncationTail(current richtext.Line, maxWidth int) richtext.Lin
 		return nil
 	}
 	// We only add an ellipsis when it fully fits because clipping looks broken in narrow widths.
-	tail := richtext.Line{
-		{Text: " ", Style: w.styles.Ellipsis},
-		{Text: w.ellipsis, Style: w.styles.Ellipsis},
-	}
+	tail := richtext.Line{{Text: " " + w.ellipsis, Style: w.styles.Ellipsis}}
 	if current.Width()+tail.Width() <= maxWidth {
 		return tail
 	}

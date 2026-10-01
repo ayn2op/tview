@@ -265,14 +265,21 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 			msg = ActionMsg(action)
 		}
 	}
+	// Laying the tree out is the costly part, so messages the tree ignores return before it.
+	switch msg.(type) {
+	case ActionMsg:
+		if !w.focused {
+			return msg
+		}
+	case tview.MouseMsg:
+	default:
+		return msg
+	}
 	v := w.resolve(area.Height)
 	a := Change{current: v.node(v.current), offset: v.offset, dragging: w.selectionState.dragging, dragY: w.selectionState.dragY}
 	center := false
 	switch m := msg.(type) {
 	case ActionMsg:
-		if !w.focused {
-			return msg
-		}
 		switch Action(m) {
 		case ActionDown:
 			a.current, center = v.node(v.step(v.current, 1)), true

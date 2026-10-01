@@ -197,14 +197,21 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 			msg = ActionMsg(action)
 		}
 	}
+	// Laying the list out is the costly part, so messages the list ignores return before it.
+	switch msg.(type) {
+	case ActionMsg:
+		if !w.focused {
+			return msg
+		}
+	case tview.MouseMsg:
+	default:
+		return msg
+	}
 	v := w.resolve(area)
 	a := Change{cursor: v.cursor, offset: v.offset, grab: w.selectionState.grab}
 	center := false
 	switch m := msg.(type) {
 	case ActionMsg:
-		if !w.focused {
-			return msg
-		}
 		switch Action(m) {
 		case ActionSelectDown:
 			a.cursor, center = min(a.cursor+1, w.count-1), true

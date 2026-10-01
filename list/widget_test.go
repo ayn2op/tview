@@ -126,7 +126,27 @@ func TestWidgetDraw(t *testing.T) {
 			t.Fatalf("last row = %q", got)
 		}
 	})
+	t.Run("clips fills of items partly out of view", func(t *testing.T) {
+		screen := screentest.New(t, 3, 3)
+		selectionState := NewSelectionState()
+		selectionState.SetCursor(-1)
+		New(&selectionState, 1, func(int) Item { return filled{} }).Draw(screen, tview.Rectangle{Y: 1, Width: 3, Height: 1})
+		if got := screentest.Row(screen, 0, 3) + screentest.Row(screen, 1, 3) + screentest.Row(screen, 2, 3); got != "   xxx   " {
+			t.Fatalf("rows = %q", got)
+		}
+	})
 }
+
+// filled is an item that fills more than the area it is given.
+type filled struct{}
+
+func (filled) Rows(int) int { return 1 }
+
+func (filled) Draw(screen tview.Screen, area tview.Rectangle) {
+	screen.FillArea(area.X-1, area.Y-1, area.Width+2, area.Height+2, 'x', tcell.StyleDefault)
+}
+
+func (filled) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }
 
 func TestStateSetTrackEnd(t *testing.T) {
 	area := tview.Rectangle{Width: 3, Height: 2}

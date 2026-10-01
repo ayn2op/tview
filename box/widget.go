@@ -158,7 +158,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 			}
 		}
 	}
-	fill(left, top, right, bottom, " ", tcell.StyleDefault.Background(w.background))
+	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', tcell.StyleDefault.Background(w.background))
 
 	if w.borders != tview.BordersNone && area.Width >= 2 && area.Height >= 2 {
 		set := w.borderSet

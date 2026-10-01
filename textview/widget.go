@@ -156,11 +156,7 @@ func (w Widget) clamp(l layout, area tview.Rectangle, row, column int, followEnd
 
 // Draw fills area with the style and draws the visible lines.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
-	for y := area.Y; y < area.Y+area.Height; y++ {
-		for x := area.X; x < area.X+area.Width; x++ {
-			screen.Put(x, y, " ", w.style)
-		}
-	}
+	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', w.style)
 	if area.Width <= 0 || area.Height <= 0 {
 		return
 	}

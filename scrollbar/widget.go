@@ -166,12 +166,7 @@ func (w Widget) glyph(start, fill int) (string, tcell.Style) {
 
 // Draw clears area and draws the scroll bar down its first column, unless all the content is visible.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
-	background := tcell.StyleDefault
-	for y := area.Y; y < area.Y+area.Height; y++ {
-		for x := area.X; x < area.X+area.Width; x++ {
-			screen.Put(x, y, " ", background)
-		}
-	}
+	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', tcell.StyleDefault)
 	if area.Width <= 0 || w.content <= w.viewport || w.TrackCells(area.Height) == 0 {
 		return
 	}

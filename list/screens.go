@@ -26,6 +26,12 @@ func (s *clippedScreen) Put(x int, y int, str string, style tcell.Style) (string
 	return s.Screen.Put(x, y, str, style)
 }
 
+func (s *clippedScreen) FillArea(x, y, width, height int, r rune, style tcell.Style) {
+	x0, y0 := max(x, s.area.X), max(y, s.area.Y)
+	x1, y1 := min(x+width, s.area.X+s.area.Width), min(y+height, s.area.Y+s.area.Height)
+	s.Screen.FillArea(x0, y0, x1-x0, y1-y0, r, style)
+}
+
 func (s *clippedScreen) PutStr(x int, y int, str string) {
 	s.PutStrStyled(x, y, str, tcell.StyleDefault)
 }
@@ -69,6 +75,10 @@ func (s *styledScreen) SetContent(x int, y int, primary rune, combining []rune, 
 
 func (s *styledScreen) Put(x int, y int, str string, style tcell.Style) (string, int) {
 	return s.Screen.Put(x, y, str, tview.MergeStyle(s.style, style))
+}
+
+func (s *styledScreen) FillArea(x, y, width, height int, r rune, style tcell.Style) {
+	s.Screen.FillArea(x, y, width, height, r, tview.MergeStyle(s.style, style))
 }
 
 func (s *styledScreen) PutStr(x int, y int, str string) {

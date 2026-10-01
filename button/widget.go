@@ -106,11 +106,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	case w.focused:
 		style = w.focusedStyle
 	}
-	for y := area.Y; y < area.Y+area.Height; y++ {
-		for x := area.X; x < area.X+area.Width; x++ {
-			screen.Put(x, y, " ", style)
-		}
-	}
+	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', style)
 	if area.Width > 0 && area.Height > 0 {
 		tview.Print(screen, w.label, area.X, area.Y+area.Height/2, area.Width, tview.AlignmentCenter, style)
 	}

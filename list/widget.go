@@ -179,11 +179,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 			continue
 		}
 		styled := &styledScreen{Screen: clipped, style: w.selectedStyle}
-		for y := itemArea.Y; y < itemArea.Y+itemArea.Height; y++ {
-			for x := itemArea.X; x < itemArea.X+itemArea.Width; x++ {
-				styled.Put(x, y, " ", tcell.StyleDefault)
-			}
-		}
+		styled.FillArea(itemArea.X, itemArea.Y, itemArea.Width, itemArea.Height, ' ', tcell.StyleDefault)
 		w.item(i).Draw(styled, itemArea)
 	}
 	if v.bar.Width > 0 {

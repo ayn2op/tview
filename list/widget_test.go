@@ -29,6 +29,7 @@ func (row) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }
 // numbers returns a list of count rows labeled 0, 1, and so on.
 func numbers(selectionState SelectionState, count int) Widget {
 	return New(selectionState, count, func(i int) tview.Element { return row(strconv.Itoa(i)) }).
+		ScrollBar(scrollbar.New().BeginSymbol("").EndSymbol(""), ScrollBarVisibilityAutomatic).
 		Focused(true).
 		OnChange(func(a Change) tview.Msg { return a })
 }
@@ -91,10 +92,9 @@ func TestWidgetHandle(t *testing.T) {
 			t.Fatalf("offset %d dragging %v, want 6 and not dragging", got.offset, got.dragging)
 		}
 	})
-	t.Run("arrows scroll a step", func(t *testing.T) {
+	t.Run("the end symbol scrolls a step", func(t *testing.T) {
 		selectionState := NewSelectionState()
-		bar := scrollbar.New().Arrows(scrollbar.ArrowsBoth)
-		msg := numbers(selectionState, 10).ScrollBar(bar, ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftClick), area)
+		msg := numbers(selectionState, 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftClick), area)
 		if a, ok := msg.(Change); !ok || a.offset != 1 {
 			t.Fatalf("got %v, want offset 1", msg)
 		}

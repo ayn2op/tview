@@ -19,26 +19,30 @@ func column(t *testing.T, w Widget, height int) string {
 }
 
 func TestWidgetDraw(t *testing.T) {
-	glyphs := BoxDrawingGlyphSet()
-	t.Run("thumb at the top", func(t *testing.T) {
-		if got := column(t, New().GlyphSet(glyphs).Lengths(8, 2), 4); got != "█│││" {
+	t.Run("default symbols", func(t *testing.T) {
+		if got := column(t, New().Lengths(8, 2), 4); got != "▲█║▼" {
 			t.Fatalf("column = %q", got)
 		}
 	})
-	t.Run("thumb at the bottom with arrows", func(t *testing.T) {
-		if got := column(t, New().GlyphSet(glyphs).Arrows(ArrowsBoth).Lengths(8, 2).Offset(6), 4); got != "▲│█▼" {
+	t.Run("thumb at the bottom", func(t *testing.T) {
+		if got := column(t, New().Symbols(Vertical).Lengths(8, 2).Offset(6), 4); got != "↑│█↓" {
+			t.Fatalf("column = %q", got)
+		}
+	})
+	t.Run("empty symbols are not drawn", func(t *testing.T) {
+		if got := column(t, New().TrackSymbol("").BeginSymbol("").EndSymbol("").Lengths(8, 2), 4); got != "█   " {
 			t.Fatalf("column = %q", got)
 		}
 	})
 	t.Run("hidden when everything fits", func(t *testing.T) {
-		if got := column(t, New().GlyphSet(glyphs).Lengths(2, 4), 4); got != "    " {
+		if got := column(t, New().Lengths(2, 4), 4); got != "    " {
 			t.Fatalf("column = %q", got)
 		}
 	})
 }
 
 func TestWidgetThumb(t *testing.T) {
-	start, size := New().Lengths(8, 2).Offset(3).Thumb(4)
+	start, size := New().BeginSymbol("").EndSymbol("").Lengths(8, 2).Offset(3).Thumb(4)
 	if start != 1 || size != 1 {
 		t.Fatalf("thumb = %d+%d, want 1+1", start, size)
 	}

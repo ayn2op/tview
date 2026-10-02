@@ -2,71 +2,37 @@
 package scrollbar
 
 import (
-	"github.com/ayn2op/tview/layout"
-	"math/bits"
-
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
 )
 
-// Arrows is which ends of the scroll bar have an arrow.
-type Arrows uint8
+// Symbols is the characters a scroll bar is drawn with. An empty Track, Begin, or End is not drawn.
+type Symbols struct {
+	Track, Thumb string
+	Begin, End   string
+}
 
-const (
-	ArrowsStart Arrows = 1 << iota
-	ArrowsEnd
-
-	ArrowsNone Arrows = 0
-	ArrowsBoth        = ArrowsStart | ArrowsEnd
+var (
+	// DoubleVertical is a solid thumb on a double-line track between triangles.
+	DoubleVertical = Symbols{Track: "║", Thumb: "█", Begin: "▲", End: "▼"}
+	// Vertical is a solid thumb on a single-line track between arrows.
+	Vertical = Symbols{Track: "│", Thumb: "█", Begin: "↑", End: "↓"}
 )
-
-func (a Arrows) start() bool { return a&ArrowsStart != 0 }
-func (a Arrows) end() bool   { return a&ArrowsEnd != 0 }
-
-// GlyphSet is the characters a scroll bar is drawn with: the track, the thumb, and the arrows.
-type GlyphSet struct {
-	TrackVertical string
-	ThumbVertical string
-
-	ArrowVerticalStart string
-	ArrowVerticalEnd   string
-}
-
-// MinimalGlyphSet returns a solid thumb on an empty track.
-func MinimalGlyphSet() GlyphSet {
-	g := BoxDrawingGlyphSet()
-	g.TrackVertical = " "
-	return g
-}
-
-// BoxDrawingGlyphSet returns a solid thumb on a box-drawing track.
-func BoxDrawingGlyphSet() GlyphSet {
-	return GlyphSet{
-		TrackVertical:      "│",
-		ThumbVertical:      "█",
-		ArrowVerticalStart: "▲",
-		ArrowVerticalEnd:   "▼",
-	}
-}
 
 // Widget draws a vertical scroll bar for content of a length scrolled by an offset in a viewport. It is hidden when everything fits.
 type Widget struct {
 	content, viewport, offset int
-	trackStyle, thumbStyle    tcell.Style
-	arrowStyle                tcell.Style
-	glyphs                    GlyphSet
-	arrows                    Arrows
+	symbols                   Symbols
+	thumbStyle, trackStyle    tcell.Style
+	beginStyle, endStyle      tcell.Style
 }
 
 var _ tview.Element = Widget{}
 
-// New returns a scroll bar with a minimal glyph set and no arrows.
+// New returns a scroll bar drawn with DoubleVertical.
 func New() Widget {
-	return Widget{
-		trackStyle: tcell.StyleDefault.Dim(true),
-		arrowStyle: tcell.StyleDefault.Dim(true),
-		glyphs:     MinimalGlyphSet(),
-	}
+	return Widget{symbols: DoubleVertical}
 }
 
 // Lengths sets the length of the content and of the part of it that is visible.
@@ -81,21 +47,39 @@ func (w Widget) Offset(offset int) Widget {
 	return w
 }
 
-// GlyphSet sets the characters the scroll bar is drawn with.
-func (w Widget) GlyphSet(glyphs GlyphSet) Widget {
-	w.glyphs = glyphs
+// Symbols sets the characters the scroll bar is drawn with.
+func (w Widget) Symbols(symbols Symbols) Widget {
+	w.symbols = symbols
 	return w
 }
 
-// Arrows sets which ends have an arrow.
-func (w Widget) Arrows(arrows Arrows) Widget {
-	w.arrows = arrows
+// ThumbSymbol sets the character of the thumb.
+func (w Widget) ThumbSymbol(symbol string) Widget {
+	w.symbols.Thumb = symbol
 	return w
 }
 
-// TrackStyle sets the style of the track.
-func (w Widget) TrackStyle(style tcell.Style) Widget {
-	w.trackStyle = style
+// TrackSymbol sets the character of the track, or none if it is empty.
+func (w Widget) TrackSymbol(symbol string) Widget {
+	w.symbols.Track = symbol
+	return w
+}
+
+// BeginSymbol sets the character at the top end, or none if it is empty.
+func (w Widget) BeginSymbol(symbol string) Widget {
+	w.symbols.Begin = symbol
+	return w
+}
+
+// EndSymbol sets the character at the bottom end, or none if it is empty.
+func (w Widget) EndSymbol(symbol string) Widget {
+	w.symbols.End = symbol
+	return w
+}
+
+// Style sets the style of every part of the scroll bar.
+func (w Widget) Style(style tcell.Style) Widget {
+	w.thumbStyle, w.trackStyle, w.beginStyle, w.endStyle = style, style, style, style
 	return w
 }
 
@@ -105,14 +89,38 @@ func (w Widget) ThumbStyle(style tcell.Style) Widget {
 	return w
 }
 
-// HasStartArrow reports whether the top cell is an arrow.
-func (w Widget) HasStartArrow() bool {
-	return w.arrows.start()
+// TrackStyle sets the style of the track.
+func (w Widget) TrackStyle(style tcell.Style) Widget {
+	w.trackStyle = style
+	return w
 }
 
-// TrackCells returns the number of cells of a scroll bar length cells long that are not arrows.
+// BeginStyle sets the style of the character at the top end.
+func (w Widget) BeginStyle(style tcell.Style) Widget {
+	w.beginStyle = style
+	return w
+}
+
+// EndStyle sets the style of the character at the bottom end.
+func (w Widget) EndStyle(style tcell.Style) Widget {
+	w.endStyle = style
+	return w
+}
+
+// HasBegin reports whether the top cell is the begin symbol.
+func (w Widget) HasBegin() bool {
+	return w.symbols.Begin != ""
+}
+
+// TrackCells returns the number of cells of a scroll bar length cells long that are not the begin or end symbol.
 func (w Widget) TrackCells(length int) int {
-	return max(length-bits.OnesCount8(uint8(w.arrows)), 0)
+	if w.symbols.Begin != "" {
+		length--
+	}
+	if w.symbols.End != "" {
+		length--
+	}
+	return max(length, 0)
 }
 
 // Thumb returns where the thumb starts and how long it is, in cells of the track of a scroll bar length cells long.
@@ -146,21 +154,22 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 
 	x, y := area.X, area.Y
-	if w.arrows.start() {
-		screen.Put(x, y, w.glyphs.ArrowVerticalStart, w.arrowStyle)
+	if w.symbols.Begin != "" {
+		screen.Put(x, y, w.symbols.Begin, w.beginStyle)
 		y++
 	}
 	thumbStart, thumbSize := w.Thumb(area.Height)
 	for cell := range w.TrackCells(area.Height) {
-		glyph, style := w.glyphs.TrackVertical, w.trackStyle
-		if cell >= thumbStart && cell < thumbStart+thumbSize {
-			glyph, style = w.glyphs.ThumbVertical, w.thumbStyle
+		switch {
+		case cell >= thumbStart && cell < thumbStart+thumbSize:
+			screen.Put(x, y, w.symbols.Thumb, w.thumbStyle)
+		case w.symbols.Track != "":
+			screen.Put(x, y, w.symbols.Track, w.trackStyle)
 		}
-		screen.Put(x, y, glyph, style)
 		y++
 	}
-	if w.arrows.end() {
-		screen.Put(x, y, w.glyphs.ArrowVerticalEnd, w.arrowStyle)
+	if w.symbols.End != "" {
+		screen.Put(x, y, w.symbols.End, w.endStyle)
 	}
 }
 

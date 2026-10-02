@@ -77,9 +77,6 @@ type Application[M Model[M]] struct {
 	lastMouseClick         time.Time        // The time when a mouse button was last clicked.
 	lastMouseButtons       tcell.ButtonMask // The last mouse button state.
 
-	// forceRedraw requests a full clear before the next frame.
-	forceRedraw bool
-
 	screen             Screen
 	disableCatchPanics bool
 }
@@ -96,8 +93,6 @@ func NewApplication[M Model[M]](model M, options ...ApplicationOption) *Applicat
 		done:  make(chan struct{}),
 		model: model,
 
-		// A screen given by an option may hold content from before, so the first frame clears it.
-		forceRedraw:        opts.screen != nil,
 		screen:             opts.screen,
 		disableCatchPanics: opts.disableCatchPanics,
 	}
@@ -186,8 +181,6 @@ func (a *Application[M]) Run() error {
 				}
 			}
 		case *tcell.EventResize:
-			// Resize events can imply terminal state changes even when size reports unchanged, so force one redraw pass.
-			a.forceRedraw = true
 			if time.Since(lastRedraw) < redrawPause {
 				if redrawTimer != nil {
 					redrawTimer.Stop()
@@ -364,16 +357,12 @@ func (a *Application[M]) draw() {
 	screen := a.screen
 	drawWidth, drawHeight := screen.Size()
 
-	// tcell.Show emits only visual deltas; clear only when forced.
-	if a.forceRedraw {
-		screen.Clear()
-	}
+	// Each frame starts blank, so nothing an element leaves undrawn shows the frame before. Show still emits only the cells that changed.
+	screen.Clear()
 	// Each frame starts without a cursor, so only an element drawn in it can show one.
 	screen.HideCursor()
 	a.model.View().Draw(screen, Rectangle{Width: drawWidth, Height: drawHeight})
 	screen.Show()
-
-	a.forceRedraw = false
 }
 
 // handle passes a message through the model's element before updating the model with it.

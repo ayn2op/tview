@@ -56,6 +56,23 @@ func (m cursorModel) Draw(screen Screen, area Rectangle) {
 	}
 }
 
+// labelModel draws its text at the top left.
+type labelModel string
+
+var _ Model[labelModel] = labelModel("")
+
+func (labelModel) Init() Cmd                           { return nil }
+func (m labelModel) Update(Msg) (labelModel, Cmd)      { return m, nil }
+func (m labelModel) View() Element                     { return m }
+func (labelModel) Handle(msg Msg, _ Rectangle) Msg     { return msg }
+func (labelModel) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
+func (labelModel) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
+}
+func (m labelModel) Draw(screen Screen, area Rectangle) {
+	screen.PutStr(area.X, area.Y, string(m))
+}
+
 func TestApplicationDraw(t *testing.T) {
 	mock, err := tcell.NewTerminfoScreenFromTty(vt.NewMockTerm(vt.MockOptSize{X: 4, Y: 2}))
 	if err != nil {
@@ -67,6 +84,15 @@ func TestApplicationDraw(t *testing.T) {
 	t.Cleanup(mock.Fini)
 	screen := &cursorScreen{Screen: mock}
 
+	t.Run("clears what an earlier frame drew", func(t *testing.T) {
+		app := NewApplication(labelModel("long"), WithScreen(screen))
+		app.draw()
+		app.model = "x"
+		app.draw()
+		if str, _, _ := screen.Get(1, 0); str != " " {
+			t.Fatalf("cell = %q, want it cleared", str)
+		}
+	})
 	t.Run("hides a cursor from an earlier frame", func(t *testing.T) {
 		screen.ShowCursor(1, 1)
 		NewApplication(cursorModel{x: -1}, WithScreen(screen)).draw()

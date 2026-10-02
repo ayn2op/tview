@@ -10,13 +10,14 @@ type SelectionState struct {
 	center bool
 	// atEnd reports whether the view was scrolled to the last row, and trackEnd whether it then stays there as items are added.
 	atEnd, trackEnd bool
-	// grab is where the scroll bar thumb was grabbed, in subcells from its top, or -1 when it is not being dragged.
-	grab int
+	// dragging is set while the scroll bar thumb is being dragged, which was grabbed grab subcells from its top.
+	dragging bool
+	grab     int
 }
 
 // NewSelectionState returns a selection state with no item selected.
 func NewSelectionState() SelectionState {
-	return SelectionState{cursor: -1, grab: -1}
+	return SelectionState{cursor: -1}
 }
 
 // Cursor returns the selected item, or -1 for none.
@@ -44,10 +45,11 @@ func (s *SelectionState) ScrollToEnd() {
 // Change is an update to SelectionState produced by a list, such as moving the cursor or scrolling.
 type Change struct {
 	cursor, offset, grab int
+	dragging             bool
 	atEnd                bool
 }
 
 func (s *SelectionState) Apply(change Change) {
-	s.cursor, s.offset, s.grab, s.atEnd = change.cursor, change.offset, change.grab, change.atEnd
+	s.cursor, s.offset, s.dragging, s.grab, s.atEnd = change.cursor, change.offset, change.dragging, change.grab, change.atEnd
 	s.center = false
 }

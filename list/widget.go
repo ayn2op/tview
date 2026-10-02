@@ -211,7 +211,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		return msg
 	}
 	v := w.resolve(area)
-	a := Change{cursor: v.cursor, offset: v.offset, grab: w.selectionState.grab}
+	a := Change{cursor: v.cursor, offset: v.offset, dragging: w.selectionState.dragging, grab: w.selectionState.grab}
 	center := false
 	switch m := msg.(type) {
 	case ActionMsg:
@@ -253,13 +253,13 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 // mouse applies m to a and reports whether the list used it.
 func (w Widget) mouse(m tview.MouseMsg, v view, a *Change) bool {
 	x, y := m.Position()
-	if a.grab >= 0 {
+	if a.dragging {
 		// Dragging the thumb follows the pointer anywhere until the button is released.
 		switch m.Action {
 		case tview.MouseMove:
 			a.offset = w.thumbOffset(v, y-v.bar.Y, a.grab)
 		case tview.MouseLeftUp:
-			a.grab = -1
+			a.dragging = false
 		}
 		return true
 	}
@@ -314,7 +314,7 @@ func (w Widget) barMouse(action tview.MouseAction, v view, row int, a *Change) b
 	onThumb := pos >= thumbStart && pos < thumbStart+thumbSize
 	switch {
 	case action == tview.MouseLeftDown && onThumb:
-		a.grab = pos - thumbStart
+		a.dragging, a.grab = true, pos-thumbStart
 	case action == tview.MouseLeftClick && pos < thumbStart:
 		a.offset -= v.items.Height
 	case action == tview.MouseLeftClick && !onThumb:

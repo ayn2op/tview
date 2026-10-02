@@ -87,8 +87,8 @@ func TestWidgetHandle(t *testing.T) {
 	})
 	t.Run("dragging the thumb scrolls", func(t *testing.T) {
 		got := apply(t, NewSelectionState(), 10, area, mouse(3, 0, tview.MouseLeftDown), mouse(3, 3, tview.MouseMove), mouse(5, 3, tview.MouseLeftUp))
-		if got.offset != 6 || got.grab != -1 {
-			t.Fatalf("offset %d grab %d, want 6 and -1", got.offset, got.grab)
+		if got.offset != 6 || got.dragging {
+			t.Fatalf("offset %d dragging %v, want 6 and not dragging", got.offset, got.dragging)
 		}
 	})
 	t.Run("arrows scroll a step", func(t *testing.T) {
@@ -203,6 +203,14 @@ type sized struct {
 
 func (s sized) Layout(limits layout.Limits) layout.Size {
 	return layout.Atomic(limits, layout.Fill, s.height)
+}
+
+func TestZeroSelectionStateIsNotDragging(t *testing.T) {
+	var selectionState SelectionState
+	move := mouse(1, 3, tview.MouseMove)
+	if got := numbers(selectionState, 50).Handle(move, tview.Rectangle{Width: 4, Height: 5}); got != move {
+		t.Fatalf("moving the mouse over the list produced %v", got)
+	}
 }
 
 func TestItemHeight(t *testing.T) {

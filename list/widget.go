@@ -310,12 +310,11 @@ func (w Widget) barMouse(action tview.MouseAction, v view, row int, a *Change) b
 		return true
 	}
 	thumbStart, thumbSize := bar.Thumb(v.bar.Height)
-	pos := row*scrollbar.Subcell + scrollbar.Subcell/2
-	onThumb := pos >= thumbStart && pos < thumbStart+thumbSize
+	onThumb := row >= thumbStart && row < thumbStart+thumbSize
 	switch {
 	case action == tview.MouseLeftDown && onThumb:
-		a.dragging, a.grab = true, pos-thumbStart
-	case action == tview.MouseLeftClick && pos < thumbStart:
+		a.dragging, a.grab = true, row-thumbStart
+	case action == tview.MouseLeftClick && row < thumbStart:
 		a.offset -= v.items.Height
 	case action == tview.MouseLeftClick && !onThumb:
 		a.offset += v.items.Height
@@ -331,10 +330,9 @@ func (w Widget) thumbOffset(v view, row, grab int) int {
 	}
 	cells := bar.TrackCells(v.bar.Height)
 	_, thumbSize := bar.Thumb(v.bar.Height)
-	travel := cells*scrollbar.Subcell - thumbSize
+	travel := cells - thumbSize
 	if travel <= 0 {
 		return v.offset
 	}
-	pos := min(max(row, 0), cells-1)*scrollbar.Subcell + scrollbar.Subcell/2
-	return min(max(pos-grab, 0), travel) * v.maxOffset() / travel
+	return min(max(row-grab, 0), travel) * v.maxOffset() / travel
 }

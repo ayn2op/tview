@@ -10,7 +10,7 @@ type SelectionState struct {
 	center bool
 	// atEnd reports whether the view was scrolled to the last row, and trackEnd whether it then stays there as items are added.
 	atEnd, trackEnd bool
-	// dragging is set while the scroll bar thumb is being dragged, which was grabbed grab subcells from its top.
+	// dragging is set while the scroll bar thumb is being dragged, which was grabbed grab cells from its top.
 	dragging bool
 	grab     int
 }

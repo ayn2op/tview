@@ -1,4 +1,4 @@
-// Package scrollbar draws a vertical scroll bar whose thumb moves in eighths of a cell.
+// Package scrollbar draws a vertical scroll bar.
 package scrollbar
 
 import (
@@ -8,9 +8,6 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
 )
-
-// Subcell is the number of steps a cell of the track is split into.
-const Subcell = 8
 
 // Arrows is which ends of the scroll bar have an arrow.
 type Arrows uint8
@@ -26,48 +23,29 @@ const (
 func (a Arrows) start() bool { return a&ArrowsStart != 0 }
 func (a Arrows) end() bool   { return a&ArrowsEnd != 0 }
 
-// GlyphSet is the characters a scroll bar is drawn with: the track, the arrows, and the thumb at each eighth of a cell from the bottom (Lower) and the top (Upper).
+// GlyphSet is the characters a scroll bar is drawn with: the track, the thumb, and the arrows.
 type GlyphSet struct {
 	TrackVertical string
+	ThumbVertical string
 
 	ArrowVerticalStart string
 	ArrowVerticalEnd   string
-
-	ThumbVerticalLower [8]string
-	ThumbVerticalUpper [8]string
 }
 
-// MinimalGlyphSet returns legacy-computing thumbs on an empty track.
+// MinimalGlyphSet returns a solid thumb on an empty track.
 func MinimalGlyphSet() GlyphSet {
-	g := LegacyComputingGlyphSet()
+	g := BoxDrawingGlyphSet()
 	g.TrackVertical = " "
 	return g
 }
 
-// BoxDrawingGlyphSet returns legacy-computing thumbs on a box-drawing track.
+// BoxDrawingGlyphSet returns a solid thumb on a box-drawing track.
 func BoxDrawingGlyphSet() GlyphSet {
-	return LegacyComputingGlyphSet()
-}
-
-// LegacyComputingGlyphSet returns legacy-computing symbols, which show the thumb in full eighths of a cell.
-func LegacyComputingGlyphSet() GlyphSet {
 	return GlyphSet{
 		TrackVertical:      "│",
+		ThumbVertical:      "█",
 		ArrowVerticalStart: "▲",
 		ArrowVerticalEnd:   "▼",
-		ThumbVerticalLower: [8]string{"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"},
-		ThumbVerticalUpper: [8]string{"▔", "🮂", "🮃", "▀", "🮄", "🮅", "🮆", "█"},
-	}
-}
-
-// UnicodeGlyphSet returns standard Unicode symbols, which approximate the top of the thumb.
-func UnicodeGlyphSet() GlyphSet {
-	return GlyphSet{
-		TrackVertical:      "│",
-		ArrowVerticalStart: "▲",
-		ArrowVerticalEnd:   "▼",
-		ThumbVerticalLower: [8]string{"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"},
-		ThumbVerticalUpper: [8]string{"▔", "▔", "▀", "▀", "▀", "▀", "█", "█"},
 	}
 }
 
@@ -137,32 +115,17 @@ func (w Widget) TrackCells(length int) int {
 	return max(length-bits.OnesCount8(uint8(w.arrows)), 0)
 }
 
-// Thumb returns where the thumb starts and how long it is, in subcells of the track of a scroll bar length cells long.
+// Thumb returns where the thumb starts and how long it is, in cells of the track of a scroll bar length cells long.
 func (w Widget) Thumb(length int) (start, size int) {
-	track := w.TrackCells(length) * Subcell
+	track := w.TrackCells(length)
 	content := max(w.content, 1)
 	viewport := min(max(w.viewport, 1), content)
 	maxOffset := content - viewport
 	if track == 0 || maxOffset == 0 {
 		return 0, track
 	}
-	// Subcells let the thumb move in eighths of a cell while staying in proportion to the viewport.
-	size = min(max(track*viewport/content, Subcell), track)
+	size = min(max(track*viewport/content, 1), track)
 	return (track - size) * min(w.offset, maxOffset) / maxOffset, size
-}
-
-// glyph returns the character and style of a track cell that start subcells into it is covered by fill subcells of the thumb.
-func (w Widget) glyph(start, fill int) (string, tcell.Style) {
-	switch {
-	case fill <= 0:
-		return w.glyphs.TrackVertical, w.trackStyle
-	case fill >= Subcell:
-		return w.glyphs.ThumbVerticalLower[7], w.thumbStyle
-	case start == 0:
-		return w.glyphs.ThumbVerticalUpper[fill-1], w.thumbStyle
-	default:
-		return w.glyphs.ThumbVerticalLower[fill-1], w.thumbStyle
-	}
 }
 
 // Size returns Fill, as the scroll bar takes its whole area.
@@ -189,10 +152,10 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 	thumbStart, thumbSize := w.Thumb(area.Height)
 	for cell := range w.TrackCells(area.Height) {
-		// The part of the thumb within this cell, in subcells from its top.
-		from := max(thumbStart, cell*Subcell)
-		to := min(thumbStart+thumbSize, (cell+1)*Subcell)
-		glyph, style := w.glyph(from-cell*Subcell, to-from)
+		glyph, style := w.glyphs.TrackVertical, w.trackStyle
+		if cell >= thumbStart && cell < thumbStart+thumbSize {
+			glyph, style = w.glyphs.ThumbVertical, w.thumbStyle
+		}
 		screen.Put(x, y, glyph, style)
 		y++
 	}

@@ -19,7 +19,7 @@ func column(t *testing.T, w Widget, height int) string {
 }
 
 func TestWidgetDraw(t *testing.T) {
-	glyphs := LegacyComputingGlyphSet()
+	glyphs := BoxDrawingGlyphSet()
 	t.Run("thumb at the top", func(t *testing.T) {
 		if got := column(t, New().GlyphSet(glyphs).Lengths(8, 2), 4); got != "█│││" {
 			t.Fatalf("column = %q", got)
@@ -39,7 +39,7 @@ func TestWidgetDraw(t *testing.T) {
 
 func TestWidgetThumb(t *testing.T) {
 	start, size := New().Lengths(8, 2).Offset(3).Thumb(4)
-	if start != 12 || size != 8 {
-		t.Fatalf("thumb = %d+%d, want 12+8", start, size)
+	if start != 1 || size != 1 {
+		t.Fatalf("thumb = %d+%d, want 1+1", start, size)
 	}
 }

@@ -25,8 +25,15 @@ func TestWidgetDraw(t *testing.T) {
 		}
 	})
 	t.Run("thumb at the bottom", func(t *testing.T) {
-		if got := column(t, New().Symbols(Vertical).Lengths(8, 2).Offset(6), 4); got != "↑│█↓" {
+		if got := column(t, New().SymbolSet(SymbolSetVertical()).Lengths(8, 2).Offset(6), 4); got != "↑│█↓" {
 			t.Fatalf("column = %q", got)
+		}
+	})
+	t.Run("horizontal", func(t *testing.T) {
+		screen := screentest.New(t, 4, 1)
+		New().Horizontal(true).SymbolSet(SymbolSetDoubleHorizontal()).Lengths(8, 2).Offset(6).Draw(screen, tview.Rectangle{Width: 4, Height: 1})
+		if got := screentest.Row(screen, 0, 4); got != "◄═█►" {
+			t.Fatalf("row = %q", got)
 		}
 	})
 	t.Run("empty symbols are not drawn", func(t *testing.T) {

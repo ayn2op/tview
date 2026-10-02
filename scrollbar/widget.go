@@ -1,4 +1,4 @@
-// Package scrollbar draws a vertical scroll bar.
+// Package scrollbar draws a vertical or horizontal scroll bar.
 package scrollbar
 
 import (
@@ -7,32 +7,52 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
-// Symbols is the characters a scroll bar is drawn with. An empty Track, Begin, or End is not drawn.
-type Symbols struct {
+// SymbolSet is the characters a scroll bar is drawn with. An empty Track, Begin, or End is not drawn.
+type SymbolSet struct {
 	Track, Thumb string
 	Begin, End   string
 }
 
-var (
-	// DoubleVertical is a solid thumb on a double-line track between triangles.
-	DoubleVertical = Symbols{Track: "║", Thumb: "█", Begin: "▲", End: "▼"}
-	// Vertical is a solid thumb on a single-line track between arrows.
-	Vertical = Symbols{Track: "│", Thumb: "█", Begin: "↑", End: "↓"}
-)
+// SymbolSetVertical returns a solid thumb on a single-line track between arrows, for a vertical scroll bar.
+func SymbolSetVertical() SymbolSet {
+	return SymbolSet{Track: "│", Thumb: "█", Begin: "↑", End: "↓"}
+}
 
-// Widget draws a vertical scroll bar for content of a length scrolled by an offset in a viewport. It is hidden when everything fits.
+// SymbolSetDoubleVertical returns a solid thumb on a double-line track between triangles, for a vertical scroll bar.
+func SymbolSetDoubleVertical() SymbolSet {
+	return SymbolSet{Track: "║", Thumb: "█", Begin: "▲", End: "▼"}
+}
+
+// SymbolSetHorizontal returns a solid thumb on a single-line track between arrows, for a horizontal scroll bar.
+func SymbolSetHorizontal() SymbolSet {
+	return SymbolSet{Track: "─", Thumb: "█", Begin: "←", End: "→"}
+}
+
+// SymbolSetDoubleHorizontal returns a solid thumb on a double-line track between triangles, for a horizontal scroll bar.
+func SymbolSetDoubleHorizontal() SymbolSet {
+	return SymbolSet{Track: "═", Thumb: "█", Begin: "◄", End: "►"}
+}
+
+// Widget draws a scroll bar for content of a length scrolled by an offset in a viewport. It is hidden when everything fits.
 type Widget struct {
 	content, viewport, offset int
-	symbols                   Symbols
+	horizontal                bool
+	symbols                   SymbolSet
 	thumbStyle, trackStyle    tcell.Style
 	beginStyle, endStyle      tcell.Style
 }
 
 var _ tview.Element = Widget{}
 
-// New returns a scroll bar drawn with DoubleVertical.
+// New returns a vertical scroll bar drawn with SymbolSetDoubleVertical.
 func New() Widget {
-	return Widget{symbols: DoubleVertical}
+	return Widget{symbols: SymbolSetDoubleVertical()}
+}
+
+// Horizontal sets whether the scroll bar runs along the first row of its area and not down its first column. It keeps its symbols, so set a horizontal set too.
+func (w Widget) Horizontal(horizontal bool) Widget {
+	w.horizontal = horizontal
+	return w
 }
 
 // Lengths sets the length of the content and of the part of it that is visible.
@@ -47,8 +67,8 @@ func (w Widget) Offset(offset int) Widget {
 	return w
 }
 
-// Symbols sets the characters the scroll bar is drawn with.
-func (w Widget) Symbols(symbols Symbols) Widget {
+// SymbolSet sets the characters the scroll bar is drawn with.
+func (w Widget) SymbolSet(symbols SymbolSet) Widget {
 	w.symbols = symbols
 	return w
 }
@@ -152,30 +172,42 @@ func (Widget) Layout(limits layout.Limits) layout.Size {
 	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
-// Draw clears area and draws the scroll bar down its first column, unless all the content is visible.
+// Draw clears area and draws the scroll bar down its first column, or along its first row if it is horizontal, unless all the content is visible.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', tcell.StyleDefault)
-	if area.Width <= 0 || w.content <= w.viewport || w.TrackCells(area.Height) == 0 {
+	length := area.Height
+	if w.horizontal {
+		length = area.Width
+	}
+	if area.Width <= 0 || area.Height <= 0 || w.content <= w.viewport || w.TrackCells(length) == 0 {
 		return
 	}
 
-	x, y := area.X, area.Y
-	if w.symbols.Begin != "" {
-		screen.Put(x, y, w.symbols.Begin, w.beginStyle)
-		y++
+	// put draws symbol in cell i of the scroll bar.
+	put := func(i int, symbol string, style tcell.Style) {
+		if w.horizontal {
+			screen.Put(area.X+i, area.Y, symbol, style)
+		} else {
+			screen.Put(area.X, area.Y+i, symbol, style)
+		}
 	}
-	thumbStart, thumbSize := w.Thumb(area.Height)
-	for cell := range w.TrackCells(area.Height) {
+	i := 0
+	if w.symbols.Begin != "" {
+		put(i, w.symbols.Begin, w.beginStyle)
+		i++
+	}
+	thumbStart, thumbSize := w.Thumb(length)
+	for cell := range w.TrackCells(length) {
 		switch {
 		case cell >= thumbStart && cell < thumbStart+thumbSize:
-			screen.Put(x, y, w.symbols.Thumb, w.thumbStyle)
+			put(i, w.symbols.Thumb, w.thumbStyle)
 		case w.symbols.Track != "":
-			screen.Put(x, y, w.symbols.Track, w.trackStyle)
+			put(i, w.symbols.Track, w.trackStyle)
 		}
-		y++
+		i++
 	}
 	if w.symbols.End != "" {
-		screen.Put(x, y, w.symbols.End, w.endStyle)
+		put(i, w.symbols.End, w.endStyle)
 	}
 }
 

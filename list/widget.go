@@ -43,6 +43,7 @@ func New(selectionState SelectionState, count int, item func(index int) tview.El
 		item:           item,
 		width:          layout.Fill,
 		height:         layout.Fill,
+		selectedStyle:  tcell.StyleDefault.Reverse(true),
 		scrollBar:      scrollbar.New(),
 		keybind:        DefaultKeybind,
 	}

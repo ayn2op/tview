@@ -18,7 +18,7 @@ type Markers struct {
 // Widget draws the nodes under a root and turns keys and the mouse into Changes.
 type Widget struct {
 	root           *Node
-	selectionState *SelectionState
+	selectionState SelectionState
 	width, height  tview.Length
 	topLevel       int
 	markers        Markers
@@ -34,7 +34,7 @@ type Widget struct {
 var _ tview.Element = Widget{}
 
 // New returns a tree of the nodes under root, with selectionState as its current node and scroll position, that draws lines between nodes and fills its parent. It is interactive only once OnChange is set.
-func New(root *Node, selectionState *SelectionState) Widget {
+func New(root *Node, selectionState SelectionState) Widget {
 	return Widget{
 		root:           root,
 		selectionState: selectionState,

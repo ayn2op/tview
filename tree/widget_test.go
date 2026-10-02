@@ -17,14 +17,14 @@ func testTree() map[string]*Node {
 	return nodes
 }
 
-func interactive(root *Node, selectionState *SelectionState) Widget {
+func interactive(root *Node, selectionState SelectionState) Widget {
 	return New(root, selectionState).TopLevel(1).Markers(Markers{}).Focused(true).OnChange(func(a Change) tview.Msg { return a }).OnSelect(func(n *Node) tview.Msg { return n })
 }
 
 func TestWidgetDraw(t *testing.T) {
 	screen := screentest.New(t, 6, 3)
 	var selectionState SelectionState
-	interactive(testTree()["root"], &selectionState).Draw(screen, tview.Rectangle{Width: 6, Height: 3})
+	interactive(testTree()["root"], selectionState).Draw(screen, tview.Rectangle{Width: 6, Height: 3})
 	for y, want := range []string{"a     ", "└──a1 ", "b     "} {
 		if got := screentest.Row(screen, y, 6); got != want {
 			t.Fatalf("row %d = %q, want %q", y, got, want)
@@ -37,7 +37,7 @@ func TestWidgetHandle(t *testing.T) {
 	key := func(k tcell.Key, str string) tview.KeyMsg { return tcell.NewEventKey(k, str, tcell.ModNone) }
 	// send passes msg through the tree and applies the Change it produces, if any, returning the other result.
 	send := func(nodes map[string]*Node, selectionState *SelectionState, msg tview.Msg) tview.Msg {
-		out := interactive(nodes["root"], selectionState).Handle(msg, area)
+		out := interactive(nodes["root"], *selectionState).Handle(msg, area)
 		if change, ok := out.(Change); ok {
 			selectionState.Apply(change)
 			return nil
@@ -93,7 +93,7 @@ func TestWidgetHandle(t *testing.T) {
 		var selectionState SelectionState
 		down := key(tcell.KeyDown, "")
 		for _, msg := range []tview.Msg{down, ActionMsg(ActionDown)} {
-			if got := interactive(nodes["root"], &selectionState).Focused(false).Handle(msg, area); got != msg {
+			if got := interactive(nodes["root"], selectionState).Focused(false).Handle(msg, area); got != msg {
 				t.Fatalf("got %v, want %v", got, msg)
 			}
 		}

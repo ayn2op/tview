@@ -1,7 +1,9 @@
 package flex
 
 import (
+	"github.com/ayn2op/tview/box"
 	"github.com/ayn2op/tview/layout"
+	"github.com/ayn2op/tview/text"
 	"slices"
 	"testing"
 
@@ -43,6 +45,10 @@ func TestWidgetAreas(t *testing.T) {
 			{X: 1, Y: 2, Width: 2, Height: 4},
 			{X: 3, Y: 2, Width: 5, Height: 4},
 			{X: 8, Y: 2, Width: 3, Height: 4},
+		}},
+		{"row shrink", New(true, box.New(text.New("abc")).Width(layout.Shrink), wide(layout.Fill)), []tview.Rectangle{
+			{X: 1, Y: 2, Width: 3, Height: 4},
+			{X: 4, Y: 2, Width: 7, Height: 4},
 		}},
 		{"row fixed", New(true, wide(layout.Fixed(3)), wide(layout.Fill)), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 3, Height: 4},

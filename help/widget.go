@@ -79,9 +79,9 @@ func (w Widget) Styles(styles Styles) Widget {
 	return w
 }
 
-// Size returns Fill, as the help takes the area its parent gives it. Layout reports the rows it needs.
+// Size fills the width and shrinks the height to the rows reported by Layout.
 func (Widget) Size() (width, height layout.Length) {
-	return layout.Fill, layout.Fill
+	return layout.Fill, layout.Shrink
 }
 
 // Layout returns the size of the help within limits, as tall as the rows it takes at the width of limits, where a width of 0 is unlimited.

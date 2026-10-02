@@ -124,6 +124,14 @@ func (w Widget) areas(area tview.Rectangle) []tview.Rectangle {
 	free, portions := length-w.spacing*max(len(w.children)-1, 0), 0
 	for i, child := range w.children {
 		lengths[i], _ = w.axes(child)
+		if lengths[i].IsShrink() {
+			size := child.Layout(layout.Limits{Max: layout.Size{Width: area.Width, Height: area.Height}})
+			if w.horizontal {
+				lengths[i] = layout.Fixed(size.Width)
+			} else {
+				lengths[i] = layout.Fixed(size.Height)
+			}
+		}
 		if lengths[i].Cells() > 0 {
 			free -= lengths[i].Cells()
 		} else {

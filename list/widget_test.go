@@ -14,8 +14,10 @@ import (
 // row is an item one line tall showing its label.
 type row string
 
-func (row) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fixed(1))
+func (row) Size() (width, height layout.Length) { return layout.Fill, layout.Fixed(1) }
+
+func (row) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fixed(1))
 }
 
 func (r row) Draw(screen tview.Screen, area tview.Rectangle) {
@@ -189,18 +191,18 @@ func TestStateSetTrackEnd(t *testing.T) {
 // wrapped is an item that takes a row for every width cells of its 6 cells of text.
 type wrapped struct{ row }
 
-func (wrapped) Layout(limits layout.Limits) tview.Size {
-	return tview.Size{Width: limits.Max.Width, Height: (6 + limits.Max.Width - 1) / limits.Max.Width}
+func (wrapped) Layout(limits layout.Limits) layout.Size {
+	return layout.Size{Width: limits.Max.Width, Height: (6 + limits.Max.Width - 1) / limits.Max.Width}
 }
 
 // sized is an item of a height.
 type sized struct {
 	row
-	height tview.Length
+	height layout.Length
 }
 
-func (s sized) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, s.height)
+func (s sized) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, s.height)
 }
 
 func TestItemHeight(t *testing.T) {
@@ -211,12 +213,12 @@ func TestItemHeight(t *testing.T) {
 	}{
 		{"one row", row(""), 1},
 		{"height for the width", wrapped{}, 2},
-		{"fixed height", sized{height: tview.Fixed(3)}, 3},
-		{"fill height takes the height of the view", sized{height: tview.Fill}, 10},
+		{"fixed height", sized{height: layout.Fixed(3)}, 3},
+		{"fill height takes the height of the view", sized{height: layout.Fill}, 10},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			list := New(NewSelectionState(), 1, func(int) tview.Element { return tt.item })
-			if _, sizes, _ := list.layout(tview.Size{Width: 4, Height: 10}); sizes[0] != tt.want {
+			if _, sizes, _ := list.layout(layout.Size{Width: 4, Height: 10}); sizes[0] != tt.want {
 				t.Fatalf("rows = %d, want %d", sizes[0], tt.want)
 			}
 		})

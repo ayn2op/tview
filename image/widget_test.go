@@ -1,6 +1,7 @@
 package image
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"image"
 	stdcolor "image/color"
 	"testing"
@@ -30,13 +31,13 @@ var (
 func TestWidgetSize(t *testing.T) {
 	t.Run("one pixel per column", func(t *testing.T) {
 		width, height := New(column(red, red, red)).Size()
-		if width != tview.Fixed(1) || height != tview.Fixed(2) {
+		if width != layout.Fixed(1) || height != layout.Fixed(2) {
 			t.Fatalf("size = %v, %v", width, height)
 		}
 	})
 	t.Run("height follows width", func(t *testing.T) {
 		width, height := New(column(red, red)).Width(3).Size()
-		if width != tview.Fixed(3) || height != tview.Fixed(3) {
+		if width != layout.Fixed(3) || height != layout.Fixed(3) {
 			t.Fatalf("size = %v, %v", width, height)
 		}
 	})

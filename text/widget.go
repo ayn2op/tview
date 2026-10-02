@@ -20,12 +20,12 @@ func New(content string) Widget {
 }
 
 // Size returns the width of the text and a height of one line.
-func (w Widget) Size() (width, height tview.Length) {
-	return tview.Fixed(uniseg.StringWidth(w.content)), tview.Fixed(1)
+func (w Widget) Size() (width, height layout.Length) {
+	return layout.Fixed(uniseg.StringWidth(w.content)), layout.Fixed(1)
 }
 
 // Layout returns the size of the text within limits.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
 	width, height := w.Size()
 	return layout.Atomic(limits, width, height)
 }

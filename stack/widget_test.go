@@ -65,6 +65,8 @@ func TestWidgetHandle(t *testing.T) {
 	})
 }
 
-func (letter) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fill)
+func (letter) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
+
+func (letter) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }

@@ -19,12 +19,12 @@ func New(child tview.Element) Widget {
 }
 
 // Size returns the size of the child.
-func (w Widget) Size() (width, height tview.Length) {
-	return tview.SizeOf(w.child)
+func (w Widget) Size() (width, height layout.Length) {
+	return w.child.Size()
 }
 
 // Layout lays out the child.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
 	return w.child.Layout(limits)
 }
 

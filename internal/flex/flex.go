@@ -6,10 +6,10 @@ import (
 	"github.com/ayn2op/tview/layout"
 )
 
-// Widget lays out its children along one axis. Children take their width and height from tview.SizeOf.
+// Widget lays out its children along one axis. Children take their width and height from their Size.
 type Widget struct {
 	horizontal    bool
-	width, height tview.Length
+	width, height layout.Length
 	spacing       int
 	children      []tview.Element
 }
@@ -18,7 +18,7 @@ var _ tview.Element = Widget{}
 
 // New returns children laid out left to right if horizontal and top to bottom otherwise, skipping nil ones. It fills its parent in both directions by default.
 func New(horizontal bool, children ...tview.Element) Widget {
-	w := Widget{horizontal: horizontal, width: tview.Fill, height: tview.Fill}
+	w := Widget{horizontal: horizontal, width: layout.Fill, height: layout.Fill}
 	for _, child := range children {
 		w = w.Push(child)
 	}
@@ -34,13 +34,13 @@ func (w Widget) Push(child tview.Element) Widget {
 }
 
 // Width sets the width of the layout.
-func (w Widget) Width(width tview.Length) Widget {
+func (w Widget) Width(width layout.Length) Widget {
 	w.width = width
 	return w
 }
 
 // Height sets the height of the layout.
-func (w Widget) Height(height tview.Length) Widget {
+func (w Widget) Height(height layout.Length) Widget {
 	w.height = height
 	return w
 }
@@ -51,23 +51,23 @@ func (w Widget) Spacing(spacing int) Widget {
 	return w
 }
 
-// Size returns the width and height of the layout, resolving tview.Shrink to the size of its fixed-size children.
-func (w Widget) Size() (width, height tview.Length) {
+// Size returns the width and height of the layout, resolving layout.Shrink to the size of its fixed-size children.
+func (w Widget) Size() (width, height layout.Length) {
 	width, height = w.width, w.height
 	if width.IsShrink() || height.IsShrink() {
 		contentWidth, contentHeight := w.contentSize()
 		if width.IsShrink() {
-			width = tview.Fixed(contentWidth)
+			width = layout.Fixed(contentWidth)
 		}
 		if height.IsShrink() {
-			height = tview.Fixed(contentHeight)
+			height = layout.Fixed(contentHeight)
 		}
 	}
 	return width, height
 }
 
 // Layout returns the size of the layout within limits.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
 	width, height := w.Size()
 	return layout.Atomic(limits, width, height)
 }
@@ -88,8 +88,8 @@ func (w Widget) contentSize() (width, height int) {
 }
 
 // axes returns the length of child along the layout's axis and across it.
-func (w Widget) axes(child tview.Element) (along, across tview.Length) {
-	width, height := tview.SizeOf(child)
+func (w Widget) axes(child tview.Element) (along, across layout.Length) {
+	width, height := child.Size()
 	if w.horizontal {
 		return width, height
 	}
@@ -120,7 +120,7 @@ func (w Widget) areas(area tview.Rectangle) []tview.Rectangle {
 		length = area.Width
 	}
 
-	lengths := make([]tview.Length, len(w.children))
+	lengths := make([]layout.Length, len(w.children))
 	free, portions := length-w.spacing*max(len(w.children)-1, 0), 0
 	for i, child := range w.children {
 		lengths[i], _ = w.axes(child)

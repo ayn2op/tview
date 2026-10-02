@@ -1,6 +1,7 @@
 package row
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -17,8 +18,8 @@ func TestRow(t *testing.T) {
 }
 
 func TestWidgetSize(t *testing.T) {
-	width, height := New(text.New("ab"), text.New("cde")).Width(tview.Shrink).Height(tview.Shrink).Spacing(1).Size()
-	if width != tview.Fixed(6) || height != tview.Fixed(1) {
+	width, height := New(text.New("ab"), text.New("cde")).Width(layout.Shrink).Height(layout.Shrink).Spacing(1).Size()
+	if width != layout.Fixed(6) || height != layout.Fixed(1) {
 		t.Fatalf("size = %+v x %+v", width, height)
 	}
 }

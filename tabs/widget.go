@@ -116,9 +116,14 @@ func (w Widget) OnSelect(onSelect func(index int) tview.Msg) Widget {
 	return w
 }
 
+// Size returns Fill, as the tabs takes its whole area.
+func (Widget) Size() (width, height layout.Length) {
+	return layout.Fill, layout.Fill
+}
+
 // Layout returns the size of limits, as the tabs takes its whole area.
-func (Widget) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fill)
+func (Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
 // Draw draws the labels on the first row of area, highlighting the active one, and the content below them.

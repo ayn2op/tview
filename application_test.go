@@ -123,10 +123,14 @@ func TestApplicationRun(t *testing.T) {
 	})
 }
 
-func (cursorModel) Layout(limits layout.Limits) Size {
-	return layout.Atomic(limits, Fill, Fill)
+func (cursorModel) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
+
+func (cursorModel) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
-func (lengthModel) Layout(limits layout.Limits) Size {
-	return layout.Atomic(limits, Fill, Fill)
+func (lengthModel) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
+
+func (lengthModel) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }

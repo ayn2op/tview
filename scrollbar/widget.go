@@ -165,9 +165,14 @@ func (w Widget) glyph(start, fill int) (string, tcell.Style) {
 	}
 }
 
+// Size returns Fill, as the scroll bar takes its whole area.
+func (Widget) Size() (width, height layout.Length) {
+	return layout.Fill, layout.Fill
+}
+
 // Layout returns the size of limits, as the scroll bar takes its whole area.
-func (Widget) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fill)
+func (Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
 // Draw clears area and draws the scroll bar down its first column, unless all the content is visible.

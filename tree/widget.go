@@ -20,7 +20,7 @@ type Markers struct {
 type Widget struct {
 	root           *Node
 	selectionState SelectionState
-	width, height  tview.Length
+	width, height  layout.Length
 	topLevel       int
 	markers        Markers
 	graphics       bool
@@ -39,8 +39,8 @@ func New(root *Node, selectionState SelectionState) Widget {
 	return Widget{
 		root:           root,
 		selectionState: selectionState,
-		width:          tview.Fill,
-		height:         tview.Fill,
+		width:          layout.Fill,
+		height:         layout.Fill,
 		markers:        Markers{Expanded: "▾ ", Collapsed: "▸ "},
 		graphics:       true,
 		graphicsSet:    tview.BorderSetPlain(),
@@ -49,13 +49,13 @@ func New(root *Node, selectionState SelectionState) Widget {
 }
 
 // Width sets the width of the tree.
-func (w Widget) Width(width tview.Length) Widget {
+func (w Widget) Width(width layout.Length) Widget {
 	w.width = width
 	return w
 }
 
 // Height sets the height of the tree.
-func (w Widget) Height(height tview.Length) Widget {
+func (w Widget) Height(height layout.Length) Widget {
 	w.height = height
 	return w
 }
@@ -115,12 +115,12 @@ func (w Widget) OnSelect(f func(*Node) tview.Msg) Widget {
 }
 
 // Size returns the width and height of the tree.
-func (w Widget) Size() (width, height tview.Length) {
+func (w Widget) Size() (width, height layout.Length) {
 	return w.width, w.height
 }
 
 // Layout returns the size of the tree within limits.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
 	width, height := w.Size()
 	return layout.Atomic(limits, width, height)
 }

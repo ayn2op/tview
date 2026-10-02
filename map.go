@@ -13,12 +13,12 @@ func Map[T any](child Element, f func(T) Msg) Element {
 }
 
 // Size returns the size of the child.
-func (m mapped[T]) Size() (width, height Length) {
-	return SizeOf(m.child)
+func (m mapped[T]) Size() (width, height layout.Length) {
+	return m.child.Size()
 }
 
 // Layout lays out the child.
-func (m mapped[T]) Layout(limits layout.Limits) Size {
+func (m mapped[T]) Layout(limits layout.Limits) layout.Size {
 	return m.child.Layout(limits)
 }
 

@@ -11,11 +11,11 @@ import (
 
 // sized is an element with a fixed width and height that records the area it handles a message in.
 type sized struct {
-	width, height tview.Length
+	width, height layout.Length
 	area          *tview.Rectangle
 }
 
-func (s sized) Size() (width, height tview.Length) { return s.width, s.height }
+func (s sized) Size() (width, height layout.Length) { return s.width, s.height }
 
 func (sized) Draw(tview.Screen, tview.Rectangle) {}
 
@@ -29,8 +29,8 @@ func (s sized) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	return msg
 }
 
-func wide(width tview.Length) tview.Element  { return sized{width: width, height: tview.Fill} }
-func tall(height tview.Length) tview.Element { return sized{width: tview.Fill, height: height} }
+func wide(width layout.Length) tview.Element  { return sized{width: width, height: layout.Fill} }
+func tall(height layout.Length) tview.Element { return sized{width: layout.Fill, height: height} }
 
 func TestWidgetAreas(t *testing.T) {
 	area := tview.Rectangle{X: 1, Y: 2, Width: 10, Height: 4}
@@ -39,20 +39,20 @@ func TestWidgetAreas(t *testing.T) {
 		layout Widget
 		want   []tview.Rectangle
 	}{
-		{"row portions", New(true, wide(tview.Fill), wide(tview.FillPortion(2)), wide(tview.Fill)), []tview.Rectangle{
+		{"row portions", New(true, wide(layout.Fill), wide(layout.FillPortion(2)), wide(layout.Fill)), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 2, Height: 4},
 			{X: 3, Y: 2, Width: 5, Height: 4},
 			{X: 8, Y: 2, Width: 3, Height: 4},
 		}},
-		{"row fixed", New(true, wide(tview.Fixed(3)), wide(tview.Fill)), []tview.Rectangle{
+		{"row fixed", New(true, wide(layout.Fixed(3)), wide(layout.Fill)), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 3, Height: 4},
 			{X: 4, Y: 2, Width: 7, Height: 4},
 		}},
-		{"row spacing", New(true, wide(tview.Fill), wide(tview.Fill)).Spacing(2), []tview.Rectangle{
+		{"row spacing", New(true, wide(layout.Fill), wide(layout.Fill)).Spacing(2), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 4, Height: 4},
 			{X: 7, Y: 2, Width: 4, Height: 4},
 		}},
-		{"column overflow", New(false, tall(tview.Fixed(3)), tall(tview.Fixed(3)), tall(tview.Fill)), []tview.Rectangle{
+		{"column overflow", New(false, tall(layout.Fixed(3)), tall(layout.Fixed(3)), tall(layout.Fill)), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 10, Height: 3},
 			{X: 1, Y: 5, Width: 10, Height: 1},
 			{X: 1, Y: 6, Width: 10, Height: 0},
@@ -69,16 +69,16 @@ func TestWidgetAreas(t *testing.T) {
 func TestWidgetSize(t *testing.T) {
 	t.Run("shrink fits fixed children", func(t *testing.T) {
 		l := New(true,
-			sized{width: tview.Fixed(2), height: tview.Fixed(1)},
-			sized{width: tview.Fixed(3), height: tview.Fixed(2)},
-		).Width(tview.Shrink).Height(tview.Shrink).Spacing(1)
-		if width, height := l.Size(); width != tview.Fixed(6) || height != tview.Fixed(2) {
+			sized{width: layout.Fixed(2), height: layout.Fixed(1)},
+			sized{width: layout.Fixed(3), height: layout.Fixed(2)},
+		).Width(layout.Shrink).Height(layout.Shrink).Spacing(1)
+		if width, height := l.Size(); width != layout.Fixed(6) || height != layout.Fixed(2) {
 			t.Fatalf("size = %+v x %+v", width, height)
 		}
 	})
 	t.Run("keeps other lengths", func(t *testing.T) {
-		l := New(false).Height(tview.Fixed(3))
-		if width, height := l.Size(); width != tview.Fill || height != tview.Fixed(3) {
+		l := New(false).Height(layout.Fixed(3))
+		if width, height := l.Size(); width != layout.Fill || height != layout.Fixed(3) {
 			t.Fatalf("size = %+v x %+v", width, height)
 		}
 	})
@@ -87,8 +87,8 @@ func TestWidgetSize(t *testing.T) {
 func TestWidgetHandle(t *testing.T) {
 	var left, right tview.Rectangle
 	l := New(true,
-		sized{width: tview.Fill, height: tview.Fill, area: &left},
-		sized{width: tview.Fill, height: tview.Fill, area: &right},
+		sized{width: layout.Fill, height: layout.Fill, area: &left},
+		sized{width: layout.Fill, height: layout.Fill, area: &right},
 	)
 	area := tview.Rectangle{Width: 10, Height: 1}
 	t.Run("child areas", func(t *testing.T) {
@@ -111,6 +111,6 @@ func TestWidgetHandle(t *testing.T) {
 	})
 }
 
-func (s sized) Layout(limits layout.Limits) tview.Size {
+func (s sized) Layout(limits layout.Limits) layout.Size {
 	return layout.Atomic(limits, s.width, s.height)
 }

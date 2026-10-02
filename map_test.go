@@ -68,10 +68,14 @@ func TestMapHandle(t *testing.T) {
 	})
 }
 
-func (emitter) Layout(limits layout.Limits) Size {
-	return layout.Atomic(limits, Fill, Fill)
+func (emitter) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
+
+func (emitter) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
-func (sliceEmitter) Layout(limits layout.Limits) Size {
-	return layout.Atomic(limits, Fill, Fill)
+func (sliceEmitter) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
+
+func (sliceEmitter) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }

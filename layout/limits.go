@@ -13,7 +13,7 @@ type Axes struct {
 // Infinity is the bound of Limits along an axis that is infinite.
 const Infinity = 1 << 30
 
-// Limits is a set of size constraints for laying out an element, after iced's layout::Limits.
+// Limits is a set of size constraints for laying out an element.
 type Limits struct {
 	// Min and Max are the smallest and largest size the element may take.
 	Min, Max Size

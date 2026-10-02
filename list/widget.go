@@ -23,7 +23,7 @@ type Widget struct {
 	selectionState SelectionState
 	count          int
 	item           func(index int) tview.Element
-	width, height  tview.Length
+	width, height  layout.Length
 	gap            int
 	selectedStyle  tcell.Style
 	scrollBar      scrollbar.Widget
@@ -41,21 +41,21 @@ func New(selectionState SelectionState, count int, item func(index int) tview.El
 		selectionState: selectionState,
 		count:          count,
 		item:           item,
-		width:          tview.Fill,
-		height:         tview.Fill,
+		width:          layout.Fill,
+		height:         layout.Fill,
 		scrollBar:      scrollbar.New(),
 		keybind:        DefaultKeybind,
 	}
 }
 
 // Width sets the width of the list.
-func (w Widget) Width(width tview.Length) Widget {
+func (w Widget) Width(width layout.Length) Widget {
 	w.width = width
 	return w
 }
 
 // Height sets the height of the list.
-func (w Widget) Height(height tview.Length) Widget {
+func (w Widget) Height(height layout.Length) Widget {
 	w.height = height
 	return w
 }
@@ -97,12 +97,12 @@ func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
 }
 
 // Size returns the width and height of the list.
-func (w Widget) Size() (width, height tview.Length) {
+func (w Widget) Size() (width, height layout.Length) {
 	return w.width, w.height
 }
 
 // Layout returns the size of the list within limits.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
 	width, height := w.Size()
 	return layout.Atomic(limits, width, height)
 }
@@ -121,7 +121,7 @@ func (v view) maxOffset() int {
 }
 
 // layout returns where each item starts and how many rows it takes in a view of a size. Items are laid out at the width of the view with an infinite height, as the list scrolls along it.
-func (w Widget) layout(view tview.Size) (starts, sizes []int, total int) {
+func (w Widget) layout(view layout.Size) (starts, sizes []int, total int) {
 	limits := layout.Limits{Max: view, Infinite: layout.Axes{Height: true}}
 	starts, sizes = make([]int, w.count), make([]int, w.count)
 	for i := range w.count {

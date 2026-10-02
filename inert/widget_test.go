@@ -13,10 +13,10 @@ type taken struct{}
 // taker turns every message into taken, and records whether it was drawn.
 type taker struct {
 	drawn *bool
-	width tview.Length
+	width layout.Length
 }
 
-func (t taker) Size() (width, height tview.Length) { return t.width, tview.Fill }
+func (t taker) Size() (width, height layout.Length) { return t.width, layout.Fill }
 
 func (t taker) Draw(tview.Screen, tview.Rectangle) { *t.drawn = true }
 
@@ -24,7 +24,7 @@ func (taker) Handle(tview.Msg, tview.Rectangle) tview.Msg { return taken{} }
 
 func TestWidget(t *testing.T) {
 	var drawn bool
-	w := New(taker{drawn: &drawn, width: tview.Fixed(3)})
+	w := New(taker{drawn: &drawn, width: layout.Fixed(3)})
 	area := tview.Rectangle{Width: 4, Height: 2}
 
 	t.Run("draws the child", func(t *testing.T) {
@@ -34,7 +34,7 @@ func TestWidget(t *testing.T) {
 		}
 	})
 	t.Run("keeps the child's size", func(t *testing.T) {
-		if width, _ := w.Size(); width != tview.Fixed(3) {
+		if width, _ := w.Size(); width != layout.Fixed(3) {
 			t.Fatalf("width = %v", width)
 		}
 	})
@@ -51,6 +51,6 @@ func TestWidget(t *testing.T) {
 	})
 }
 
-func (t taker) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, t.width, tview.Fill)
+func (t taker) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, t.width, layout.Fill)
 }

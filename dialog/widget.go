@@ -108,14 +108,14 @@ func (w Widget) layout(area tview.Rectangle) (tview.Element, tview.Rectangle) {
 	lines := richtext.WordWrap(w.text, contentWidth)
 	lines = lines[:min(len(lines), max(area.Height-6, 0))]
 
-	buttons := row.New().Width(tview.Shrink).Height(tview.Shrink).Spacing(2)
+	buttons := row.New().Width(layout.Shrink).Height(layout.Shrink).Spacing(2)
 	for i, label := range w.buttons {
 		b := button.New().
 			Label(label).
 			Style(w.buttonStyle).
 			FocusedStyle(w.activatedStyle).
-			Width(tview.Fixed(uniseg.StringWidth(label) + 4)).
-			Height(tview.Fixed(1)).
+			Width(layout.Fixed(uniseg.StringWidth(label) + 4)).
+			Height(layout.Fixed(1)).
 			Keybind(noKeys).
 			Focused(i == w.focus)
 		if w.onDone != nil {
@@ -124,8 +124,8 @@ func (w Widget) layout(area tview.Rectangle) (tview.Element, tview.Rectangle) {
 		buttons = buttons.Push(b)
 	}
 	content := column.New(
-		column.New(text{lines: lines, style: tcell.StyleDefault.Background(w.background).Foreground(w.textColor)}).Height(tview.Fixed(len(lines))),
-		column.New().Height(tview.Fixed(1)),
+		text{lines: lines, style: tcell.StyleDefault.Background(w.background).Foreground(w.textColor)},
+		column.New().Height(layout.Fixed(1)),
 		center.New(buttons),
 	)
 	dialog := box.New(content).Borders(tview.BordersAll).Background(w.background).Padding(1, 1, 1, 1)
@@ -134,9 +134,14 @@ func (w Widget) layout(area tview.Rectangle) (tview.Element, tview.Rectangle) {
 	return dialog, tview.Rectangle{X: area.X + (area.Width-width)/2, Y: area.Y + (area.Height-height)/2, Width: width, Height: height}
 }
 
+// Size returns Fill, as the dialog takes its whole area.
+func (Widget) Size() (width, height layout.Length) {
+	return layout.Fill, layout.Fill
+}
+
 // Layout returns the size of limits, as the dialog takes its whole area.
-func (Widget) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fill)
+func (Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
 // Draw draws the dialog in the middle of area.
@@ -173,8 +178,13 @@ type text struct {
 	style tcell.Style
 }
 
-func (t text) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fixed(len(t.lines)))
+// Size returns Fill and a height of one row for each line.
+func (t text) Size() (width, height layout.Length) {
+	return layout.Fill, layout.Fixed(len(t.lines))
+}
+
+func (t text) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fixed(len(t.lines)))
 }
 
 func (t text) Draw(screen tview.Screen, area tview.Rectangle) {

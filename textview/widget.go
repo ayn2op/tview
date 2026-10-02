@@ -13,7 +13,7 @@ import (
 type Widget struct {
 	text          richtext.Text
 	scrollState   *ScrollState
-	width, height tview.Length
+	width, height layout.Length
 	wrap          bool
 	wordWrap      bool
 	alignment     tview.Alignment
@@ -29,8 +29,8 @@ var _ tview.Element = Widget{}
 func New(text richtext.Text) Widget {
 	return Widget{
 		text:      text,
-		width:     tview.Fill,
-		height:    tview.Fill,
+		width:     layout.Fill,
+		height:    layout.Fill,
 		wrap:      true,
 		wordWrap:  true,
 		alignment: tview.AlignmentLeft,
@@ -39,13 +39,13 @@ func New(text richtext.Text) Widget {
 }
 
 // Width sets the width of the text view.
-func (w Widget) Width(width tview.Length) Widget {
+func (w Widget) Width(width layout.Length) Widget {
 	w.width = width
 	return w
 }
 
 // Height sets the height of the text view.
-func (w Widget) Height(height tview.Length) Widget {
+func (w Widget) Height(height layout.Length) Widget {
 	w.height = height
 	return w
 }
@@ -99,15 +99,15 @@ func (w Widget) Focused(focused bool) Widget {
 }
 
 // Size returns the width and height of the text view.
-func (w Widget) Size() (width, height tview.Length) {
+func (w Widget) Size() (width, height layout.Length) {
 	return w.width, w.height
 }
 
 // Layout returns the size of the text view within limits, where its content is as wide as the longest line and as tall as the lines the text wraps to.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
-	return layout.Sized(limits, w.width, w.height, func(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Sized(limits, w.width, w.height, func(limits layout.Limits) layout.Size {
 		l := w.layout(limits.Bounds().Width)
-		return tview.Size{Width: l.longest, Height: len(l.lines)}
+		return layout.Size{Width: l.longest, Height: len(l.lines)}
 	})
 }
 

@@ -25,9 +25,14 @@ func (w Widget) Style(style tcell.Style) Widget {
 	return w
 }
 
+// Size returns Fill, as the backdrop takes its whole area.
+func (Widget) Size() (width, height layout.Length) {
+	return layout.Fill, layout.Fill
+}
+
 // Layout returns the size of limits, as the backdrop takes its whole area.
-func (Widget) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fill)
+func (Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
 // Draw restyles the cells already drawn within area.

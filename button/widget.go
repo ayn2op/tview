@@ -10,7 +10,7 @@ import (
 // Widget is a labeled button. It is a value built in View; the model owns any state it reflects, such as focus.
 type Widget struct {
 	label         string
-	width, height tview.Length
+	width, height layout.Length
 	style         tcell.Style
 	focusedStyle  tcell.Style
 	disabledStyle tcell.Style
@@ -25,8 +25,8 @@ var _ tview.Element = Widget{}
 // New returns an empty button that fills its parent.
 func New() Widget {
 	return Widget{
-		width:         tview.Fill,
-		height:        tview.Fill,
+		width:         layout.Fill,
+		height:        layout.Fill,
 		keybind:       DefaultKeybind,
 		focusedStyle:  tcell.StyleDefault.Reverse(true),
 		disabledStyle: tcell.StyleDefault.Dim(true),
@@ -40,13 +40,13 @@ func (w Widget) Label(label string) Widget {
 }
 
 // Width sets the width of the button.
-func (w Widget) Width(width tview.Length) Widget {
+func (w Widget) Width(width layout.Length) Widget {
 	w.width = width
 	return w
 }
 
 // Height sets the height of the button.
-func (w Widget) Height(height tview.Length) Widget {
+func (w Widget) Height(height layout.Length) Widget {
 	w.height = height
 	return w
 }
@@ -94,12 +94,12 @@ func (w Widget) Focused(focused bool) Widget {
 }
 
 // Size returns the width and height of the button.
-func (w Widget) Size() (width, height tview.Length) {
+func (w Widget) Size() (width, height layout.Length) {
 	return w.width, w.height
 }
 
 // Layout returns the size of the button within limits.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
 	width, height := w.Size()
 	return layout.Atomic(limits, width, height)
 }

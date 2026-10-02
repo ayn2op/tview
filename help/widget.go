@@ -79,13 +79,18 @@ func (w Widget) Styles(styles Styles) Widget {
 	return w
 }
 
+// Size returns Fill, as the help takes the area its parent gives it. Layout reports the rows it needs.
+func (Widget) Size() (width, height layout.Length) {
+	return layout.Fill, layout.Fill
+}
+
 // Layout returns the size of the help within limits, as tall as the rows it takes at the width of limits, where a width of 0 is unlimited.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
-	return layout.Sized(limits, tview.Fill, tview.Shrink, func(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Sized(limits, layout.Fill, layout.Shrink, func(limits layout.Limits) layout.Size {
 		if !w.showAll || w.keyMap == nil {
-			return tview.Size{Height: 1}
+			return layout.Size{Height: 1}
 		}
-		return tview.Size{Height: len(w.fullHelpSegments(w.keyMap.FullHelp(), limits.Max.Width))}
+		return layout.Size{Height: len(w.fullHelpSegments(w.keyMap.FullHelp(), limits.Max.Width))}
 	})
 }
 

@@ -30,9 +30,14 @@ func (w Widget) Push(child tview.Element) Widget {
 	return w
 }
 
+// Size returns Fill, as the stack takes its whole area.
+func (Widget) Size() (width, height layout.Length) {
+	return layout.Fill, layout.Fill
+}
+
 // Layout returns the size of limits, as the stack takes its whole area.
-func (Widget) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fill)
+func (Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
 // Draw draws the children from bottom to top.

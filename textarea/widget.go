@@ -15,7 +15,7 @@ import (
 // Widget draws EditState and turns typing into Changes.
 type Widget struct {
 	editState     *EditState
-	width, height tview.Length
+	width, height layout.Length
 	placeholder   string
 	style         tcell.Style
 	keybind       func(tview.KeyMsg) (Action, bool)
@@ -29,20 +29,20 @@ var _ tview.Element = Widget{}
 func New(editState *EditState) Widget {
 	return Widget{
 		editState: editState,
-		width:     tview.Fill,
-		height:    tview.Fill,
+		width:     layout.Fill,
+		height:    layout.Fill,
 		keybind:   DefaultKeybind,
 	}
 }
 
 // Width sets the width of the text area.
-func (w Widget) Width(width tview.Length) Widget {
+func (w Widget) Width(width layout.Length) Widget {
 	w.width = width
 	return w
 }
 
 // Height sets the height of the text area.
-func (w Widget) Height(height tview.Length) Widget {
+func (w Widget) Height(height layout.Length) Widget {
 	w.height = height
 	return w
 }
@@ -78,12 +78,12 @@ func (w Widget) Focused(focused bool) Widget {
 }
 
 // Size returns the width and height of the text area.
-func (w Widget) Size() (width, height tview.Length) {
+func (w Widget) Size() (width, height layout.Length) {
 	return w.width, w.height
 }
 
 // Layout returns the size of the text area within limits.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
 	width, height := w.Size()
 	return layout.Atomic(limits, width, height)
 }

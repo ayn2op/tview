@@ -1,4 +1,4 @@
-// Package layout holds the lengths and limits elements are laid out with, after iced's layout module.
+// Package layout holds the lengths and limits elements are laid out with.
 package layout
 
 // Length is how much space an element takes along one axis of its parent.

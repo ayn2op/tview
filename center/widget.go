@@ -18,9 +18,14 @@ func New(child tview.Element) Widget {
 	return Widget{child: child}
 }
 
+// Size returns Fill, as the center takes its whole area.
+func (Widget) Size() (width, height layout.Length) {
+	return layout.Fill, layout.Fill
+}
+
 // Layout returns the size of limits, as the center takes its whole area.
-func (Widget) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fill)
+func (Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
 // Draw draws the child in the middle of area.
@@ -34,7 +39,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 }
 
 func (w Widget) area(area tview.Rectangle) tview.Rectangle {
-	width, height := tview.SizeOf(w.child)
+	width, height := w.child.Size()
 	if cells := width.Cells(); cells > 0 && cells < area.Width {
 		area.X += (area.Width - cells) / 2
 		area.Width = cells

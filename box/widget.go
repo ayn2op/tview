@@ -11,7 +11,7 @@ import (
 // Widget draws a background, border, title, and footer, with its child inside them.
 type Widget struct {
 	child         tview.Element
-	width, height tview.Length
+	width, height layout.Length
 
 	background                      tcell.Color
 	borders                         tview.Borders
@@ -30,8 +30,8 @@ var _ tview.Element = Widget{}
 func New(child tview.Element) Widget {
 	return Widget{
 		child:           child,
-		width:           tview.Fill,
-		height:          tview.Fill,
+		width:           layout.Fill,
+		height:          layout.Fill,
 		borderSet:       tview.BorderSetPlain(),
 		titleAlignment:  tview.AlignmentCenter,
 		footerAlignment: tview.AlignmentCenter,
@@ -39,13 +39,13 @@ func New(child tview.Element) Widget {
 }
 
 // Width sets the width of the box.
-func (w Widget) Width(width tview.Length) Widget {
+func (w Widget) Width(width layout.Length) Widget {
 	w.width = width
 	return w
 }
 
 // Height sets the height of the box.
-func (w Widget) Height(height tview.Length) Widget {
+func (w Widget) Height(height layout.Length) Widget {
 	w.height = height
 	return w
 }
@@ -117,18 +117,18 @@ func (w Widget) FooterAlignment(alignment tview.Alignment) Widget {
 }
 
 // Size returns the width and height of the box.
-func (w Widget) Size() (width, height tview.Length) {
+func (w Widget) Size() (width, height layout.Length) {
 	return w.width, w.height
 }
 
-// Layout returns the size of the box within limits: that of its child inside the frame, plus the frame, as iced's container does.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
+// Layout returns the size of the box within limits: that of its child inside the frame, plus the frame.
+func (w Widget) Layout(limits layout.Limits) layout.Size {
 	limits = limits.Width(w.width).Height(w.height)
 	inner := w.InnerArea(tview.Rectangle{Width: layout.Infinity, Height: layout.Infinity})
-	frame := tview.Size{Width: layout.Infinity - inner.Width, Height: layout.Infinity - inner.Height}
+	frame := layout.Size{Width: layout.Infinity - inner.Width, Height: layout.Infinity - inner.Height}
 	content := w.child.Layout(limits.Shrink(frame).Loose())
 	size := limits.Shrink(frame).Resolve(w.width, w.height, content)
-	return tview.Size{Width: size.Width + frame.Width, Height: size.Height + frame.Height}
+	return layout.Size{Width: size.Width + frame.Width, Height: size.Height + frame.Height}
 }
 
 // InnerArea returns the part of area inside the border and padding, where the child is drawn.

@@ -120,6 +120,8 @@ func TestWidgetDraw(t *testing.T) {
 	})
 }
 
-func (greedy) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fill)
+func (greedy) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
+
+func (greedy) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }

@@ -35,13 +35,13 @@ func (w Widget) Width(cells int) Widget {
 }
 
 // Size returns the width and the height that preserves the aspect ratio.
-func (w Widget) Size() (width, height tview.Length) {
+func (w Widget) Size() (width, height layout.Length) {
 	cols, rows := w.cells()
-	return tview.Fixed(cols), tview.Fixed(rows)
+	return layout.Fixed(cols), layout.Fixed(rows)
 }
 
 // Layout returns the size of the image within limits.
-func (w Widget) Layout(limits layout.Limits) tview.Size {
+func (w Widget) Layout(limits layout.Limits) layout.Size {
 	width, height := w.Size()
 	return layout.Atomic(limits, width, height)
 }

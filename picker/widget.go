@@ -74,9 +74,14 @@ func (w Widget) OnCancel(msg tview.Msg) Widget {
 	return w
 }
 
+// Size returns Fill, as the picker takes its whole area.
+func (Widget) Size() (width, height layout.Length) {
+	return layout.Fill, layout.Fill
+}
+
 // Layout returns the size of limits, as the picker takes its whole area.
-func (Widget) Layout(limits layout.Limits) tview.Size {
-	return layout.Atomic(limits, tview.Fill, tview.Fill)
+func (Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
 }
 
 // Draw draws the query above the list.
@@ -114,7 +119,7 @@ func (w Widget) layout() tview.Element {
 	line.Bottom = tview.BoxDrawingsLightHorizontal
 	line.BottomLeft, line.BottomRight = line.Bottom, line.Bottom
 	header := box.New(row.New(text.New("> "), query)).Borders(tview.BordersBottom).BorderSet(line).BorderStyle(tcell.StyleDefault.Dim(true))
-	return column.New(column.New(header).Height(tview.Fixed(inputHeight)), w.listView())
+	return column.New(column.New(header).Height(layout.Fixed(inputHeight)), w.listView())
 }
 
 func (w Widget) listView() list.Widget {

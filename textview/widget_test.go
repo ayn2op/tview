@@ -127,8 +127,8 @@ func TestWidgetHandle(t *testing.T) {
 }
 
 func TestWidgetLayout(t *testing.T) {
-	limits := layout.Limits{Max: tview.Size{Width: 6, Height: 10}}
-	if got := New(lines("ab cd ef", "g")).Height(tview.Shrink).Layout(limits); got != (tview.Size{Width: 6, Height: 3}) {
+	limits := layout.Limits{Max: layout.Size{Width: 6, Height: 10}}
+	if got := New(lines("ab cd ef", "g")).Height(layout.Shrink).Layout(limits); got != (layout.Size{Width: 6, Height: 3}) {
 		t.Fatalf("size = %+v, want 6 by 3", got)
 	}
 }

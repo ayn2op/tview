@@ -92,6 +92,20 @@ func TestWidgetHandle(t *testing.T) {
 			t.Fatalf("offset %d dragging %v, want 6 and not dragging", got.offset, got.dragging)
 		}
 	})
+	t.Run("holding the thumb still keeps the scroll position", func(t *testing.T) {
+		wheel := mouse(0, 0, tview.MouseScrollDown)
+		got := apply(t, NewSelectionState(), 100, area, wheel, wheel, wheel, mouse(3, 0, tview.MouseLeftDown), mouse(9, 0, tview.MouseMove))
+		if got.offset != 3 {
+			t.Fatalf("offset = %d, want 3", got.offset)
+		}
+	})
+	t.Run("a scroll bar too short to draw takes no clicks", func(t *testing.T) {
+		short := tview.Rectangle{Width: 4, Height: 2}
+		msg := numbers(NewSelectionState(), 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 1, tview.MouseLeftClick), short)
+		if a, ok := msg.(Change); !ok || a.offset != 0 {
+			t.Fatalf("got %v, want offset 0", msg)
+		}
+	})
 	t.Run("the end symbol scrolls a step", func(t *testing.T) {
 		selectionState := NewSelectionState()
 		msg := numbers(selectionState, 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftClick), area)

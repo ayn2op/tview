@@ -132,8 +132,14 @@ func (w Widget) Thumb(length int) (start, size int) {
 	if track == 0 || maxOffset == 0 {
 		return 0, track
 	}
-	size = min(max(track*viewport/content, 1), track)
-	return (track - size) * min(w.offset, maxOffset) / maxOffset, size
+	// Rounding to the nearest cell keeps the thumb at each end for as long.
+	size = min(max(divide(track*viewport, content), 1), track)
+	return divide((track-size)*min(w.offset, maxOffset), maxOffset), size
+}
+
+// divide returns numerator over denominator rounded to the nearest integer.
+func divide(numerator, denominator int) int {
+	return (numerator + denominator/2) / denominator
 }
 
 // Size returns Fill, as the scroll bar takes its whole area.

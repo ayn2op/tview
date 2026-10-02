@@ -295,6 +295,10 @@ func (w Widget) bar(v view) scrollbar.Widget {
 // barMouse applies a mouse action at row of the scroll bar to a: the begin and end symbols scroll a row, the track pages, and the thumb starts a drag.
 func (w Widget) barMouse(action tview.MouseAction, v view, row int, a *Change) bool {
 	bar := w.bar(v)
+	if bar.TrackCells(v.bar.Height) == 0 {
+		// The scroll bar is too short to be drawn.
+		return true
+	}
 	if bar.HasBegin() {
 		row--
 	}
@@ -329,10 +333,12 @@ func (w Widget) thumbOffset(v view, row, grab int) int {
 		row--
 	}
 	cells := bar.TrackCells(v.bar.Height)
-	_, thumbSize := bar.Thumb(v.bar.Height)
+	thumbStart, thumbSize := bar.Thumb(v.bar.Height)
 	travel := cells - thumbSize
-	if travel <= 0 {
+	start := min(max(row-grab, 0), travel)
+	if travel <= 0 || start == thumbStart {
+		// The thumb has not moved a cell, so the scroll position, which is finer than a cell, is kept.
 		return v.offset
 	}
-	return min(max(row-grab, 0), travel) * v.maxOffset() / travel
+	return start * v.maxOffset() / travel
 }

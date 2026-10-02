@@ -43,7 +43,7 @@ func TestWidgetDraw(t *testing.T) {
 
 func TestWidgetThumb(t *testing.T) {
 	start, size := New().BeginSymbol("").EndSymbol("").Lengths(8, 2).Offset(3).Thumb(4)
-	if start != 1 || size != 1 {
-		t.Fatalf("thumb = %d+%d, want 1+1", start, size)
+	if start != 2 || size != 1 {
+		t.Fatalf("thumb = %d+%d, want 2+1", start, size)
 	}
 }

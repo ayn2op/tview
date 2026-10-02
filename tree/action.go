@@ -9,7 +9,8 @@ import (
 type Action int
 
 const (
-	ActionUp Action = iota
+	ActionNone Action = iota
+	ActionUp
 	ActionDown
 	ActionTop
 	ActionBottom
@@ -18,20 +19,20 @@ const (
 )
 
 // DefaultKeybind binds up, down, home, end, K, and enter.
-func DefaultKeybind(key tview.KeyMsg) (Action, bool) {
+func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "up":
-		return ActionUp, true
+		return ActionUp
 	case "down":
-		return ActionDown, true
+		return ActionDown
 	case "home":
-		return ActionTop, true
+		return ActionTop
 	case "end":
-		return ActionBottom, true
+		return ActionBottom
 	case "K":
-		return ActionMoveToParent, true
+		return ActionMoveToParent
 	case "enter":
-		return ActionSelect, true
+		return ActionSelect
 	}
-	return 0, false
+	return ActionNone
 }

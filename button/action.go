@@ -9,10 +9,14 @@ import (
 type Action int
 
 const (
-	ActionPress Action = iota
+	ActionNone Action = iota
+	ActionPress
 )
 
 // DefaultKeybind binds enter.
-func DefaultKeybind(key tview.KeyMsg) (Action, bool) {
-	return ActionPress, keybind.String(key) == "enter"
+func DefaultKeybind(key tview.KeyMsg) Action {
+	if keybind.String(key) == "enter" {
+		return ActionPress
+	}
+	return ActionNone
 }

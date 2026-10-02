@@ -28,7 +28,7 @@ type Widget struct {
 	selectedStyle  tcell.Style
 	scrollBar      scrollbar.Widget
 	visibility     ScrollBarVisibility
-	keybind        func(tview.KeyMsg) (Action, bool)
+	keybind        func(tview.KeyMsg) Action
 	focused        bool
 	onChange       func(Change) tview.Msg
 }
@@ -79,8 +79,8 @@ func (w Widget) ScrollBar(scrollBar scrollbar.Widget, visibility ScrollBarVisibi
 	return w
 }
 
-// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
-func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+// Keybind sets the function that turns keys into Actions, or ActionNone for keys it does not bind, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	w.keybind = f
 	return w
 }
@@ -197,7 +197,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		return msg
 	}
 	if key, ok := msg.(tview.KeyMsg); ok && w.focused {
-		if action, ok := w.keybind(key); ok {
+		if action := w.keybind(key); action != ActionNone {
 			msg = ActionMsg(action)
 		}
 	}

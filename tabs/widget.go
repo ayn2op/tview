@@ -19,7 +19,7 @@ type Widget struct {
 	paddingLeft, paddingRight      string
 	arrowStart, arrowEnd           string
 	clickableArrows, wrap          bool
-	keybind                        func(tview.KeyMsg) (Action, bool)
+	keybind                        func(tview.KeyMsg) Action
 	onSelect                       func(index int) tview.Msg
 }
 
@@ -104,8 +104,8 @@ func (w Widget) Wrap(wrap bool) Widget {
 	return w
 }
 
-// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
-func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+// Keybind sets the function that turns keys into Actions, or ActionNone for keys it does not bind, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	w.keybind = f
 	return w
 }
@@ -157,7 +157,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	switch msg := msg.(type) {
 	case tview.KeyMsg:
-		if action, ok := w.keybind(msg); ok {
+		if action := w.keybind(msg); action != ActionNone {
 			delta := 1
 			if action == ActionPrevious {
 				delta = -1

@@ -67,6 +67,9 @@ func TestWidgetDraw(t *testing.T) {
 	}
 }
 
-func pressOnP(key tview.KeyMsg) (Action, bool) {
-	return ActionPress, key.Str() == "p"
+func pressOnP(key tview.KeyMsg) Action {
+	if key.Str() == "p" {
+		return ActionPress
+	}
+	return ActionNone
 }

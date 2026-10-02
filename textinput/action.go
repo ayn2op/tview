@@ -9,7 +9,8 @@ import (
 type Action int
 
 const (
-	ActionLeft Action = iota
+	ActionNone Action = iota
+	ActionLeft
 	ActionRight
 	ActionHome
 	ActionEnd
@@ -19,22 +20,22 @@ const (
 )
 
 // DefaultKeybind binds the keys of the same names, and enter to submitting.
-func DefaultKeybind(key tview.KeyMsg) (Action, bool) {
+func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "left":
-		return ActionLeft, true
+		return ActionLeft
 	case "right":
-		return ActionRight, true
+		return ActionRight
 	case "home":
-		return ActionHome, true
+		return ActionHome
 	case "end":
-		return ActionEnd, true
+		return ActionEnd
 	case "backspace":
-		return ActionBackspace, true
+		return ActionBackspace
 	case "delete":
-		return ActionDelete, true
+		return ActionDelete
 	case "enter":
-		return ActionSubmit, true
+		return ActionSubmit
 	}
-	return 0, false
+	return ActionNone
 }

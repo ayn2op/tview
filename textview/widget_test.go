@@ -94,7 +94,12 @@ func TestWidgetHandle(t *testing.T) {
 		}
 	})
 	t.Run("rebound key", func(t *testing.T) {
-		downOnN := func(key tview.KeyMsg) (Action, bool) { return ActionDown, key.Str() == "n" }
+		downOnN := func(key tview.KeyMsg) Action {
+			if key.Str() == "n" {
+				return ActionDown
+			}
+			return ActionNone
+		}
 		var scroll ScrollState
 		view := New(lines("1", "2", "3")).ScrollState(&scroll).Keybind(downOnN).OnChange(func(a Change) tview.Msg { return a }).Focused(true)
 		if _, ok := view.Handle(key(tcell.KeyRune, "n"), area).(Change); !ok {

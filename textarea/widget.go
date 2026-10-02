@@ -18,7 +18,7 @@ type Widget struct {
 	width, height layout.Length
 	placeholder   string
 	style         tcell.Style
-	keybind       func(tview.KeyMsg) (Action, bool)
+	keybind       func(tview.KeyMsg) Action
 	onChange      func(Change) tview.Msg
 	focused       bool
 }
@@ -59,8 +59,8 @@ func (w Widget) Style(style tcell.Style) Widget {
 	return w
 }
 
-// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
-func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+// Keybind sets the function that turns keys into Actions, or ActionNone for keys it does not bind, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	w.keybind = f
 	return w
 }
@@ -167,9 +167,9 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	value, cursor := w.editState.value, w.editState.cursor
 	switch m := msg.(type) {
 	case tview.KeyMsg:
-		action, ok := w.keybind(m)
+		action := w.keybind(m)
 		switch {
-		case ok:
+		case action != ActionNone:
 			value, cursor = edit(action, value, cursor, wrap(value, area.Width))
 		case m.Key() == tcell.KeyRune && m.Modifiers()&^tcell.ModShift == 0:
 			value, cursor = value[:cursor]+m.Str()+value[cursor:], cursor+len(m.Str())

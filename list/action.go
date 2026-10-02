@@ -9,10 +9,13 @@ import (
 type Action int
 
 const (
-	ActionSelectUp Action = iota
+	ActionNone Action = iota
+
+	ActionSelectUp
 	ActionSelectDown
 	ActionSelectTop
 	ActionSelectBottom
+
 	ActionScrollUp
 	ActionScrollDown
 	ActionScrollTop
@@ -20,24 +23,24 @@ const (
 )
 
 // DefaultKeybind binds up, down, home, and end to moving the selection, and pgup, pgdn, ctrl+home, and ctrl+end to scrolling.
-func DefaultKeybind(key tview.KeyMsg) (Action, bool) {
+func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "up":
-		return ActionSelectUp, true
+		return ActionSelectUp
 	case "down":
-		return ActionSelectDown, true
+		return ActionSelectDown
 	case "home":
-		return ActionSelectTop, true
+		return ActionSelectTop
 	case "end":
-		return ActionSelectBottom, true
+		return ActionSelectBottom
 	case "pgup":
-		return ActionScrollUp, true
+		return ActionScrollUp
 	case "pgdn":
-		return ActionScrollDown, true
+		return ActionScrollDown
 	case "ctrl+home":
-		return ActionScrollTop, true
+		return ActionScrollTop
 	case "ctrl+end":
-		return ActionScrollBottom, true
+		return ActionScrollBottom
 	}
-	return 0, false
+	return ActionNone
 }

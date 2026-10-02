@@ -9,17 +9,18 @@ import (
 type Action int
 
 const (
-	ActionPrevious Action = iota
+	ActionNone Action = iota
+	ActionPrevious
 	ActionNext
 )
 
 // DefaultKeybind binds ctrl+h and ctrl+l.
-func DefaultKeybind(key tview.KeyMsg) (Action, bool) {
+func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "ctrl+h":
-		return ActionPrevious, true
+		return ActionPrevious
 	case "ctrl+l":
-		return ActionNext, true
+		return ActionNext
 	}
-	return 0, false
+	return ActionNone
 }

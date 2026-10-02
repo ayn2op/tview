@@ -22,7 +22,7 @@ type Widget struct {
 	background, textColor tcell.Color
 	buttonStyle           tcell.Style
 	activatedStyle        tcell.Style
-	keybind               func(tview.KeyMsg) (Action, bool)
+	keybind               func(tview.KeyMsg) Action
 	onFocus               func(index int) tview.Msg
 	onDone                func(index int, label string) tview.Msg
 }
@@ -55,8 +55,8 @@ func (w Widget) Focus(index int) Widget {
 	return w
 }
 
-// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
-func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+// Keybind sets the function that turns keys into Actions, or ActionNone for keys it does not bind, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	w.keybind = f
 	return w
 }
@@ -156,7 +156,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 // Handle turns ActionNext and ActionPrevious into the OnFocus message, ActionCancel into the OnDone message for canceling, and ActionPress or a click on a button into its OnDone message. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if key, ok := msg.(tview.KeyMsg); ok && len(w.buttons) > 0 {
-		action, _ := w.keybind(key)
+		action := w.keybind(key)
 		switch {
 		case action == ActionNext && w.onFocus != nil:
 			return w.onFocus((w.focus + 1) % len(w.buttons))

@@ -22,8 +22,8 @@ const inputHeight = 2
 type Widget struct {
 	items               Items
 	searchState         *SearchState
-	keybind             func(tview.KeyMsg) (Action, bool)
-	listKeybind         func(tview.KeyMsg) (list.Action, bool)
+	keybind             func(tview.KeyMsg) Action
+	listKeybind         func(tview.KeyMsg) list.Action
 	scrollBar           scrollbar.Widget
 	scrollBarVisibility list.ScrollBarVisibility
 	onChange            func(Change) tview.Msg
@@ -38,14 +38,14 @@ func New(items Items, searchState *SearchState) Widget {
 	return Widget{items: items, searchState: searchState, keybind: DefaultKeybind, listKeybind: list.DefaultKeybind, scrollBar: scrollbar.New()}
 }
 
-// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
-func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+// Keybind sets the function that turns keys into Actions, or ActionNone for keys it does not bind, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	w.keybind = f
 	return w
 }
 
 // ListKeybind sets the function that turns keys into the list's Actions, list.DefaultKeybind unless set.
-func (w Widget) ListKeybind(f func(tview.KeyMsg) (list.Action, bool)) Widget {
+func (w Widget) ListKeybind(f func(tview.KeyMsg) list.Action) Widget {
 	w.listKeybind = f
 	return w
 }
@@ -92,17 +92,16 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 // Handle returns the OnSelect and OnCancel messages for their Actions, sends the list's keys to the list, and passes other messages to the query and the list.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if key, ok := msg.(tview.KeyMsg); ok {
-		action, ok := w.keybind(key)
-		switch {
-		case ok && action == ActionSelect:
+		switch w.keybind(key) {
+		case ActionSelect:
 			if item, ok := w.searchState.Selected(w.items); ok && w.onSelect != nil {
 				return w.onSelect(item)
 			}
 			return nil
-		case ok && action == ActionCancel:
+		case ActionCancel:
 			return w.onCancel
 		}
-		if _, ok := w.listKeybind(key); ok {
+		if w.listKeybind(key) != list.ActionNone {
 			area.Y, area.Height = area.Y+inputHeight, max(area.Height-inputHeight, 0)
 			return w.listView().Handle(msg, area)
 		}

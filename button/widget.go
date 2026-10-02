@@ -14,7 +14,7 @@ type Widget struct {
 	style         tcell.Style
 	focusedStyle  tcell.Style
 	disabledStyle tcell.Style
-	keybind       func(tview.KeyMsg) (Action, bool)
+	keybind       func(tview.KeyMsg) Action
 	onClick       tview.Msg
 	disabled      bool
 	focused       bool
@@ -69,8 +69,8 @@ func (w Widget) DisabledStyle(style tcell.Style) Widget {
 	return w
 }
 
-// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
-func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+// Keybind sets the function that turns keys into Actions, or ActionNone for keys it does not bind, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	w.keybind = f
 	return w
 }
@@ -126,7 +126,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	}
 	switch m := msg.(type) {
 	case tview.KeyMsg:
-		if action, ok := w.keybind(m); w.focused && ok && action == ActionPress {
+		if w.focused && w.keybind(m) == ActionPress {
 			return w.onClick
 		}
 	case tview.MouseMsg:

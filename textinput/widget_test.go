@@ -54,7 +54,12 @@ func TestWidgetHandle(t *testing.T) {
 	}
 
 	t.Run("rebound key", func(t *testing.T) {
-		leftOnCtrlB := func(key tview.KeyMsg) (Action, bool) { return ActionLeft, key.Key() == tcell.KeyCtrlB }
+		leftOnCtrlB := func(key tview.KeyMsg) Action {
+			if key.Key() == tcell.KeyCtrlB {
+				return ActionLeft
+			}
+			return ActionNone
+		}
 		editState := NewEditState("ab")
 		out := New(&editState).Keybind(leftOnCtrlB).Focused(true).OnChange(func(a Change) tview.Msg { return a }).Handle(key(tcell.KeyCtrlB, "", tcell.ModCtrl), area)
 		change, ok := out.(Change)

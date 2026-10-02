@@ -10,28 +10,29 @@ import (
 type Action int
 
 const (
-	ActionNext Action = iota
+	ActionNone Action = iota
 	ActionPrevious
+	ActionNext
 	ActionPress
 	ActionCancel
 )
 
 // DefaultKeybind binds tab, down, and right to the next button, shift+tab, up, and left to the previous one, enter to pressing it, and esc to canceling.
-func DefaultKeybind(key tview.KeyMsg) (Action, bool) {
+func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
-	case "tab", "down", "right":
-		return ActionNext, true
 	case "shift+tab", "up", "left":
-		return ActionPrevious, true
+		return ActionPrevious
+	case "tab", "down", "right":
+		return ActionNext
 	case "enter":
-		return ActionPress, true
+		return ActionPress
 	case "esc":
-		return ActionCancel, true
+		return ActionCancel
 	}
-	return 0, false
+	return ActionNone
 }
 
 // noKeys binds no keys, since the dialog presses its buttons itself.
-func noKeys(tview.KeyMsg) (button.Action, bool) {
-	return 0, false
+func noKeys(tview.KeyMsg) button.Action {
+	return button.ActionNone
 }

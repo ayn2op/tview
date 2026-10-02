@@ -9,7 +9,8 @@ import (
 type Action int
 
 const (
-	ActionUp Action = iota
+	ActionNone Action = iota
+	ActionUp
 	ActionDown
 	ActionLeft
 	ActionRight
@@ -20,24 +21,24 @@ const (
 )
 
 // DefaultKeybind binds the arrows and hjkl, home and g, end and G, and pgup, ctrl+b, pgdn, and ctrl+f.
-func DefaultKeybind(key tview.KeyMsg) (Action, bool) {
+func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "up", "k":
-		return ActionUp, true
+		return ActionUp
 	case "down", "j":
-		return ActionDown, true
+		return ActionDown
 	case "left", "h":
-		return ActionLeft, true
+		return ActionLeft
 	case "right", "l":
-		return ActionRight, true
+		return ActionRight
 	case "home", "g":
-		return ActionTop, true
+		return ActionTop
 	case "end", "G":
-		return ActionBottom, true
+		return ActionBottom
 	case "pgup", "ctrl+b":
-		return ActionPageUp, true
+		return ActionPageUp
 	case "pgdn", "ctrl+f":
-		return ActionPageDown, true
+		return ActionPageDown
 	}
-	return 0, false
+	return ActionNone
 }

@@ -9,17 +9,18 @@ import (
 type Action int
 
 const (
-	ActionSelect Action = iota
+	ActionNone Action = iota
+	ActionSelect
 	ActionCancel
 )
 
 // DefaultKeybind binds enter and esc.
-func DefaultKeybind(key tview.KeyMsg) (Action, bool) {
+func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "enter":
-		return ActionSelect, true
+		return ActionSelect
 	case "esc":
-		return ActionCancel, true
+		return ActionCancel
 	}
-	return 0, false
+	return ActionNone
 }

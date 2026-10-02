@@ -18,7 +18,7 @@ type Widget struct {
 	wordWrap      bool
 	alignment     tview.Alignment
 	style         tcell.Style
-	keybind       func(tview.KeyMsg) (Action, bool)
+	keybind       func(tview.KeyMsg) Action
 	onChange      func(Change) tview.Msg
 	focused       bool
 }
@@ -74,8 +74,8 @@ func (w Widget) Style(style tcell.Style) Widget {
 	return w
 }
 
-// Keybind sets the function that turns keys into Actions, DefaultKeybind unless set.
-func (w Widget) Keybind(f func(tview.KeyMsg) (Action, bool)) Widget {
+// Keybind sets the function that turns keys into Actions, or ActionNone for keys it does not bind, DefaultKeybind unless set.
+func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	w.keybind = f
 	return w
 }
@@ -225,11 +225,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		if !w.focused {
 			return msg
 		}
-		action, ok := w.keybind(m)
-		if !ok {
-			return msg
-		}
-		switch action {
+		switch w.keybind(m) {
 		case ActionTop:
 			row, column, followEnd = 0, 0, false
 		case ActionBottom:

@@ -22,7 +22,7 @@ func (r row) Draw(screen tview.Screen, area tview.Rectangle) {
 func (row) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }
 
 // numbers returns a list of count rows labeled 0, 1, and so on.
-func numbers(selectionState *SelectionState, count int) Widget {
+func numbers(selectionState SelectionState, count int) Widget {
 	return New(selectionState, count, func(i int) Item { return row(strconv.Itoa(i)) }).
 		Focused(true).
 		OnChange(func(a Change) tview.Msg { return a })
@@ -32,7 +32,7 @@ func numbers(selectionState *SelectionState, count int) Widget {
 func apply(t *testing.T, selectionState SelectionState, count int, area tview.Rectangle, msgs ...tview.Msg) SelectionState {
 	t.Helper()
 	for _, msg := range msgs {
-		out := numbers(&selectionState, count).Handle(msg, area)
+		out := numbers(selectionState, count).Handle(msg, area)
 		change, ok := out.(Change)
 		if !ok {
 			t.Fatalf("%v: got %v, want a Change", msg, out)
@@ -89,7 +89,7 @@ func TestWidgetHandle(t *testing.T) {
 	t.Run("arrows scroll a step", func(t *testing.T) {
 		selectionState := NewSelectionState()
 		bar := scrollbar.New().Arrows(scrollbar.ArrowsBoth)
-		msg := numbers(&selectionState, 10).ScrollBar(bar, ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftClick), area)
+		msg := numbers(selectionState, 10).ScrollBar(bar, ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftClick), area)
 		if a, ok := msg.(Change); !ok || a.offset != 1 {
 			t.Fatalf("got %v, want offset 1", msg)
 		}
@@ -97,7 +97,7 @@ func TestWidgetHandle(t *testing.T) {
 	t.Run("passes other keys through", func(t *testing.T) {
 		selectionState := NewSelectionState()
 		enter := key(tcell.KeyEnter)
-		if got := numbers(&selectionState, 10).Handle(enter, area); got != enter {
+		if got := numbers(selectionState, 10).Handle(enter, area); got != enter {
 			t.Fatalf("got %v", got)
 		}
 	})
@@ -109,7 +109,7 @@ func TestWidgetDraw(t *testing.T) {
 		screen := screentest.New(t, 3, 2)
 		selectionState := NewSelectionState()
 		selectionState.SetCursor(1)
-		numbers(&selectionState, 3).ScrollBar(scrollbar.New(), ScrollBarVisibilityNever).SelectedStyle(tcell.StyleDefault.Reverse(true)).Draw(screen, area)
+		numbers(selectionState, 3).ScrollBar(scrollbar.New(), ScrollBarVisibilityNever).SelectedStyle(tcell.StyleDefault.Reverse(true)).Draw(screen, area)
 		if got := screentest.Row(screen, 0, 3) + screentest.Row(screen, 1, 3); got != "0  1  " {
 			t.Fatalf("rows = %q", got)
 		}
@@ -121,7 +121,7 @@ func TestWidgetDraw(t *testing.T) {
 		screen := screentest.New(t, 3, 2)
 		selectionState := NewSelectionState()
 		selectionState.ScrollToEnd()
-		numbers(&selectionState, 5).Draw(screen, area)
+		numbers(selectionState, 5).Draw(screen, area)
 		if got := screentest.Row(screen, 1, 2); got != "4 " {
 			t.Fatalf("last row = %q", got)
 		}
@@ -130,7 +130,7 @@ func TestWidgetDraw(t *testing.T) {
 		screen := screentest.New(t, 3, 3)
 		selectionState := NewSelectionState()
 		selectionState.SetCursor(-1)
-		New(&selectionState, 1, func(int) Item { return filled{} }).Draw(screen, tview.Rectangle{Y: 1, Width: 3, Height: 1})
+		New(selectionState, 1, func(int) Item { return filled{} }).Draw(screen, tview.Rectangle{Y: 1, Width: 3, Height: 1})
 		if got := screentest.Row(screen, 0, 3) + screentest.Row(screen, 1, 3) + screentest.Row(screen, 2, 3); got != "   xxx   " {
 			t.Fatalf("rows = %q", got)
 		}
@@ -153,7 +153,7 @@ func TestStateSetTrackEnd(t *testing.T) {
 	lastRow := func(t *testing.T, selectionState SelectionState, count int) string {
 		t.Helper()
 		screen := screentest.New(t, 3, 2)
-		numbers(&selectionState, count).ScrollBar(scrollbar.New(), ScrollBarVisibilityNever).Draw(screen, area)
+		numbers(selectionState, count).ScrollBar(scrollbar.New(), ScrollBarVisibilityNever).Draw(screen, area)
 		return screentest.Row(screen, 1, 1)
 	}
 	t.Run("stays at the end when an item is added and the cursor is kept", func(t *testing.T) {

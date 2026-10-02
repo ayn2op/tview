@@ -113,7 +113,7 @@ func (w Widget) layout() tview.Element {
 
 func (w Widget) listView() list.Widget {
 	s, items := w.searchState, w.items
-	return list.New(&s.list, s.count(items), func(i int) list.Item { return entry(items[s.index(i)].Text) }).
+	return list.New(s.list, s.count(items), func(i int) list.Item { return entry(items[s.index(i)].Text) }).
 		SelectedStyle(tcell.StyleDefault.Reverse(true)).
 		ScrollBar(w.scrollBar, w.scrollBarVisibility).
 		Keybind(w.listKeybind).

@@ -25,7 +25,7 @@ const (
 
 // Widget draws items, selected and scrolled as its SelectionState says, and turns keys and the mouse into Changes.
 type Widget struct {
-	selectionState *SelectionState
+	selectionState SelectionState
 	count          int
 	item           func(index int) Item
 	width, height  tview.Length
@@ -41,7 +41,7 @@ type Widget struct {
 var _ tview.Element = Widget{}
 
 // New returns a list of count items built by item, with selectionState as its cursor and scroll position, showing the scroll bar when they do not fit.
-func New(selectionState *SelectionState, count int, item func(index int) Item) Widget {
+func New(selectionState SelectionState, count int, item func(index int) Item) Widget {
 	return Widget{
 		selectionState: selectionState,
 		count:          count,

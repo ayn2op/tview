@@ -7,6 +7,7 @@ import (
 	"github.com/ayn2op/tview/button"
 	"github.com/ayn2op/tview/center"
 	"github.com/ayn2op/tview/column"
+	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/richtext"
 	"github.com/ayn2op/tview/row"
 	"github.com/gdamore/tcell/v3"
@@ -133,6 +134,11 @@ func (w Widget) layout(area tview.Rectangle) (tview.Element, tview.Rectangle) {
 	return dialog, tview.Rectangle{X: area.X + (area.Width-width)/2, Y: area.Y + (area.Height-height)/2, Width: width, Height: height}
 }
 
+// Layout returns the size of limits, as the dialog takes its whole area.
+func (Widget) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
+}
+
 // Draw draws the dialog in the middle of area.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	if area.Width <= 0 || area.Height <= 0 {
@@ -165,6 +171,10 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 type text struct {
 	lines []string
 	style tcell.Style
+}
+
+func (t text) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fixed(len(t.lines)))
 }
 
 func (t text) Draw(screen tview.Screen, area tview.Rectangle) {

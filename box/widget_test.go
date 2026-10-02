@@ -1,6 +1,7 @@
 package box
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -46,4 +47,8 @@ func TestWidgetHandle(t *testing.T) {
 	if want := (tview.Rectangle{X: 2, Y: 1, Width: 6, Height: 2}); inner != want {
 		t.Fatalf("inner = %+v, want %+v", inner, want)
 	}
+}
+
+func (areaElement) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
 }

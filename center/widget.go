@@ -1,7 +1,10 @@
 // Package center places an element in the middle of its area.
 package center
 
-import "github.com/ayn2op/tview"
+import (
+	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
+)
 
 // Widget places its child in the middle of its area.
 type Widget struct {
@@ -13,6 +16,11 @@ var _ tview.Element = Widget{}
 // New places child in the middle of its area at the child's Fixed size. A child that fills along an axis takes the whole area along it.
 func New(child tview.Element) Widget {
 	return Widget{child: child}
+}
+
+// Layout returns the size of limits, as the center takes its whole area.
+func (Widget) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
 }
 
 // Draw draws the child in the middle of area.

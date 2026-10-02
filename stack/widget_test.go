@@ -1,6 +1,7 @@
 package stack
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -62,4 +63,8 @@ func TestWidgetHandle(t *testing.T) {
 			t.Fatalf("seen = %v", seen)
 		}
 	})
+}
+
+func (letter) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
 }

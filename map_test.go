@@ -1,6 +1,7 @@
 package tview
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
@@ -65,4 +66,12 @@ func TestMapHandle(t *testing.T) {
 			t.Fatalf("got %v", got)
 		}
 	})
+}
+
+func (emitter) Layout(limits layout.Limits) Size {
+	return layout.Atomic(limits, Fill, Fill)
+}
+
+func (sliceEmitter) Layout(limits layout.Limits) Size {
+	return layout.Atomic(limits, Fill, Fill)
 }

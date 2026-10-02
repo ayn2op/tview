@@ -3,6 +3,7 @@ package backdrop
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -22,6 +23,11 @@ func New() Widget {
 func (w Widget) Style(style tcell.Style) Widget {
 	w.style = style
 	return w
+}
+
+// Layout returns the size of limits, as the backdrop takes its whole area.
+func (Widget) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
 }
 
 // Draw restyles the cells already drawn within area.

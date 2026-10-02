@@ -1,6 +1,7 @@
 package inert
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -48,4 +49,8 @@ func TestWidget(t *testing.T) {
 			}
 		}
 	})
+}
+
+func (t taker) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, t.width, tview.Fill)
 }

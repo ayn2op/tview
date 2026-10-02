@@ -2,6 +2,7 @@
 package image
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"image"
 	stdcolor "image/color"
 
@@ -37,6 +38,12 @@ func (w Widget) Width(cells int) Widget {
 func (w Widget) Size() (width, height tview.Length) {
 	cols, rows := w.cells()
 	return tview.Fixed(cols), tview.Fixed(rows)
+}
+
+// Layout returns the size of the image within limits.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	width, height := w.Size()
+	return layout.Atomic(limits, width, height)
 }
 
 func (w Widget) cells() (cols, rows int) {

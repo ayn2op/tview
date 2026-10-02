@@ -3,6 +3,7 @@ package textview
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/richtext"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
@@ -102,19 +103,22 @@ func (w Widget) Size() (width, height tview.Length) {
 	return w.width, w.height
 }
 
-// Rows returns the number of lines the text takes at width.
-func (w Widget) Rows(width int) int {
-	return len(w.layout(width).lines)
+// Layout returns the size of the text view within limits, where its content is as wide as the longest line and as tall as the lines the text wraps to.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	return layout.Sized(limits, w.width, w.height, func(limits layout.Limits) tview.Size {
+		l := w.layout(limits.Bounds().Width)
+		return tview.Size{Width: l.longest, Height: len(l.lines)}
+	})
 }
 
 // layout is the text wrapped to a width.
-type layout struct {
+type textLayout struct {
 	lines   richtext.Text
 	longest int
 }
 
-func (w Widget) layout(width int) layout {
-	var l layout
+func (w Widget) layout(width int) textLayout {
+	var l textLayout
 	for _, line := range w.text {
 		wrapped := richtext.Text{line}
 		switch {
@@ -132,7 +136,7 @@ func (w Widget) layout(width int) layout {
 }
 
 // origin returns where, in a canvas as wide as the longest line or area, the view starts for a column offset of 0.
-func (w Widget) origin(l layout, width int) int {
+func (w Widget) origin(l textLayout, width int) int {
 	switch w.alignment {
 	case tview.AlignmentCenter:
 		return max(l.longest-width, 0) / 2
@@ -144,7 +148,7 @@ func (w Widget) origin(l layout, width int) int {
 }
 
 // clamp returns the scroll position limited to what can be shown in area, with the last lines shown if followEnd is set.
-func (w Widget) clamp(l layout, area tview.Rectangle, row, column int, followEnd bool) (int, int) {
+func (w Widget) clamp(l textLayout, area tview.Rectangle, row, column int, followEnd bool) (int, int) {
 	if followEnd {
 		row = len(l.lines) - area.Height
 	}

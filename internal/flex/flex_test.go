@@ -1,6 +1,7 @@
 package flex
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"slices"
 	"testing"
 
@@ -108,4 +109,8 @@ func TestWidgetHandle(t *testing.T) {
 			t.Fatal("message reached the child after the one that dropped it")
 		}
 	})
+}
+
+func (s sized) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, s.width, s.height)
 }

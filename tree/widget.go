@@ -2,6 +2,7 @@
 package tree
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"slices"
 
 	"github.com/ayn2op/tview"
@@ -116,6 +117,12 @@ func (w Widget) OnSelect(f func(*Node) tview.Msg) Widget {
 // Size returns the width and height of the tree.
 func (w Widget) Size() (width, height tview.Length) {
 	return w.width, w.height
+}
+
+// Layout returns the size of the tree within limits.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	width, height := w.Size()
+	return layout.Atomic(limits, width, height)
 }
 
 // row is a node shown on one line: the row of its parent, its level, and where its lines and text start.

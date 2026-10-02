@@ -1,7 +1,10 @@
 // Package opaque keeps mouse messages from passing through an element to the ones stacked below it.
 package opaque
 
-import "github.com/ayn2op/tview"
+import (
+	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
+)
 
 // Widget drops the mouse messages within its area that its child does not turn into another message.
 type Widget struct {
@@ -18,6 +21,11 @@ func New(child tview.Element) Widget {
 // Size returns the size of the child.
 func (w Widget) Size() (width, height tview.Length) {
 	return tview.SizeOf(w.child)
+}
+
+// Layout lays out the child.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	return w.child.Layout(limits)
 }
 
 // Draw draws the child.

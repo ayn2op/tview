@@ -3,6 +3,7 @@ package button
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -95,6 +96,12 @@ func (w Widget) Focused(focused bool) Widget {
 // Size returns the width and height of the button.
 func (w Widget) Size() (width, height tview.Length) {
 	return w.width, w.height
+}
+
+// Layout returns the size of the button within limits.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	width, height := w.Size()
+	return layout.Atomic(limits, width, height)
 }
 
 // Draw fills area with the style for the button's state and centers the label in it.

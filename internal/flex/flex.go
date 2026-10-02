@@ -1,7 +1,10 @@
 // Package flex lays out elements along one axis. It implements the row and column packages.
 package flex
 
-import "github.com/ayn2op/tview"
+import (
+	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
+)
 
 // Widget lays out its children along one axis. Children take their width and height from tview.SizeOf.
 type Widget struct {
@@ -61,6 +64,12 @@ func (w Widget) Size() (width, height tview.Length) {
 		}
 	}
 	return width, height
+}
+
+// Layout returns the size of the layout within limits.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	width, height := w.Size()
+	return layout.Atomic(limits, width, height)
 }
 
 // contentSize returns the space the fixed-size children need: their sum along the axis plus spacing, and their maximum across it.

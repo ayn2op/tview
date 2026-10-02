@@ -3,15 +3,10 @@ package list
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/scrollbar"
 	"github.com/gdamore/tcell/v3"
 )
-
-// Item is an element in a list that reports how many rows it takes at a width.
-type Item interface {
-	tview.Element
-	Rows(width int) int
-}
 
 // ScrollBarVisibility is when a list shows its scroll bar.
 type ScrollBarVisibility uint8
@@ -27,7 +22,7 @@ const (
 type Widget struct {
 	selectionState SelectionState
 	count          int
-	item           func(index int) Item
+	item           func(index int) tview.Element
 	width, height  tview.Length
 	gap            int
 	selectedStyle  tcell.Style
@@ -40,8 +35,8 @@ type Widget struct {
 
 var _ tview.Element = Widget{}
 
-// New returns a list of count items built by item, with selectionState as its cursor and scroll position, showing the scroll bar when they do not fit.
-func New(selectionState SelectionState, count int, item func(index int) Item) Widget {
+// New returns a list of count items built by item, with selectionState as its cursor and scroll position, showing the scroll bar when they do not fit. An item is as tall as it lays out to at the width of the list, where its height is not limited.
+func New(selectionState SelectionState, count int, item func(index int) tview.Element) Widget {
 	return Widget{
 		selectionState: selectionState,
 		count:          count,
@@ -106,6 +101,12 @@ func (w Widget) Size() (width, height tview.Length) {
 	return w.width, w.height
 }
 
+// Layout returns the size of the list within limits.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	width, height := w.Size()
+	return layout.Atomic(limits, width, height)
+}
+
 // view is the list laid out in an area.
 type view struct {
 	items, bar     tview.Rectangle
@@ -119,13 +120,15 @@ func (v view) maxOffset() int {
 	return max(v.total-v.items.Height, 0)
 }
 
-func (w Widget) layout(width int) (starts, sizes []int, total int) {
+// layout returns where each item starts and how many rows it takes in a view of a size. Items are laid out at the width of the view with an infinite height, as the list scrolls along it.
+func (w Widget) layout(view tview.Size) (starts, sizes []int, total int) {
+	limits := layout.Limits{Max: view, Infinite: layout.Axes{Height: true}}
 	starts, sizes = make([]int, w.count), make([]int, w.count)
 	for i := range w.count {
 		if i > 0 {
 			total += w.gap
 		}
-		starts[i], sizes[i] = total, w.item(i).Rows(width)
+		starts[i], sizes[i] = total, w.item(i).Layout(limits).Height
 		total += sizes[i]
 	}
 	return starts, sizes, total
@@ -137,15 +140,15 @@ func (w Widget) resolve(area tview.Rectangle) view {
 	// Lay out beside the scroll bar first: a list long enough to need it is then laid out once.
 	if area.Width > 1 && (w.visibility == ScrollBarVisibilityAlways || w.visibility == ScrollBarVisibilityAutomatic) {
 		v.items.Width--
-		v.starts, v.sizes, v.total = w.layout(v.items.Width)
+		v.starts, v.sizes, v.total = w.layout(v.items.Size())
 		if w.visibility == ScrollBarVisibilityAlways || v.total > area.Height {
 			v.bar = tview.Rectangle{X: area.X + v.items.Width, Y: area.Y, Width: 1, Height: area.Height}
 		} else {
 			v.items.Width++
-			v.starts, v.sizes, v.total = w.layout(v.items.Width)
+			v.starts, v.sizes, v.total = w.layout(v.items.Size())
 		}
 	} else {
-		v.starts, v.sizes, v.total = w.layout(area.Width)
+		v.starts, v.sizes, v.total = w.layout(area.Size())
 	}
 
 	c := w.selectionState

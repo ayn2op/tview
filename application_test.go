@@ -1,6 +1,7 @@
 package tview
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"strings"
 	"testing"
 
@@ -120,4 +121,12 @@ func TestApplicationRun(t *testing.T) {
 			t.Fatalf("got %d, want 3", got)
 		}
 	})
+}
+
+func (cursorModel) Layout(limits layout.Limits) Size {
+	return layout.Atomic(limits, Fill, Fill)
+}
+
+func (lengthModel) Layout(limits layout.Limits) Size {
+	return layout.Atomic(limits, Fill, Fill)
 }

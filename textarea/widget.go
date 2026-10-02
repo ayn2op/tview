@@ -2,6 +2,7 @@
 package textarea
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"strings"
 
 	"github.com/ayn2op/tview"
@@ -79,6 +80,12 @@ func (w Widget) Focused(focused bool) Widget {
 // Size returns the width and height of the text area.
 func (w Widget) Size() (width, height tview.Length) {
 	return w.width, w.height
+}
+
+// Layout returns the size of the text area within limits.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	width, height := w.Size()
+	return layout.Atomic(limits, width, height)
 }
 
 // line is the byte range of one wrapped line of the value.

@@ -1,7 +1,10 @@
 // Package stack draws elements on top of each other, for overlays such as modal dialogs.
 package stack
 
-import "github.com/ayn2op/tview"
+import (
+	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
+)
 
 // Widget draws its children on top of each other in the same area.
 type Widget struct {
@@ -25,6 +28,11 @@ func (w Widget) Push(child tview.Element) Widget {
 		w.children = append(w.children[:len(w.children):len(w.children)], child)
 	}
 	return w
+}
+
+// Layout returns the size of limits, as the stack takes its whole area.
+func (Widget) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
 }
 
 // Draw draws the children from bottom to top.

@@ -5,6 +5,7 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/box"
 	"github.com/ayn2op/tview/column"
+	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/list"
 	"github.com/ayn2op/tview/row"
 	"github.com/ayn2op/tview/scrollbar"
@@ -73,6 +74,11 @@ func (w Widget) OnCancel(msg tview.Msg) Widget {
 	return w
 }
 
+// Layout returns the size of limits, as the picker takes its whole area.
+func (Widget) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
+}
+
 // Draw draws the query above the list.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	w.layout().Draw(screen, area)
@@ -113,7 +119,7 @@ func (w Widget) layout() tview.Element {
 
 func (w Widget) listView() list.Widget {
 	s, items := w.searchState, w.items
-	return list.New(s.list, s.count(items), func(i int) list.Item { return entry(items[s.index(i)].Text) }).
+	return list.New(s.list, s.count(items), func(i int) tview.Element { return text.New(items[s.index(i)].Text) }).
 		SelectedStyle(tcell.StyleDefault.Reverse(true)).
 		ScrollBar(w.scrollBar, w.scrollBarVisibility).
 		Keybind(w.listKeybind).

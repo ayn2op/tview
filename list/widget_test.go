@@ -1,6 +1,7 @@
 package list
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"strconv"
 	"testing"
 
@@ -13,7 +14,9 @@ import (
 // row is an item one line tall showing its label.
 type row string
 
-func (r row) Rows(int) int { return 1 }
+func (row) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fixed(1))
+}
 
 func (r row) Draw(screen tview.Screen, area tview.Rectangle) {
 	tview.Print(screen, string(r), area.X, area.Y, area.Width, tview.AlignmentLeft, tcell.StyleDefault)
@@ -23,7 +26,7 @@ func (row) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }
 
 // numbers returns a list of count rows labeled 0, 1, and so on.
 func numbers(selectionState SelectionState, count int) Widget {
-	return New(selectionState, count, func(i int) Item { return row(strconv.Itoa(i)) }).
+	return New(selectionState, count, func(i int) tview.Element { return row(strconv.Itoa(i)) }).
 		Focused(true).
 		OnChange(func(a Change) tview.Msg { return a })
 }
@@ -130,7 +133,7 @@ func TestWidgetDraw(t *testing.T) {
 		screen := screentest.New(t, 3, 3)
 		selectionState := NewSelectionState()
 		selectionState.SetCursor(-1)
-		New(selectionState, 1, func(int) Item { return filled{} }).Draw(screen, tview.Rectangle{Y: 1, Width: 3, Height: 1})
+		New(selectionState, 1, func(int) tview.Element { return filled{} }).Draw(screen, tview.Rectangle{Y: 1, Width: 3, Height: 1})
 		if got := screentest.Row(screen, 0, 3) + screentest.Row(screen, 1, 3) + screentest.Row(screen, 2, 3); got != "   xxx   " {
 			t.Fatalf("rows = %q", got)
 		}
@@ -138,9 +141,7 @@ func TestWidgetDraw(t *testing.T) {
 }
 
 // filled is an item that fills more than the area it is given.
-type filled struct{}
-
-func (filled) Rows(int) int { return 1 }
+type filled struct{ row }
 
 func (filled) Draw(screen tview.Screen, area tview.Rectangle) {
 	screen.FillArea(area.X-1, area.Y-1, area.Width+2, area.Height+2, 'x', tcell.StyleDefault)
@@ -183,4 +184,41 @@ func TestStateSetTrackEnd(t *testing.T) {
 			t.Fatalf("last row = %q, want %q", got, "3")
 		}
 	})
+}
+
+// wrapped is an item that takes a row for every width cells of its 6 cells of text.
+type wrapped struct{ row }
+
+func (wrapped) Layout(limits layout.Limits) tview.Size {
+	return tview.Size{Width: limits.Max.Width, Height: (6 + limits.Max.Width - 1) / limits.Max.Width}
+}
+
+// sized is an item of a height.
+type sized struct {
+	row
+	height tview.Length
+}
+
+func (s sized) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, s.height)
+}
+
+func TestItemHeight(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		item tview.Element
+		want int
+	}{
+		{"one row", row(""), 1},
+		{"height for the width", wrapped{}, 2},
+		{"fixed height", sized{height: tview.Fixed(3)}, 3},
+		{"fill height takes the height of the view", sized{height: tview.Fill}, 10},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			list := New(NewSelectionState(), 1, func(int) tview.Element { return tt.item })
+			if _, sizes, _ := list.layout(tview.Size{Width: 4, Height: 10}); sizes[0] != tt.want {
+				t.Fatalf("rows = %d, want %d", sizes[0], tt.want)
+			}
+		})
+	}
 }

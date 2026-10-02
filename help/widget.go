@@ -2,6 +2,7 @@ package help
 
 import (
 	"cmp"
+	"github.com/ayn2op/tview/layout"
 	"strings"
 
 	"github.com/ayn2op/tview"
@@ -78,6 +79,16 @@ func (w Widget) Styles(styles Styles) Widget {
 	return w
 }
 
+// Layout returns the size of the help within limits, as tall as the rows it takes at the width of limits, where a width of 0 is unlimited.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	return layout.Sized(limits, tview.Fill, tview.Shrink, func(limits layout.Limits) tview.Size {
+		if !w.showAll || w.keyMap == nil {
+			return tview.Size{Height: 1}
+		}
+		return tview.Size{Height: len(w.fullHelpSegments(w.keyMap.FullHelp(), limits.Max.Width))}
+	})
+}
+
 // Draw draws the help lines that fit in area.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	if w.keyMap == nil {
@@ -100,14 +111,6 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 
 // Handle passes msg through unchanged.
 func (Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }
-
-// Rows returns the number of rows the help takes at width, where 0 means unlimited.
-func (w Widget) Rows(width int) int {
-	if !w.showAll || w.keyMap == nil {
-		return 1
-	}
-	return len(w.fullHelpSegments(w.keyMap.FullHelp(), width))
-}
 
 func (w Widget) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) richtext.Line {
 	items := make([]richtext.Line, 0, len(bindings))

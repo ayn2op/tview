@@ -1,6 +1,7 @@
 package textview
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -125,8 +126,9 @@ func TestWidgetHandle(t *testing.T) {
 	})
 }
 
-func TestWidgetRows(t *testing.T) {
-	if got := New(lines("ab cd ef", "g")).Rows(6); got != 3 {
-		t.Fatalf("rows = %d, want 3", got)
+func TestWidgetLayout(t *testing.T) {
+	limits := layout.Limits{Max: tview.Size{Width: 6, Height: 10}}
+	if got := New(lines("ab cd ef", "g")).Height(tview.Shrink).Layout(limits); got != (tview.Size{Width: 6, Height: 3}) {
+		t.Fatalf("size = %+v, want 6 by 3", got)
 	}
 }

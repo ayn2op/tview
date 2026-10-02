@@ -3,6 +3,7 @@ package text
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
 	"github.com/rivo/uniseg"
 )
 
@@ -21,6 +22,12 @@ func New(content string) Widget {
 // Size returns the width of the text and a height of one line.
 func (w Widget) Size() (width, height tview.Length) {
 	return tview.Fixed(uniseg.StringWidth(w.content)), tview.Fixed(1)
+}
+
+// Layout returns the size of the text within limits.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	width, height := w.Size()
+	return layout.Atomic(limits, width, height)
 }
 
 // Draw draws the text from the top-left corner of area, cut off at its right edge.

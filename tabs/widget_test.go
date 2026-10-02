@@ -1,6 +1,7 @@
 package tabs
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -117,4 +118,8 @@ func TestWidgetDraw(t *testing.T) {
 			t.Fatalf("row = %q, want %q", got, want)
 		}
 	})
+}
+
+func (greedy) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
 }

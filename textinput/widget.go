@@ -2,6 +2,7 @@
 package textinput
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"strings"
 
 	"github.com/ayn2op/tview"
@@ -78,6 +79,12 @@ func (w Widget) Focused(focused bool) Widget {
 // Size returns the width and a height of one line.
 func (w Widget) Size() (width, height tview.Length) {
 	return w.width, tview.Fixed(1)
+}
+
+// Layout returns the size of the text input within limits.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	width, height := w.Size()
+	return layout.Atomic(limits, width, height)
 }
 
 // shown returns text as it is drawn, masked if a mask is set.

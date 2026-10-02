@@ -1,7 +1,10 @@
 // Package inert draws an element without letting it take input, like HTML's inert attribute, such as for the content behind a dialog.
 package inert
 
-import "github.com/ayn2op/tview"
+import (
+	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
+)
 
 // Widget draws its child but passes every message by it unchanged.
 type Widget struct {
@@ -18,6 +21,11 @@ func New(child tview.Element) Widget {
 // Size returns the size of the child.
 func (w Widget) Size() (width, height tview.Length) {
 	return tview.SizeOf(w.child)
+}
+
+// Layout lays out the child.
+func (w Widget) Layout(limits layout.Limits) tview.Size {
+	return w.child.Layout(limits)
 }
 
 // Draw draws the child.

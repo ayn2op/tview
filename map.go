@@ -1,5 +1,7 @@
 package tview
 
+import "github.com/ayn2op/tview/layout"
+
 type mapped[T any] struct {
 	child Element
 	f     func(T) Msg
@@ -13,6 +15,11 @@ func Map[T any](child Element, f func(T) Msg) Element {
 // Size returns the size of the child.
 func (m mapped[T]) Size() (width, height Length) {
 	return SizeOf(m.child)
+}
+
+// Layout lays out the child.
+func (m mapped[T]) Layout(limits layout.Limits) Size {
+	return m.child.Layout(limits)
 }
 
 // Draw draws the child.

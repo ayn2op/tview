@@ -2,6 +2,7 @@
 package scrollbar
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"math/bits"
 
 	"github.com/ayn2op/tview"
@@ -162,6 +163,11 @@ func (w Widget) glyph(start, fill int) (string, tcell.Style) {
 	default:
 		return w.glyphs.ThumbVerticalLower[fill-1], w.thumbStyle
 	}
+}
+
+// Layout returns the size of limits, as the scroll bar takes its whole area.
+func (Widget) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
 }
 
 // Draw clears area and draws the scroll bar down its first column, unless all the content is visible.

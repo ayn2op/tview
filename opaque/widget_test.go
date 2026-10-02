@@ -1,6 +1,7 @@
 package opaque
 
 import (
+	"github.com/ayn2op/tview/layout"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -50,4 +51,8 @@ func TestWidgetHandle(t *testing.T) {
 			t.Fatalf("got %v", got)
 		}
 	})
+}
+
+func (clicker) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
 }

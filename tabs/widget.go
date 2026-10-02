@@ -3,6 +3,7 @@ package tabs
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
@@ -115,6 +116,11 @@ func (w Widget) OnSelect(onSelect func(index int) tview.Msg) Widget {
 	return w
 }
 
+// Layout returns the size of limits, as the tabs takes its whole area.
+func (Widget) Layout(limits layout.Limits) tview.Size {
+	return layout.Atomic(limits, tview.Fill, tview.Fill)
+}
+
 // Draw draws the labels on the first row of area, highlighting the active one, and the content below them.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	l := w.layout(area)
@@ -207,7 +213,7 @@ func contentArea(area tview.Rectangle) tview.Rectangle {
 }
 
 // layout is where the labels are drawn on the first row of an area.
-type layout struct {
+type labelLayout struct {
 	// xs and widths are where each padded label starts and how wide it is, with gap cells between labels for the separator.
 	xs, widths []int
 	gap        int
@@ -218,8 +224,8 @@ type layout struct {
 }
 
 // layout places the labels in area by the alignment, or when they do not fit, centers the active one without scrolling past the first or last label.
-func (w Widget) layout(area tview.Rectangle) layout {
-	l := layout{gap: uniseg.StringWidth(w.separator), left: area.X, right: area.X + area.Width}
+func (w Widget) layout(area tview.Rectangle) labelLayout {
+	l := labelLayout{gap: uniseg.StringWidth(w.separator), left: area.X, right: area.X + area.Width}
 	stripWidth := -l.gap // no separator after the last label
 	for _, label := range w.labels {
 		width := uniseg.StringWidth(w.paddingLeft + label + w.paddingRight)
@@ -250,7 +256,7 @@ func (w Widget) layout(area tview.Rectangle) layout {
 }
 
 // print draws text, width cells wide from x, on row y, cut to the columns the labels are drawn in.
-func (l layout) print(screen tview.Screen, text string, x, width, y int, style tcell.Style) {
+func (l labelLayout) print(screen tview.Screen, text string, x, width, y int, style tcell.Style) {
 	// Right alignment cuts the start of text that begins before the columns, center alignment both ends.
 	end := x + width
 	alignment := tview.AlignmentLeft

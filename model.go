@@ -1,6 +1,9 @@
 package tview
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"github.com/ayn2op/tview/layout"
+	"github.com/gdamore/tcell/v3"
+)
 
 type Screen = tcell.Screen
 
@@ -21,6 +24,11 @@ type Rectangle struct {
 	X, Y, Width, Height int
 }
 
+// Size returns the width and height of r.
+func (r Rectangle) Size() Size {
+	return Size{Width: r.Width, Height: r.Height}
+}
+
 // Contains reports whether the point x, y lies within r.
 func (r Rectangle) Contains(x, y int) bool {
 	return x >= r.X && x < r.X+r.Width && y >= r.Y && y < r.Y+r.Height
@@ -28,6 +36,8 @@ func (r Rectangle) Contains(x, y int) bool {
 
 // Element is a drawable part of the user interface.
 type Element interface {
+	// Layout returns the size the element takes within limits, as iced's Widget::layout does. Its parent uses it to measure the element, as a list does to learn how tall each item is at its width.
+	Layout(limits layout.Limits) Size
 	// Draw draws the element onto the screen within the given area.
 	Draw(Screen, Rectangle)
 	// Handle translates a message, such as input received within the given area, into the message passed to Update. It returns nil to drop the message.

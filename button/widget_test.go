@@ -51,7 +51,7 @@ func TestWidgetDraw(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
 		button Widget
-		want   tcell.Style
+		want   tview.Style
 	}{
 		{"normal", New(), tcell.StyleDefault},
 		{"focused", New().Focused(true), tcell.StyleDefault.Reverse(true)},

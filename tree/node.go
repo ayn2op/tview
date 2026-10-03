@@ -3,6 +3,7 @@ package tree
 import (
 	"slices"
 
+	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/richtext"
 	"github.com/gdamore/tcell/v3"
 )
@@ -19,7 +20,7 @@ type Node struct {
 	line richtext.Line
 
 	// The style of selected text.
-	selectedTextStyle tcell.Style
+	selectedTextStyle tview.Style
 
 	// Whether or not this node can be selected.
 	selectable bool
@@ -178,12 +179,12 @@ func (n *Node) CollapseAll() *Node {
 }
 
 // SelectedTextStyle returns the text style for this node when it is selected.
-func (n *Node) SelectedTextStyle() tcell.Style {
+func (n *Node) SelectedTextStyle() tview.Style {
 	return n.selectedTextStyle
 }
 
 // SetSelectedTextStyle sets the text style for this node when it is selected.
-func (n *Node) SetSelectedTextStyle(style tcell.Style) *Node {
+func (n *Node) SetSelectedTextStyle(style tview.Style) *Node {
 	n.selectedTextStyle = style
 	return n
 }

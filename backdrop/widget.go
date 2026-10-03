@@ -9,7 +9,7 @@ import (
 
 // Widget merges its style into everything already drawn within its area and hides the cursor.
 type Widget struct {
-	style tcell.Style
+	style tview.Style
 }
 
 var _ tview.Element = Widget{}
@@ -20,7 +20,7 @@ func New() Widget {
 }
 
 // Style sets the style merged into the cells behind the backdrop with tview.MergeStyle.
-func (w Widget) Style(style tcell.Style) Widget {
+func (w Widget) Style(style tview.Style) Widget {
 	w.style = style
 	return w
 }

@@ -5,7 +5,7 @@ import "github.com/gdamore/tcell/v3"
 type Style = tcell.Style
 
 // MergeStyle layers b on top of a and returns the result, merging every style component. Colors (foreground, background, underline) set on b — i.e. not [tcell.ColorDefault] — override a's; otherwise a's are kept. The underline style and hyperlink set on b likewise win over a's. Boolean attributes (bold, dim, italic, blink, reverse, strikethrough) are the union of both.
-func MergeStyle(a, b tcell.Style) tcell.Style {
+func MergeStyle(a, b Style) Style {
 	fg := b.GetForeground()
 	if fg == tcell.ColorDefault {
 		fg = a.GetForeground()

@@ -2,11 +2,17 @@
 package tree
 
 import (
-	"github.com/ayn2op/tview/layout"
 	"slices"
+
+	"github.com/ayn2op/tview/layout"
 
 	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
+)
+
+const (
+	expandedMarker  = "▾ "
+	collapsedMarker = "▸ "
 )
 
 // Markers are drawn before a node's text depending on whether it is expanded.
@@ -25,7 +31,7 @@ type Widget struct {
 	markers        Markers
 	graphics       bool
 	graphicsSet    tview.BorderSet
-	graphicsStyle  tcell.Style
+	graphicsStyle  tview.Style
 	keybind        func(tview.KeyMsg) Action
 	focused        bool
 	onChange       func(Change) tview.Msg
@@ -41,7 +47,7 @@ func New(root *Node, selectionState SelectionState) Widget {
 		selectionState: selectionState,
 		width:          layout.Fill,
 		height:         layout.Fill,
-		markers:        Markers{Expanded: "▾ ", Collapsed: "▸ "},
+		markers:        Markers{Expanded: expandedMarker, Collapsed: collapsedMarker},
 		graphics:       true,
 		graphicsSet:    tview.BorderSetPlain(),
 		keybind:        DefaultKeybind,
@@ -85,7 +91,7 @@ func (w Widget) GraphicsSet(set tview.BorderSet) Widget {
 }
 
 // GraphicsStyle sets the style of the lines.
-func (w Widget) GraphicsStyle(style tcell.Style) Widget {
+func (w Widget) GraphicsStyle(style tview.Style) Widget {
 	w.graphicsStyle = style
 	return w
 }
@@ -209,9 +215,6 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 				a := v.rows[ancestor]
 				parent := v.rows[a.parent].node
 				if a.gx < width && parent.children[len(parent.children)-1] != a.node {
-					if y-1 >= area.Y && a.tx > a.gx {
-						tview.PrintJoinedSemigraphics(screen, x+a.gx, y-1, set.Left, w.graphicsStyle)
-					}
 					screen.Put(x+a.gx, y, set.Right, w.graphicsStyle)
 				}
 			}
@@ -222,7 +225,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 						connector = set.LeftT
 					}
 				}
-				tview.PrintJoinedSemigraphics(screen, x+current.gx, y, connector, w.graphicsStyle)
+				screen.Put(x+current.gx, y, connector, w.graphicsStyle)
 				for pos := current.gx + 1; pos < current.tx && pos < width; pos++ {
 					screen.Put(x+pos, y, set.Top, w.graphicsStyle)
 				}

@@ -25,7 +25,7 @@ type Widget struct {
 	item           func(index int) tview.Element
 	width, height  layout.Length
 	gap            int
-	selectedStyle  tcell.Style
+	selectedStyle  tview.Style
 	scrollBar      scrollbar.Widget
 	visibility     ScrollBarVisibility
 	keybind        func(tview.KeyMsg) Action
@@ -68,7 +68,7 @@ func (w Widget) Gap(gap int) Widget {
 }
 
 // SelectedStyle sets the style merged into the selected item.
-func (w Widget) SelectedStyle(style tcell.Style) Widget {
+func (w Widget) SelectedStyle(style tview.Style) Widget {
 	w.selectedStyle = style
 	return w
 }

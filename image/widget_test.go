@@ -1,10 +1,11 @@
 package image
 
 import (
-	"github.com/ayn2op/tview/layout"
 	"image"
 	stdcolor "image/color"
 	"testing"
+
+	"github.com/ayn2op/tview/layout"
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
@@ -48,7 +49,7 @@ func TestWidgetDraw(t *testing.T) {
 	New(column(red, blue, faint, translucent)).Draw(screen, tview.Rectangle{Width: 1, Height: 2})
 	for y, want := range []struct {
 		str   string
-		style tcell.Style
+		style tview.Style
 	}{
 		{"▀", tcell.StyleDefault.Foreground(color.FromImageColor(red)).Background(color.FromImageColor(blue))},
 		{"▄", tcell.StyleDefault.Foreground(color.NewRGBColor(0, 255, 0))},

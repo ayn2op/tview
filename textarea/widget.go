@@ -2,8 +2,9 @@
 package textarea
 
 import (
-	"github.com/ayn2op/tview/layout"
 	"strings"
+
+	"github.com/ayn2op/tview/layout"
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/grapheme"
@@ -17,7 +18,7 @@ type Widget struct {
 	editState     *EditState
 	width, height layout.Length
 	placeholder   string
-	style         tcell.Style
+	style         tview.Style
 	keybind       func(tview.KeyMsg) Action
 	onChange      func(Change) tview.Msg
 	focused       bool
@@ -54,7 +55,7 @@ func (w Widget) Placeholder(placeholder string) Widget {
 }
 
 // Style sets the style of the text area.
-func (w Widget) Style(style tcell.Style) Widget {
+func (w Widget) Style(style tview.Style) Widget {
 	w.style = style
 	return w
 }

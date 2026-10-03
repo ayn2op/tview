@@ -5,7 +5,6 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/richtext"
-	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
 
@@ -17,7 +16,7 @@ type Widget struct {
 	wrap          bool
 	wordWrap      bool
 	alignment     tview.Alignment
-	style         tcell.Style
+	style         tview.Style
 	keybind       func(tview.KeyMsg) Action
 	onChange      func(Change) tview.Msg
 	focused       bool
@@ -69,7 +68,7 @@ func (w Widget) Alignment(alignment tview.Alignment) Widget {
 }
 
 // Style sets the style of the background and the text beneath the text's own styles.
-func (w Widget) Style(style tcell.Style) Widget {
+func (w Widget) Style(style tview.Style) Widget {
 	w.style = style
 	return w
 }

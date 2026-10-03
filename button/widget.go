@@ -11,9 +11,9 @@ import (
 type Widget struct {
 	label         string
 	width, height layout.Length
-	style         tcell.Style
-	focusedStyle  tcell.Style
-	disabledStyle tcell.Style
+	style         tview.Style
+	focusedStyle  tview.Style
+	disabledStyle tview.Style
 	keybind       func(tview.KeyMsg) Action
 	onClick       tview.Msg
 	disabled      bool
@@ -52,19 +52,19 @@ func (w Widget) Height(height layout.Length) Widget {
 }
 
 // Style sets the style of the button.
-func (w Widget) Style(style tcell.Style) Widget {
+func (w Widget) Style(style tview.Style) Widget {
 	w.style = style
 	return w
 }
 
 // FocusedStyle sets the style of the button when it is focused.
-func (w Widget) FocusedStyle(style tcell.Style) Widget {
+func (w Widget) FocusedStyle(style tview.Style) Widget {
 	w.focusedStyle = style
 	return w
 }
 
 // DisabledStyle sets the style of the button when it is disabled.
-func (w Widget) DisabledStyle(style tcell.Style) Widget {
+func (w Widget) DisabledStyle(style tview.Style) Widget {
 	w.disabledStyle = style
 	return w
 }

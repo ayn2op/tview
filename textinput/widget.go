@@ -2,8 +2,9 @@
 package textinput
 
 import (
-	"github.com/ayn2op/tview/layout"
 	"strings"
+
+	"github.com/ayn2op/tview/layout"
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/grapheme"
@@ -15,7 +16,7 @@ import (
 type Widget struct {
 	editState *EditState
 	width     layout.Length
-	style     tcell.Style
+	style     tview.Style
 	mask      string
 	keybind   func(tview.KeyMsg) Action
 	onChange  func(Change) tview.Msg
@@ -41,7 +42,7 @@ func (w Widget) Width(width layout.Length) Widget {
 }
 
 // Style sets the style of the text input.
-func (w Widget) Style(style tcell.Style) Widget {
+func (w Widget) Style(style tview.Style) Widget {
 	w.style = style
 	return w
 }

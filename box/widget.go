@@ -8,6 +8,8 @@ import (
 	"github.com/rivo/uniseg"
 )
 
+const ellipsis = "…"
+
 // Widget draws a background, border, title, and footer, with its child inside them.
 type Widget struct {
 	child         tview.Element
@@ -16,11 +18,11 @@ type Widget struct {
 	background                      tcell.Color
 	borders                         tview.Borders
 	borderSet                       tview.BorderSet
-	borderStyle                     tcell.Style
+	borderStyle                     tview.Style
 	paddingTop, paddingBottom       int
 	paddingLeft, paddingRight       int
 	title, footer                   string
-	titleStyle, footerStyle         tcell.Style
+	titleStyle, footerStyle         tview.Style
 	titleAlignment, footerAlignment tview.Alignment
 }
 
@@ -69,7 +71,7 @@ func (w Widget) BorderSet(set tview.BorderSet) Widget {
 }
 
 // BorderStyle sets the style of the border.
-func (w Widget) BorderStyle(style tcell.Style) Widget {
+func (w Widget) BorderStyle(style tview.Style) Widget {
 	w.borderStyle = style
 	return w
 }
@@ -87,7 +89,7 @@ func (w Widget) Title(title string) Widget {
 }
 
 // TitleStyle sets the style of the title.
-func (w Widget) TitleStyle(style tcell.Style) Widget {
+func (w Widget) TitleStyle(style tview.Style) Widget {
 	w.titleStyle = style
 	return w
 }
@@ -105,7 +107,7 @@ func (w Widget) Footer(footer string) Widget {
 }
 
 // FooterStyle sets the style of the footer.
-func (w Widget) FooterStyle(style tcell.Style) Widget {
+func (w Widget) FooterStyle(style tview.Style) Widget {
 	w.footerStyle = style
 	return w
 }
@@ -162,7 +164,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	left, top := area.X, area.Y
 	right, bottom := area.X+area.Width-1, area.Y+area.Height-1
 
-	fill := func(x0, y0, x1, y1 int, str string, style tcell.Style) {
+	fill := func(x0, y0, x1, y1 int, str string, style tview.Style) {
 		for y := y0; y <= y1; y++ {
 			for x := x0; x <= x1; x++ {
 				screen.Put(x, y, str, style)
@@ -199,7 +201,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 }
 
 // label draws text on row y inside the corners of area, ending it with an ellipsis if it is cut off.
-func label(screen tview.Screen, text string, area tview.Rectangle, y int, alignment tview.Alignment, style tcell.Style) {
+func label(screen tview.Screen, text string, area tview.Rectangle, y int, alignment tview.Alignment, style tview.Style) {
 	if text == "" || area.Width < 4 {
 		return
 	}
@@ -208,7 +210,7 @@ func label(screen tview.Screen, text string, area tview.Rectangle, y int, alignm
 		if alignment == tview.AlignmentRight {
 			x = area.X + 1
 		}
-		screen.Put(x, y, tview.SemigraphicsHorizontalEllipsis, style)
+		screen.Put(x, y, ellipsis, style)
 	}
 }
 

@@ -12,6 +12,11 @@ import (
 )
 
 // Pixels less opaque than minAlpha are drawn as transparent, so antialiased edges do not show as dark cells.
+const (
+	upperHalfBlock = "▀"
+	lowerHalfBlock = "▄"
+)
+
 const minAlpha = 50
 
 // Widget draws an image scaled to fit its area, preserving its aspect ratio.
@@ -86,9 +91,9 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 			top, bottom := pixel(x, y), pixel(x, y+1)
 			switch {
 			case top != color.Default:
-				screen.Put(area.X+x, area.Y+y/2, "▀", tcell.StyleDefault.Foreground(top).Background(bottom))
+				screen.Put(area.X+x, area.Y+y/2, upperHalfBlock, tcell.StyleDefault.Foreground(top).Background(bottom))
 			case bottom != color.Default:
-				screen.Put(area.X+x, area.Y+y/2, "▄", tcell.StyleDefault.Foreground(bottom))
+				screen.Put(area.X+x, area.Y+y/2, lowerHalfBlock, tcell.StyleDefault.Foreground(bottom))
 			}
 		}
 	}

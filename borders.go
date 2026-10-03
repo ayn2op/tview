@@ -35,61 +35,61 @@ func BorderSetHidden() BorderSet {
 
 func BorderSetPlain() BorderSet {
 	return BorderSet{
-		Top:         BoxDrawingsLightHorizontal,
-		Bottom:      BoxDrawingsLightHorizontal,
-		Left:        BoxDrawingsLightVertical,
-		Right:       BoxDrawingsLightVertical,
-		TopLeft:     BoxDrawingsLightDownAndRight,
-		TopRight:    BoxDrawingsLightDownAndLeft,
-		BottomLeft:  BoxDrawingsLightUpAndRight,
-		BottomRight: BoxDrawingsLightUpAndLeft,
-		TopT:        BoxDrawingsLightDownAndHorizontal,
-		BottomT:     BoxDrawingsLightUpAndHorizontal,
-		LeftT:       BoxDrawingsLightVerticalAndRight,
-		RightT:      BoxDrawingsLightVerticalAndLeft,
+		Top:         "─",
+		Bottom:      "─",
+		Left:        "│",
+		Right:       "│",
+		TopLeft:     "┌",
+		TopRight:    "┐",
+		BottomLeft:  "└",
+		BottomRight: "┘",
+		TopT:        "┬",
+		BottomT:     "┴",
+		LeftT:       "├",
+		RightT:      "┤",
 	}
 }
 
 func BorderSetRound() BorderSet {
 	b := BorderSetPlain()
-	b.TopLeft = BoxDrawingsLightArcDownAndRight
-	b.TopRight = BoxDrawingsLightArcDownAndLeft
-	b.BottomLeft = BoxDrawingsLightArcUpAndRight
-	b.BottomRight = BoxDrawingsLightArcUpAndLeft
+	b.TopLeft = "╭"
+	b.TopRight = "╮"
+	b.BottomLeft = "╰"
+	b.BottomRight = "╯"
 	return b
 }
 
 func BorderSetThick() BorderSet {
 	return BorderSet{
-		Top:         BoxDrawingsHeavyHorizontal,
-		Bottom:      BoxDrawingsHeavyHorizontal,
-		Left:        BoxDrawingsHeavyVertical,
-		Right:       BoxDrawingsHeavyVertical,
-		TopLeft:     BoxDrawingsHeavyDownAndRight,
-		TopRight:    BoxDrawingsHeavyDownAndLeft,
-		BottomLeft:  BoxDrawingsHeavyUpAndRight,
-		BottomRight: BoxDrawingsHeavyUpAndLeft,
-		TopT:        BoxDrawingsHeavyDownAndHorizontal,
-		BottomT:     BoxDrawingsHeavyUpAndHorizontal,
-		LeftT:       BoxDrawingsHeavyVerticalAndRight,
-		RightT:      BoxDrawingsHeavyVerticalAndLeft,
+		Top:         "━",
+		Bottom:      "━",
+		Left:        "┃",
+		Right:       "┃",
+		TopLeft:     "┏",
+		TopRight:    "┓",
+		BottomLeft:  "┗",
+		BottomRight: "┛",
+		TopT:        "┳",
+		BottomT:     "┻",
+		LeftT:       "┣",
+		RightT:      "┫",
 	}
 }
 
 func BorderSetDouble() BorderSet {
 	return BorderSet{
-		Top:         BoxDrawingsDoubleHorizontal,
-		Bottom:      BoxDrawingsDoubleHorizontal,
-		Left:        BoxDrawingsDoubleVertical,
-		Right:       BoxDrawingsDoubleVertical,
-		TopLeft:     BoxDrawingsDoubleDownAndRight,
-		TopRight:    BoxDrawingsDoubleDownAndLeft,
-		BottomLeft:  BoxDrawingsDoubleUpAndRight,
-		BottomRight: BoxDrawingsDoubleUpAndLeft,
-		TopT:        BoxDrawingsDoubleDownAndHorizontal,
-		BottomT:     BoxDrawingsDoubleUpAndHorizontal,
-		LeftT:       BoxDrawingsDoubleVerticalAndRight,
-		RightT:      BoxDrawingsDoubleVerticalAndLeft,
+		Top:         "═",
+		Bottom:      "═",
+		Left:        "║",
+		Right:       "║",
+		TopLeft:     "╔",
+		TopRight:    "╗",
+		BottomLeft:  "╚",
+		BottomRight: "╝",
+		TopT:        "╦",
+		BottomT:     "╩",
+		LeftT:       "╠",
+		RightT:      "╣",
 	}
 }
 

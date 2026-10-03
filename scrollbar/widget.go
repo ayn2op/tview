@@ -38,8 +38,8 @@ type Widget struct {
 	content, viewport, offset int
 	horizontal                bool
 	symbols                   SymbolSet
-	thumbStyle, trackStyle    tcell.Style
-	beginStyle, endStyle      tcell.Style
+	thumbStyle, trackStyle    tview.Style
+	beginStyle, endStyle      tview.Style
 }
 
 var _ tview.Element = Widget{}
@@ -98,31 +98,31 @@ func (w Widget) EndSymbol(symbol string) Widget {
 }
 
 // Style sets the style of every part of the scroll bar.
-func (w Widget) Style(style tcell.Style) Widget {
+func (w Widget) Style(style tview.Style) Widget {
 	w.thumbStyle, w.trackStyle, w.beginStyle, w.endStyle = style, style, style, style
 	return w
 }
 
 // ThumbStyle sets the style of the thumb.
-func (w Widget) ThumbStyle(style tcell.Style) Widget {
+func (w Widget) ThumbStyle(style tview.Style) Widget {
 	w.thumbStyle = style
 	return w
 }
 
 // TrackStyle sets the style of the track.
-func (w Widget) TrackStyle(style tcell.Style) Widget {
+func (w Widget) TrackStyle(style tview.Style) Widget {
 	w.trackStyle = style
 	return w
 }
 
 // BeginStyle sets the style of the character at the top end.
-func (w Widget) BeginStyle(style tcell.Style) Widget {
+func (w Widget) BeginStyle(style tview.Style) Widget {
 	w.beginStyle = style
 	return w
 }
 
 // EndStyle sets the style of the character at the bottom end.
-func (w Widget) EndStyle(style tcell.Style) Widget {
+func (w Widget) EndStyle(style tview.Style) Widget {
 	w.endStyle = style
 	return w
 }
@@ -184,7 +184,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 
 	// put draws symbol in cell i of the scroll bar.
-	put := func(i int, symbol string, style tcell.Style) {
+	put := func(i int, symbol string, style tview.Style) {
 		if w.horizontal {
 			screen.Put(area.X+i, area.Y, symbol, style)
 		} else {

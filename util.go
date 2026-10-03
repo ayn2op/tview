@@ -1,7 +1,6 @@
 package tview
 
 import (
-	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
 
@@ -14,7 +13,7 @@ const (
 )
 
 // Print draws text on row y from x, at most width cells wide and aligned within them, and returns the width it drew. Text too wide for a right or center alignment loses its start, or both ends.
-func Print(screen Screen, text string, x, y, width int, alignment Alignment, style tcell.Style) int {
+func Print(screen Screen, text string, x, y, width int, alignment Alignment, style Style) int {
 	if width <= 0 {
 		return 0
 	}

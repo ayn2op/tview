@@ -20,8 +20,8 @@ type Widget struct {
 	buttons               []string
 	focus                 int
 	background, textColor tcell.Color
-	buttonStyle           tcell.Style
-	activatedStyle        tcell.Style
+	buttonStyle           tview.Style
+	activatedStyle        tview.Style
 	keybind               func(tview.KeyMsg) Action
 	onFocus               func(index int) tview.Msg
 	onDone                func(index int, label string) tview.Msg
@@ -74,13 +74,13 @@ func (w Widget) TextColor(color tcell.Color) Widget {
 }
 
 // ButtonStyle sets the style of the buttons that are not focused.
-func (w Widget) ButtonStyle(style tcell.Style) Widget {
+func (w Widget) ButtonStyle(style tview.Style) Widget {
 	w.buttonStyle = style
 	return w
 }
 
 // ActivatedStyle sets the style of the focused button.
-func (w Widget) ActivatedStyle(style tcell.Style) Widget {
+func (w Widget) ActivatedStyle(style tview.Style) Widget {
 	w.activatedStyle = style
 	return w
 }
@@ -175,7 +175,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 // text draws lines centered in the width of its area.
 type text struct {
 	lines []string
-	style tcell.Style
+	style tview.Style
 }
 
 // Size returns Fill and a height of one row for each line.

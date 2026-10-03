@@ -16,6 +16,11 @@ import (
 )
 
 // bottom border + value
+const (
+	prompt    = "> "
+	separator = "─"
+)
+
 const inputHeight = 2
 
 // Widget is a query above the list of items that match it.
@@ -115,9 +120,9 @@ func (w Widget) layout() tview.Element {
 		OnChange(w.queryChange)
 	// A line below the query separates it from the list.
 	var line tview.BorderSet
-	line.Bottom = tview.BoxDrawingsLightHorizontal
+	line.Bottom = separator
 	line.BottomLeft, line.BottomRight = line.Bottom, line.Bottom
-	header := box.New(row.New(text.New("> "), query)).Borders(tview.BordersBottom).BorderSet(line).BorderStyle(tcell.StyleDefault.Dim(true))
+	header := box.New(row.New(text.New(prompt), query)).Borders(tview.BordersBottom).BorderSet(line).BorderStyle(tcell.StyleDefault.Dim(true))
 	return column.New(column.New(header).Height(layout.Fixed(inputHeight)), w.listView())
 }
 

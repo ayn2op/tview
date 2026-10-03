@@ -13,7 +13,7 @@ type Widget struct {
 	labels                         []string
 	active                         int
 	content                        tview.Element
-	style, activeStyle, arrowStyle tcell.Style
+	style, activeStyle, arrowStyle tview.Style
 	alignment                      tview.Alignment
 	separator                      string
 	paddingLeft, paddingRight      string
@@ -51,13 +51,13 @@ func (w Widget) Content(content tview.Element) Widget {
 }
 
 // Style sets the style of the row and of the labels of inactive tabs.
-func (w Widget) Style(style tcell.Style) Widget {
+func (w Widget) Style(style tview.Style) Widget {
 	w.style = style
 	return w
 }
 
 // ActiveStyle sets the style of the label of the active tab.
-func (w Widget) ActiveStyle(style tcell.Style) Widget {
+func (w Widget) ActiveStyle(style tview.Style) Widget {
 	w.activeStyle = style
 	return w
 }
@@ -93,7 +93,7 @@ func (w Widget) ClickableArrows(clickable bool) Widget {
 }
 
 // ArrowStyle sets the style of the arrows.
-func (w Widget) ArrowStyle(style tcell.Style) Widget {
+func (w Widget) ArrowStyle(style tview.Style) Widget {
 	w.arrowStyle = style
 	return w
 }
@@ -261,7 +261,7 @@ func (w Widget) layout(area tview.Rectangle) labelLayout {
 }
 
 // print draws text, width cells wide from x, on row y, cut to the columns the labels are drawn in.
-func (l labelLayout) print(screen tview.Screen, text string, x, width, y int, style tcell.Style) {
+func (l labelLayout) print(screen tview.Screen, text string, x, width, y int, style tview.Style) {
 	// Right alignment cuts the start of text that begins before the columns, center alignment both ends.
 	end := x + width
 	alignment := tview.AlignmentLeft

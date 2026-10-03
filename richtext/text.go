@@ -5,18 +5,18 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gdamore/tcell/v3"
+	"github.com/ayn2op/tview"
 	"github.com/rivo/uniseg"
 )
 
 // Segment is a styled string.
 type Segment struct {
 	Text  string
-	Style tcell.Style
+	Style tview.Style
 }
 
 // NewSegment returns a styled segment.
-func NewSegment(text string, style tcell.Style) Segment {
+func NewSegment(text string, style tview.Style) Segment {
 	return Segment{Text: text, Style: style}
 }
 
@@ -85,7 +85,7 @@ type Builder struct {
 }
 
 // Write appends styled text.
-func (b *Builder) Write(value string, style tcell.Style) {
+func (b *Builder) Write(value string, style tview.Style) {
 	for {
 		line, rest, found := strings.Cut(value, "\n")
 		b.WriteSegment(NewSegment(line, style))

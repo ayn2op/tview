@@ -2,14 +2,21 @@ package help
 
 import (
 	"cmp"
-	"github.com/ayn2op/tview/layout"
 	"strings"
+
+	"github.com/ayn2op/tview/layout"
+	"github.com/gdamore/tcell/v3"
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/keybind"
 	"github.com/ayn2op/tview/richtext"
-	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
+)
+
+const (
+	defaultShortSeparator = " • "
+	defaultFullSeparator  = "    "
+	defaultEllipsis       = "…"
 )
 
 type KeyMap interface {
@@ -21,25 +28,33 @@ type KeyMap interface {
 
 // Widget draws the keybinds of a KeyMap on one line, or in columns when showing all.
 type Widget struct {
-	styles           Styles
-	keyMap           KeyMap
-	showAll          bool
-	compactModifiers bool
-	shortSeparator   string
-	fullSeparator    string
-	ellipsis         string
+	shortKeyStyle, shortDescStyle           tview.Style
+	fullKeyStyle, fullDescStyle             tview.Style
+	shortSeparatorStyle, fullSeparatorStyle tview.Style
+	ellipsisStyle                           tview.Style
+	keyMap                                  KeyMap
+	showAll                                 bool
+	compactModifiers                        bool
+	shortSeparator                          string
+	fullSeparator                           string
+	ellipsis                                string
 }
 
 var _ tview.Element = Widget{}
 
 // New returns help for keyMap showing its short help.
 func New(keyMap KeyMap) Widget {
+	dim := tcell.StyleDefault.Dim(true)
 	return Widget{
-		keyMap:         keyMap,
-		styles:         DefaultStyles(),
-		shortSeparator: " • ",
-		fullSeparator:  "    ",
-		ellipsis:       "…",
+		keyMap:              keyMap,
+		shortKeyStyle:       dim,
+		fullKeyStyle:        dim,
+		shortSeparatorStyle: dim,
+		fullSeparatorStyle:  dim,
+		ellipsisStyle:       dim,
+		shortSeparator:      defaultShortSeparator,
+		fullSeparator:       defaultFullSeparator,
+		ellipsis:            defaultEllipsis,
 	}
 }
 
@@ -73,9 +88,45 @@ func (w Widget) Ellipsis(ellipsis string) Widget {
 	return w
 }
 
-// Styles sets the styles of keys, descriptions, separators, and the ellipsis.
-func (w Widget) Styles(styles Styles) Widget {
-	w.styles = styles
+// ShortKeyStyle sets the style of keys in the short help.
+func (w Widget) ShortKeyStyle(style tview.Style) Widget {
+	w.shortKeyStyle = style
+	return w
+}
+
+// ShortDescStyle sets the style of descriptions in the short help.
+func (w Widget) ShortDescStyle(style tview.Style) Widget {
+	w.shortDescStyle = style
+	return w
+}
+
+// FullKeyStyle sets the style of keys in the full help.
+func (w Widget) FullKeyStyle(style tview.Style) Widget {
+	w.fullKeyStyle = style
+	return w
+}
+
+// FullDescStyle sets the style of descriptions in the full help.
+func (w Widget) FullDescStyle(style tview.Style) Widget {
+	w.fullDescStyle = style
+	return w
+}
+
+// ShortSeparatorStyle sets the style of the separator in the short help.
+func (w Widget) ShortSeparatorStyle(style tview.Style) Widget {
+	w.shortSeparatorStyle = style
+	return w
+}
+
+// FullSeparatorStyle sets the style of the separator in the full help.
+func (w Widget) FullSeparatorStyle(style tview.Style) Widget {
+	w.fullSeparatorStyle = style
+	return w
+}
+
+// EllipsisStyle sets the style of the ellipsis.
+func (w Widget) EllipsisStyle(style tview.Style) Widget {
+	w.ellipsisStyle = style
 	return w
 }
 
@@ -121,7 +172,7 @@ func (w Widget) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) rich
 	items := make([]richtext.Line, 0, len(bindings))
 	for _, kb := range bindings {
 		hp := kb.Help()
-		item := shortItemSegments(w.formatKey(hp.Key), hp.Desc, w.styles.ShortKey, w.styles.ShortDesc)
+		item := shortItemSegments(w.formatKey(hp.Key), hp.Desc, w.shortKeyStyle, w.shortDescStyle)
 		if len(item) == 0 {
 			continue
 		}
@@ -131,7 +182,7 @@ func (w Widget) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) rich
 		return nil
 	}
 
-	sep := richtext.Segment{Text: cmp.Or(w.shortSeparator, " "), Style: w.styles.ShortSeparator}
+	sep := richtext.Segment{Text: cmp.Or(w.shortSeparator, " "), Style: w.shortSeparatorStyle}
 
 	out := items[0].Clone()
 	for i := 1; i < len(items); i++ {
@@ -150,7 +201,7 @@ func (w Widget) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) rich
 }
 
 func (w Widget) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) []richtext.Line {
-	sep := richtext.Segment{Text: cmp.Or(w.fullSeparator, " "), Style: w.styles.FullSeparator}
+	sep := richtext.Segment{Text: cmp.Or(w.fullSeparator, " "), Style: w.fullSeparatorStyle}
 	var columns [][]richtext.Line
 	var widths []int
 	width, truncated := 0, false
@@ -173,7 +224,7 @@ func (w Widget) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) []ric
 	}
 	if len(columns) == 0 {
 		if truncated {
-			return []richtext.Line{{{Text: w.ellipsis, Style: w.styles.Ellipsis}}}
+			return []richtext.Line{{{Text: w.ellipsis, Style: w.ellipsisStyle}}}
 		}
 		return nil
 	}
@@ -195,7 +246,7 @@ func (w Widget) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) []ric
 			}
 			// Every column but the last is padded to its width so the separators line up.
 			if pad := widths[i] - cell.Width(); pad > 0 && (i < len(columns)-1 || row >= len(column)) {
-				cell = append(cell.Clone(), richtext.Segment{Text: strings.Repeat(" ", pad), Style: w.styles.FullDesc})
+				cell = append(cell.Clone(), richtext.Segment{Text: strings.Repeat(" ", pad), Style: w.fullDescStyle})
 			}
 			line = append(line, cell...)
 		}
@@ -221,12 +272,12 @@ func (w Widget) fullColumn(group []keybind.Keybind) ([]richtext.Line, int) {
 	rows := make([]richtext.Line, len(helps))
 	width := 0
 	for i, h := range helps {
-		rows[i] = richtext.Line{{Text: h.Key + strings.Repeat(" ", keyWidth-uniseg.StringWidth(h.Key)), Style: w.styles.FullKey}}
+		rows[i] = richtext.Line{{Text: h.Key + strings.Repeat(" ", keyWidth-uniseg.StringWidth(h.Key)), Style: w.fullKeyStyle}}
 		if h.Key != "" && h.Desc != "" {
-			rows[i] = append(rows[i], richtext.Segment{Text: " ", Style: w.styles.FullDesc})
+			rows[i] = append(rows[i], richtext.Segment{Text: " ", Style: w.fullDescStyle})
 		}
 		if h.Desc != "" {
-			rows[i] = append(rows[i], richtext.Segment{Text: h.Desc, Style: w.styles.FullDesc})
+			rows[i] = append(rows[i], richtext.Segment{Text: h.Desc, Style: w.fullDescStyle})
 		}
 		width = max(width, rows[i].Width())
 	}
@@ -238,7 +289,7 @@ func (w Widget) truncationTail(current richtext.Line, maxWidth int) richtext.Lin
 		return nil
 	}
 	// We only add an ellipsis when it fully fits because clipping looks broken in narrow widths.
-	tail := richtext.Line{{Text: " " + w.ellipsis, Style: w.styles.Ellipsis}}
+	tail := richtext.Line{{Text: " " + w.ellipsis, Style: w.ellipsisStyle}}
 	if current.Width()+tail.Width() <= maxWidth {
 		return tail
 	}
@@ -258,7 +309,7 @@ func (w Widget) drawSegments(screen tview.Screen, x, y, width int, segments rich
 	}
 }
 
-func shortItemSegments(key, desc string, keyStyle, descStyle tcell.Style) richtext.Line {
+func shortItemSegments(key, desc string, keyStyle, descStyle tview.Style) richtext.Line {
 	switch {
 	case key == "" && desc == "":
 		return nil

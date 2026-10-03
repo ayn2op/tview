@@ -17,9 +17,6 @@ const (
 	redrawPause = 50 * time.Millisecond
 )
 
-// DoubleClickInterval specifies the maximum time between clicks to register a double-click rather than click.
-var DoubleClickInterval = 500 * time.Millisecond
-
 // MouseAction indicates one of the actions the mouse is logically doing.
 type MouseAction int16
 
@@ -29,15 +26,12 @@ const (
 	MouseLeftDown
 	MouseLeftUp
 	MouseLeftClick
-	MouseLeftDoubleClick
 	MouseMiddleDown
 	MouseMiddleUp
 	MouseMiddleClick
-	MouseMiddleDoubleClick
 	MouseRightDown
 	MouseRightUp
 	MouseRightClick
-	MouseRightDoubleClick
 	MouseScrollUp
 	MouseScrollDown
 	MouseScrollLeft
@@ -74,7 +68,6 @@ type Application[M Model[M]] struct {
 
 	lastMouseX, lastMouseY int              // The last position of the mouse.
 	mouseDownX, mouseDownY int              // The position of the mouse when a button was last pressed.
-	lastMouseClick         time.Time        // The time when a mouse button was last clicked.
 	lastMouseButtons       tcell.ButtonMask // The last mouse button state.
 
 	screen             Screen
@@ -297,12 +290,12 @@ func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (isMouseDownA
 	}
 
 	for _, buttonMsg := range []struct {
-		button                  tcell.ButtonMask
-		down, up, click, dclick MouseAction
+		button          tcell.ButtonMask
+		down, up, click MouseAction
 	}{
-		{tcell.ButtonPrimary, MouseLeftDown, MouseLeftUp, MouseLeftClick, MouseLeftDoubleClick},
-		{tcell.ButtonMiddle, MouseMiddleDown, MouseMiddleUp, MouseMiddleClick, MouseMiddleDoubleClick},
-		{tcell.ButtonSecondary, MouseRightDown, MouseRightUp, MouseRightClick, MouseRightDoubleClick},
+		{tcell.ButtonPrimary, MouseLeftDown, MouseLeftUp, MouseLeftClick},
+		{tcell.ButtonMiddle, MouseMiddleDown, MouseMiddleUp, MouseMiddleClick},
+		{tcell.ButtonSecondary, MouseRightDown, MouseRightUp, MouseRightClick},
 	} {
 		if buttonChanges&buttonMsg.button != 0 {
 			if buttons&buttonMsg.button != 0 {
@@ -310,13 +303,7 @@ func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (isMouseDownA
 			} else {
 				fire(buttonMsg.up)
 				if !clickMoved {
-					if a.lastMouseClick.Add(DoubleClickInterval).Before(time.Now()) {
-						fire(buttonMsg.click)
-						a.lastMouseClick = time.Now()
-					} else {
-						fire(buttonMsg.dclick)
-						a.lastMouseClick = time.Time{} // reset
-					}
+					fire(buttonMsg.click)
 				}
 			}
 		}

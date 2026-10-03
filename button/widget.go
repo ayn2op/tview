@@ -119,7 +119,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle returns the OnClick message for a left click within area, or for ActionPress while focused. Other messages pass through unchanged.
+// Handle returns the OnClick message for a left press within area, or for ActionPress while focused. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if w.disabled || w.onClick == nil {
 		return msg
@@ -130,7 +130,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 			return w.onClick
 		}
 	case tview.MouseMsg:
-		if m.Action == tview.MouseLeftClick && area.Contains(m.Position()) {
+		if m.Action == tview.MouseLeftDown && area.Contains(m.Position()) {
 			return w.onClick
 		}
 	}

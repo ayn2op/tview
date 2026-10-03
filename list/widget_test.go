@@ -75,13 +75,13 @@ func TestWidgetHandle(t *testing.T) {
 		}
 	})
 	t.Run("click selects the item", func(t *testing.T) {
-		got := apply(t, NewSelectionState(), 10, area, mouse(0, 2, tview.MouseLeftClick))
+		got := apply(t, NewSelectionState(), 10, area, mouse(0, 2, tview.MouseLeftDown))
 		if got.cursor != 2 {
 			t.Fatalf("cursor = %d, want 2", got.cursor)
 		}
 	})
 	t.Run("track click pages", func(t *testing.T) {
-		got := apply(t, NewSelectionState(), 10, area, mouse(3, 3, tview.MouseLeftClick))
+		got := apply(t, NewSelectionState(), 10, area, mouse(3, 3, tview.MouseLeftDown))
 		if got.offset != 4 {
 			t.Fatalf("offset = %d, want 4", got.offset)
 		}
@@ -101,14 +101,14 @@ func TestWidgetHandle(t *testing.T) {
 	})
 	t.Run("a scroll bar too short to draw takes no clicks", func(t *testing.T) {
 		short := tview.Rectangle{Width: 4, Height: 2}
-		msg := numbers(NewSelectionState(), 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 1, tview.MouseLeftClick), short)
+		msg := numbers(NewSelectionState(), 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 1, tview.MouseLeftDown), short)
 		if a, ok := msg.(Change); !ok || a.offset != 0 {
 			t.Fatalf("got %v, want offset 0", msg)
 		}
 	})
 	t.Run("the end symbol scrolls a step", func(t *testing.T) {
 		selectionState := NewSelectionState()
-		msg := numbers(selectionState, 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftClick), area)
+		msg := numbers(selectionState, 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftDown), area)
 		if a, ok := msg.(Change); !ok || a.offset != 1 {
 			t.Fatalf("got %v, want offset 1", msg)
 		}

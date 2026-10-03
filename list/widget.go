@@ -272,7 +272,7 @@ func (w Widget) mouse(m tview.MouseMsg, v view, a *Change) bool {
 		return false
 	}
 	switch m.Action {
-	case tview.MouseLeftClick:
+	case tview.MouseLeftDown:
 		row := y - v.items.Y + v.offset
 		for i := range w.count {
 			if row >= v.starts[i] && row < v.starts[i]+v.sizes[i] {
@@ -306,7 +306,7 @@ func (w Widget) barMouse(action tview.MouseAction, v view, row int, a *Change) b
 	}
 	if row < 0 || row >= bar.TrackCells(v.bar.Height) {
 		// The begin or end symbol.
-		if action == tview.MouseLeftClick {
+		if action == tview.MouseLeftDown {
 			if row < 0 {
 				a.offset--
 			} else {
@@ -320,9 +320,9 @@ func (w Widget) barMouse(action tview.MouseAction, v view, row int, a *Change) b
 	switch {
 	case action == tview.MouseLeftDown && onThumb:
 		a.dragging, a.grab = true, row-thumbStart
-	case action == tview.MouseLeftClick && row < thumbStart:
+	case action == tview.MouseLeftDown && row < thumbStart:
 		a.offset -= v.items.Height
-	case action == tview.MouseLeftClick && !onThumb:
+	case action == tview.MouseLeftDown && !onThumb:
 		a.offset += v.items.Height
 	}
 	return true

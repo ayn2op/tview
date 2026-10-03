@@ -36,7 +36,7 @@ func TestWidgetHandle(t *testing.T) {
 		OnSelect(func(i int) tview.Msg { return selectMsg(i) })
 	next := tcell.NewEventKey(tcell.KeyRune, "l", tcell.ModCtrl)
 	// The labels "tab tab" are centered: the second starts at x 1 + (10-7)/2 + 4.
-	click := tview.MouseMsg{EventMouse: tcell.NewEventMouse(6, 2, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftClick}
+	click := tview.MouseMsg{EventMouse: tcell.NewEventMouse(6, 2, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftDown}
 
 	for _, tt := range []struct {
 		name   string
@@ -60,7 +60,7 @@ func TestWidgetHandle(t *testing.T) {
 
 	t.Run("clicking an arrow selects the neighbor of the active tab", func(t *testing.T) {
 		// "one two three" is wider than the area, so it scrolls between arrows at x 1 and 10.
-		arrow := tview.MouseMsg{EventMouse: tcell.NewEventMouse(1, 2, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftClick}
+		arrow := tview.MouseMsg{EventMouse: tcell.NewEventMouse(1, 2, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftDown}
 		w := New("one", "two", "three").Arrows("◀", "▶").Active(2).OnSelect(func(i int) tview.Msg { return selectMsg(i) })
 		if got := w.Handle(arrow, area); got != selectMsg(1) {
 			t.Fatalf("got %v", got)
@@ -68,7 +68,7 @@ func TestWidgetHandle(t *testing.T) {
 	})
 
 	t.Run("clicking an arrow that is not clickable does nothing", func(t *testing.T) {
-		arrow := tview.MouseMsg{EventMouse: tcell.NewEventMouse(1, 2, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftClick}
+		arrow := tview.MouseMsg{EventMouse: tcell.NewEventMouse(1, 2, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftDown}
 		w := New("one", "two", "three").Arrows("◀", "▶").ClickableArrows(false).Active(2).OnSelect(func(i int) tview.Msg { return selectMsg(i) })
 		if got := w.Handle(arrow, area); got != nil {
 			t.Fatalf("got %v", got)

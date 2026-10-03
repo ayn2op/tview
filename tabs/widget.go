@@ -172,7 +172,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 			break
 		}
 		switch msg.Action {
-		case tview.MouseLeftClick:
+		case tview.MouseLeftDown:
 			if tab, ok := w.tabAt(area, x); ok {
 				return w.selectTab(tab)
 			}

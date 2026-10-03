@@ -13,7 +13,7 @@ type pressMsg struct{}
 func TestWidgetHandle(t *testing.T) {
 	area := tview.Rectangle{X: 2, Y: 1, Width: 6, Height: 1}
 	click := func(x, y int) tview.MouseMsg {
-		return tview.MouseMsg{EventMouse: tcell.NewEventMouse(x, y, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftClick}
+		return tview.MouseMsg{EventMouse: tcell.NewEventMouse(x, y, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftDown}
 	}
 	inside, outside := click(3, 1), click(9, 1)
 	enter := tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModNone)

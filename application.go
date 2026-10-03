@@ -114,6 +114,9 @@ func (a *Application[M]) Run() error {
 		if err = screen.Init(); err != nil {
 			return err
 		}
+		screen.EnableMouse()
+		screen.EnablePaste()
+		screen.EnableFocus()
 		a.screen = screen
 	}
 	defer a.stop()

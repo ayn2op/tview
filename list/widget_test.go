@@ -136,6 +136,16 @@ func TestWidgetDraw(t *testing.T) {
 			t.Fatal("selected item is not reversed")
 		}
 	})
+	t.Run("deselecting leaves the view where it is", func(t *testing.T) {
+		screen := screentest.New(t, 3, 2)
+		selectionState := NewSelectionState()
+		selectionState.SetCursor(3)
+		selectionState.SetCursor(-1)
+		numbers(selectionState, 9).ScrollBar(scrollbar.New(), ScrollBarVisibilityNever).Draw(screen, area)
+		if got := screentest.Row(screen, 0, 3) + screentest.Row(screen, 1, 3); got != "2  3  " {
+			t.Fatalf("rows = %q", got)
+		}
+	})
 	t.Run("follows the end", func(t *testing.T) {
 		screen := screentest.New(t, 3, 2)
 		selectionState := NewSelectionState()

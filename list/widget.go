@@ -156,8 +156,9 @@ func (w Widget) resolve(area tview.Rectangle) view {
 	v.cursor = min(c.cursor, w.count-1)
 	v.offset = c.offset
 	switch {
-	case c.center && v.cursor >= 0:
-		v.offset = v.starts[v.cursor] + v.sizes[v.cursor]/2 - area.Height/2
+	case c.center >= 0 && w.count > 0:
+		i := min(c.center, w.count-1)
+		v.offset = v.starts[i] + v.sizes[i]/2 - area.Height/2
 	case c.atEnd:
 		v.offset = v.maxOffset()
 	}

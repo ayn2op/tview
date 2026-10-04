@@ -19,11 +19,18 @@ const (
 
 const minAlpha = 50
 
+// The cell size assumed when the terminal's is unknown: twice as tall as wide.
+const (
+	defaultCellWidth  = 1
+	defaultCellHeight = 2
+)
+
 // Widget draws an image scaled to fit its area, preserving its aspect ratio.
 type Widget struct {
-	src   image.Image
-	width int
-	kitty int
+	src                   image.Image
+	width                 int
+	cellWidth, cellHeight int
+	kitty                 int
 }
 
 var _ tview.Widget = Widget{}
@@ -36,6 +43,13 @@ func New(src image.Image) Widget {
 // Width sets the width in cells; the height follows from the aspect ratio.
 func (w Widget) Width(cells int) Widget {
 	w.width = cells
+	return w
+}
+
+// CellSize sets the size of a terminal cell in pixels, so the image keeps its aspect ratio.
+// A zero width or height leaves the cell assumed twice as tall as wide.
+func (w Widget) CellSize(width, height int) Widget {
+	w.cellWidth, w.cellHeight = width, height
 	return w
 }
 
@@ -56,11 +70,19 @@ func (w Widget) cells() (cols, rows int) {
 	if b.Empty() {
 		return 0, 0
 	}
+	cellWidth, cellHeight := w.cell()
 	cols = w.width
 	if cols == 0 {
 		cols = b.Dx()
 	}
-	return cols, (cols*b.Dy()/b.Dx() + 1) / 2
+	return cols, (cols*cellWidth*b.Dy()/b.Dx() + cellHeight - 1) / cellHeight
+}
+
+func (w Widget) cell() (width, height int) {
+	if w.cellWidth <= 0 || w.cellHeight <= 0 {
+		return defaultCellWidth, defaultCellHeight
+	}
+	return w.cellWidth, w.cellHeight
 }
 
 // Draw draws the image at the top-left corner of area.
@@ -74,8 +96,10 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	if b.Empty() {
 		return
 	}
-	width := min(area.Width, area.Height*2*b.Dx()/b.Dy())
-	height := width * b.Dy() / b.Dx()
+	// Each cell holds two pixels, one above the other, so height counts half cells.
+	cellWidth, cellHeight := w.cell()
+	width := min(area.Width, area.Height*cellHeight*b.Dx()/(cellWidth*b.Dy()))
+	height := width * cellWidth * b.Dy() * 2 / (b.Dx() * cellHeight)
 	pixel := func(x, y int) color.Color {
 		if y >= height {
 			return color.Default

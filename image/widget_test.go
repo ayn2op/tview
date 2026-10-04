@@ -42,6 +42,13 @@ func TestWidgetSize(t *testing.T) {
 			t.Fatalf("size = %v, %v", width, height)
 		}
 	})
+	t.Run("cell size", func(t *testing.T) {
+		src := image.NewRGBA(image.Rect(0, 0, 100, 100))
+		width, height := New(src).Width(10).CellSize(10, 25).Size()
+		if width != layout.Fixed(10) || height != layout.Fixed(4) {
+			t.Fatalf("size = %v, %v", width, height)
+		}
+	})
 }
 
 func TestWidgetDraw(t *testing.T) {

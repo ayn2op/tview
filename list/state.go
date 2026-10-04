@@ -8,8 +8,8 @@ type SelectionState struct {
 	offset int
 	// center is the item the next view scrolls to the middle, or -1 for none. It outlives the cursor, so that deselecting leaves the view where it is.
 	center int
-	// atEnd reports whether the view was scrolled to the last row, and trackEnd whether it then stays there as items are added.
-	atEnd, trackEnd bool
+	// atEnd keeps the view scrolled to the last row as items are added.
+	atEnd bool
 	// dragging is set while the scroll bar thumb is being dragged, which was grabbed grab cells from its top.
 	dragging bool
 	grab     int
@@ -34,11 +34,6 @@ func (s *SelectionState) SetCursor(index int) {
 	if index >= 0 {
 		s.center, s.atEnd = index, false
 	}
-}
-
-// SetTrackEnd sets whether the view stays scrolled to the last row as items are added while it is there.
-func (s *SelectionState) SetTrackEnd(track bool) {
-	s.trackEnd = track
 }
 
 // ScrollToEnd scrolls the view to the last row.

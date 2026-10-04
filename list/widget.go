@@ -28,6 +28,7 @@ type Widget struct {
 	selectedStyle  tview.Style
 	scrollBar      scrollbar.Widget
 	visibility     ScrollBarVisibility
+	trackEnd       bool
 	keybind        func(tview.KeyMsg) Action
 	focused        bool
 	onChange       func(Change) tview.Msg
@@ -76,6 +77,12 @@ func (w Widget) SelectedStyle(style tview.Style) Widget {
 // ScrollBar sets the scroll bar and when it is shown.
 func (w Widget) ScrollBar(scrollBar scrollbar.Widget, visibility ScrollBarVisibility) Widget {
 	w.scrollBar, w.visibility = scrollBar, visibility
+	return w
+}
+
+// TrackEnd sets whether the view stays scrolled to the last row as items are added while it is there.
+func (w Widget) TrackEnd(track bool) Widget {
+	w.trackEnd = track
 	return w
 }
 
@@ -248,7 +255,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		a.offset = v.starts[a.cursor] + v.sizes[a.cursor]/2 - v.items.Height/2
 	}
 	a.offset = min(max(a.offset, 0), v.maxOffset())
-	a.atEnd = w.selectionState.trackEnd && a.offset == v.maxOffset()
+	a.atEnd = w.trackEnd && a.offset == v.maxOffset()
 	return w.onChange(a)
 }
 

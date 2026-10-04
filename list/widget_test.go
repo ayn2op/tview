@@ -175,8 +175,18 @@ func (filled) Draw(screen tview.Screen, area tview.Rectangle) {
 
 func (filled) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }
 
-func TestStateSetTrackEnd(t *testing.T) {
+func TestWidgetTrackEnd(t *testing.T) {
 	area := tview.Rectangle{Width: 3, Height: 2}
+	// scrolled returns the state scrolled to the end of 5 rows, with msgs applied by a list that tracks the end.
+	scrolled := func(t *testing.T, msgs ...tview.Msg) SelectionState {
+		t.Helper()
+		selectionState := NewSelectionState()
+		selectionState.ScrollToEnd()
+		for _, msg := range msgs {
+			selectionState.Apply(numbers(selectionState, 5).TrackEnd(true).Handle(msg, area).(Change))
+		}
+		return selectionState
+	}
 	lastRow := func(t *testing.T, selectionState SelectionState, count int) string {
 		t.Helper()
 		screen := screentest.New(t, 3, 2)
@@ -184,28 +194,20 @@ func TestStateSetTrackEnd(t *testing.T) {
 		return screentest.Row(screen, 1, 1)
 	}
 	t.Run("stays at the end when an item is added and the cursor is kept", func(t *testing.T) {
-		selectionState := NewSelectionState()
-		selectionState.SetTrackEnd(true)
-		selectionState.ScrollToEnd()
+		selectionState := scrolled(t)
 		selectionState.SetCursor(-1)
 		if got := lastRow(t, selectionState, 6); got != "5" {
 			t.Fatalf("last row = %q, want %q", got, "5")
 		}
 	})
 	t.Run("scrolling back to the end tracks it again", func(t *testing.T) {
-		selectionState := NewSelectionState()
-		selectionState.SetTrackEnd(true)
-		selectionState.ScrollToEnd()
-		selectionState = apply(t, selectionState, 5, area, mouse(0, 0, tview.MouseScrollUp), mouse(0, 0, tview.MouseScrollDown))
+		selectionState := scrolled(t, mouse(0, 0, tview.MouseScrollUp), mouse(0, 0, tview.MouseScrollDown))
 		if got := lastRow(t, selectionState, 6); got != "5" {
 			t.Fatalf("last row = %q, want %q", got, "5")
 		}
 	})
 	t.Run("scrolled up stays put", func(t *testing.T) {
-		selectionState := NewSelectionState()
-		selectionState.SetTrackEnd(true)
-		selectionState.ScrollToEnd()
-		selectionState = apply(t, selectionState, 5, area, mouse(0, 0, tview.MouseScrollUp))
+		selectionState := scrolled(t, mouse(0, 0, tview.MouseScrollUp))
 		if got := lastRow(t, selectionState, 6); got != "3" {
 			t.Fatalf("last row = %q, want %q", got, "3")
 		}

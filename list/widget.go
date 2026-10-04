@@ -22,7 +22,7 @@ const (
 type Widget struct {
 	selectionState SelectionState
 	count          int
-	item           func(index int) tview.Element
+	item           func(index int) tview.Widget
 	width, height  layout.Length
 	gap            int
 	selectedStyle  tview.Style
@@ -33,10 +33,10 @@ type Widget struct {
 	onChange       func(Change) tview.Msg
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a list of count items built by item, with selectionState as its cursor and scroll position, showing the scroll bar when they do not fit. An item is as tall as it lays out to at the width of the list, where its height is not limited.
-func New(selectionState SelectionState, count int, item func(index int) tview.Element) Widget {
+func New(selectionState SelectionState, count int, item func(index int) tview.Widget) Widget {
 	return Widget{
 		selectionState: selectionState,
 		count:          count,

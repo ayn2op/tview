@@ -27,7 +27,7 @@ type Widget struct {
 	onDone                func(index int, label string) tview.Msg
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns an empty dialog.
 func New() Widget {
@@ -98,7 +98,7 @@ func (w Widget) OnDone(f func(index int, label string) tview.Msg) Widget {
 }
 
 // layout returns the dialog's box and the area it takes within area.
-func (w Widget) layout(area tview.Rectangle) (tview.Element, tview.Rectangle) {
+func (w Widget) layout(area tview.Rectangle) (tview.Widget, tview.Rectangle) {
 	maxContentWidth := max(area.Width-4, 1)
 	buttonsWidth := 0
 	for _, label := range w.buttons {

@@ -1,4 +1,4 @@
-// Package box draws a border with a title and footer around an element.
+// Package box draws a border with a title and footer around a widget.
 package box
 
 import (
@@ -12,7 +12,7 @@ const ellipsis = "…"
 
 // Widget draws a background, border, title, and footer, with its child inside them.
 type Widget struct {
-	child         tview.Element
+	child         tview.Widget
 	width, height layout.Length
 
 	background                      tcell.Color
@@ -26,10 +26,10 @@ type Widget struct {
 	titleAlignment, footerAlignment tview.Alignment
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a box around child, without a border, that fills its parent.
-func New(child tview.Element) Widget {
+func New(child tview.Widget) Widget {
 	return Widget{
 		child:           child,
 		width:           layout.Fill,

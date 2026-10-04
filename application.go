@@ -194,7 +194,7 @@ func (a *Application[M]) Run() error {
 				a.mouseDownX, a.mouseDownY = msg.Position()
 			}
 		default:
-			// Messages from commands reach the element too, so widgets can handle ones like tree.ActionMsg.
+			// Messages from commands reach the widget too, so widgets can handle ones like tree.ActionMsg.
 			a.handle(msg)
 		}
 
@@ -268,7 +268,7 @@ func (a *Application[M]) execBatchMsg(msg batchMsg) {
 	wg.Wait()
 }
 
-// fireMouseActions derives mouse actions from the provided mouse event and passes them through the root's element.
+// fireMouseActions derives mouse actions from the provided mouse event and passes them through the root's widget.
 func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (isMouseDownAction bool) {
 	fire := func(action MouseAction) {
 		switch action {
@@ -347,15 +347,15 @@ func (a *Application[M]) draw() {
 	screen := a.screen
 	drawWidth, drawHeight := screen.Size()
 
-	// Each frame starts blank, so nothing an element leaves undrawn shows the frame before. Show still emits only the cells that changed.
+	// Each frame starts blank, so nothing a widget leaves undrawn shows the frame before. Show still emits only the cells that changed.
 	screen.Clear()
-	// Each frame starts without a cursor, so only an element drawn in it can show one.
+	// Each frame starts without a cursor, so only a widget drawn in it can show one.
 	screen.HideCursor()
 	a.model.View().Draw(screen, Rectangle{Width: drawWidth, Height: drawHeight})
 	screen.Show()
 }
 
-// handle passes a message through the model's element before updating the model with it.
+// handle passes a message through the model's widget before updating the model with it.
 func (a *Application[M]) handle(msg Msg) {
 	width, height := a.screen.Size()
 	if msg = a.model.View().Handle(msg, Rectangle{Width: width, Height: height}); msg != nil {

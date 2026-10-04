@@ -40,7 +40,7 @@ type Widget struct {
 	ellipsis                                string
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns help for keyMap showing its short help.
 func New(keyMap KeyMap) Widget {

@@ -1,4 +1,4 @@
-// Package center places an element in the middle of its area.
+// Package center places a widget in the middle of its area.
 package center
 
 import (
@@ -8,13 +8,13 @@ import (
 
 // Widget places its child in the middle of its area.
 type Widget struct {
-	child tview.Element
+	child tview.Widget
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New places child in the middle of its area at the child's Fixed size. A child that fills along an axis takes the whole area along it.
-func New(child tview.Element) Widget {
+func New(child tview.Widget) Widget {
 	return Widget{child: child}
 }
 

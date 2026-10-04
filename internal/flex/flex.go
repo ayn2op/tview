@@ -1,4 +1,4 @@
-// Package flex lays out elements along one axis. It implements the row and column packages.
+// Package flex lays out widgets along one axis. It implements the row and column packages.
 package flex
 
 import (
@@ -11,13 +11,13 @@ type Widget struct {
 	horizontal    bool
 	width, height layout.Length
 	spacing       int
-	children      []tview.Element
+	children      []tview.Widget
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns children laid out left to right if horizontal and top to bottom otherwise, skipping nil ones. It fills its parent in both directions by default.
-func New(horizontal bool, children ...tview.Element) Widget {
+func New(horizontal bool, children ...tview.Widget) Widget {
 	w := Widget{horizontal: horizontal, width: layout.Fill, height: layout.Fill}
 	for _, child := range children {
 		w = w.Push(child)
@@ -26,7 +26,7 @@ func New(horizontal bool, children ...tview.Element) Widget {
 }
 
 // Push adds child after the others, unless it is nil.
-func (w Widget) Push(child tview.Element) Widget {
+func (w Widget) Push(child tview.Widget) Widget {
 	if child != nil {
 		w.children = append(w.children[:len(w.children):len(w.children)], child)
 	}
@@ -88,7 +88,7 @@ func (w Widget) contentSize() (width, height int) {
 }
 
 // axes returns the length of child along the layout's axis and across it.
-func (w Widget) axes(child tview.Element) (along, across layout.Length) {
+func (w Widget) axes(child tview.Widget) (along, across layout.Length) {
 	width, height := child.Size()
 	if w.horizontal {
 		return width, height

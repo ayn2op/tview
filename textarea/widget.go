@@ -24,7 +24,7 @@ type Widget struct {
 	focused       bool
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a text area showing editState that fills its parent.
 func New(editState *EditState) Widget {

@@ -28,7 +28,7 @@ func (row) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }
 
 // numbers returns a list of count rows labeled 0, 1, and so on.
 func numbers(selectionState SelectionState, count int) Widget {
-	return New(selectionState, count, func(i int) tview.Element { return row(strconv.Itoa(i)) }).
+	return New(selectionState, count, func(i int) tview.Widget { return row(strconv.Itoa(i)) }).
 		ScrollBar(scrollbar.New().BeginSymbol("").EndSymbol(""), ScrollBarVisibilityAutomatic).
 		Focused(true).
 		OnChange(func(a Change) tview.Msg { return a })
@@ -159,7 +159,7 @@ func TestWidgetDraw(t *testing.T) {
 		screen := screentest.New(t, 3, 3)
 		selectionState := NewSelectionState()
 		selectionState.SetCursor(-1)
-		New(selectionState, 1, func(int) tview.Element { return filled{} }).Draw(screen, tview.Rectangle{Y: 1, Width: 3, Height: 1})
+		New(selectionState, 1, func(int) tview.Widget { return filled{} }).Draw(screen, tview.Rectangle{Y: 1, Width: 3, Height: 1})
 		if got := screentest.Row(screen, 0, 3) + screentest.Row(screen, 1, 3) + screentest.Row(screen, 2, 3); got != "   xxx   " {
 			t.Fatalf("rows = %q", got)
 		}
@@ -240,7 +240,7 @@ func TestZeroSelectionStateIsNotDragging(t *testing.T) {
 func TestItemHeight(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		item tview.Element
+		item tview.Widget
 		want int
 	}{
 		{"one row", row(""), 1},
@@ -249,7 +249,7 @@ func TestItemHeight(t *testing.T) {
 		{"fill height takes the height of the view", sized{height: layout.Fill}, 10},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			list := New(NewSelectionState(), 1, func(int) tview.Element { return tt.item })
+			list := New(NewSelectionState(), 1, func(int) tview.Widget { return tt.item })
 			if _, sizes, _ := list.layout(layout.Size{Width: 4, Height: 10}); sizes[0] != tt.want {
 				t.Fatalf("rows = %d, want %d", sizes[0], tt.want)
 			}

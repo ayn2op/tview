@@ -42,7 +42,7 @@ type Widget struct {
 	beginStyle, endStyle      tview.Style
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a vertical scroll bar drawn with SymbolSetDoubleVertical.
 func New() Widget {

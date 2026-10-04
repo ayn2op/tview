@@ -1,4 +1,4 @@
-// Package inert draws an element without letting it take input, like HTML's inert attribute, such as for the content behind a dialog.
+// Package inert draws a widget without letting it take input, like HTML's inert attribute, such as for the content behind a dialog.
 package inert
 
 import (
@@ -8,13 +8,13 @@ import (
 
 // Widget draws its child but passes every message by it unchanged.
 type Widget struct {
-	child tview.Element
+	child tview.Widget
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New wraps child so that it is drawn but takes no input.
-func New(child tview.Element) Widget {
+func New(child tview.Widget) Widget {
 	return Widget{child: child}
 }
 

@@ -26,7 +26,7 @@ type Widget struct {
 	kitty int
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a widget that draws src at one pixel per column.
 func New(src image.Image) Widget {

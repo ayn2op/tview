@@ -1,4 +1,4 @@
-// Package column lays out elements top to bottom.
+// Package column lays out widgets top to bottom.
 package column
 
 import (
@@ -10,6 +10,6 @@ import (
 type Widget = flex.Widget
 
 // New returns a column of children, skipping nil ones. It fills its parent in both directions by default.
-func New(children ...tview.Element) Widget {
+func New(children ...tview.Widget) Widget {
 	return flex.New(false, children...)
 }

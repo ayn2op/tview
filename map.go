@@ -3,12 +3,12 @@ package tview
 import "github.com/ayn2op/tview/layout"
 
 type mapped[T any] struct {
-	child Element
+	child Widget
 	f     func(T) Msg
 }
 
 // Map turns the messages of type T that child produces into f's result, like Elm's Html.map. Anything else is returned as is, including a T that was passed to child, which is taken to have passed through unchanged.
-func Map[T any](child Element, f func(T) Msg) Element {
+func Map[T any](child Widget, f func(T) Msg) Widget {
 	return mapped[T]{child: child, f: f}
 }
 

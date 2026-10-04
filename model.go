@@ -15,8 +15,8 @@ type Model[M any] interface {
 	Init() Cmd
 	// Update returns the model changed in response to a message and a command to run, or nil.
 	Update(Msg) (M, Cmd)
-	// View returns the element that draws the model.
-	View() Element
+	// View returns the widget that draws the model.
+	View() Widget
 }
 
 // Rectangle is a region of the screen.
@@ -34,13 +34,13 @@ func (r Rectangle) Contains(x, y int) bool {
 	return x >= r.X && x < r.X+r.Width && y >= r.Y && y < r.Y+r.Height
 }
 
-// Element is a drawable part of the user interface.
-type Element interface {
-	// Size returns the width and height of the element as lengths. Its parent uses them to share space between its children.
+// Widget is a drawable part of the user interface.
+type Widget interface {
+	// Size returns the width and height of the widget as lengths. Its parent uses them to share space between its children.
 	Size() (width, height layout.Length)
-	// Layout returns the size the element takes within limits. Its parent uses it to measure the element, as a list does to learn how tall each item is at its width.
+	// Layout returns the size the widget takes within limits. Its parent uses it to measure the widget, as a list does to learn how tall each item is at its width.
 	Layout(limits layout.Limits) layout.Size
-	// Draw draws the element onto the screen within the given area.
+	// Draw draws the widget onto the screen within the given area.
 	Draw(Screen, Rectangle)
 	// Handle translates a message, such as input received within the given area, into the message passed to Update. It returns nil to drop the message.
 	Handle(Msg, Rectangle) Msg

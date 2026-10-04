@@ -1,4 +1,4 @@
-// Package button provides a declarative button element.
+// Package button provides a declarative button widget.
 package button
 
 import (
@@ -20,7 +20,7 @@ type Widget struct {
 	focused       bool
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns an empty button that fills its parent.
 func New() Widget {

@@ -12,7 +12,7 @@ type Widget struct {
 	style tview.Style
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a backdrop that dims what is behind it.
 func New() Widget {

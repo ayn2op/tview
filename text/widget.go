@@ -12,9 +12,9 @@ type Widget struct {
 	content string
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
-// New draws content in the style of the cells beneath it, so it takes the colors of the element it is drawn in.
+// New draws content in the style of the cells beneath it, so it takes the colors of the widget it is drawn in.
 func New(content string) Widget {
 	return Widget{content: content}
 }

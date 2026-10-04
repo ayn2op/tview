@@ -1,13 +1,13 @@
-// Package layout holds the lengths and limits elements are laid out with.
+// Package layout holds the lengths and limits widgets are laid out with.
 package layout
 
-// Length is how much space an element takes along one axis of its parent.
+// Length is how much space a widget takes along one axis of its parent.
 type Length struct {
 	cells, portion int
 	shrink         bool
 }
 
-// Fill takes an equal share of the free space. It is the default for every element.
+// Fill takes an equal share of the free space. It is the default for every widget.
 var Fill = Length{portion: 1}
 
 // FillPortion takes a share of the free space in proportion to portion, where Fill is a portion of 1.
@@ -20,7 +20,7 @@ func Fixed(cells int) Length {
 	return Length{cells: cells}
 }
 
-// Shrink takes the size of the element's content.
+// Shrink takes the size of the widget's content.
 var Shrink = Length{shrink: true}
 
 // Cells returns the size of a Fixed length, and 0 for others.

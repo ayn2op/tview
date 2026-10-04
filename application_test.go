@@ -47,7 +47,7 @@ var _ Model[cursorModel] = cursorModel{}
 
 func (cursorModel) Init() Cmd                       { return nil }
 func (m cursorModel) Update(Msg) (cursorModel, Cmd) { return m, nil }
-func (m cursorModel) View() Element                 { return m }
+func (m cursorModel) View() Widget                  { return m }
 func (cursorModel) Handle(msg Msg, _ Rectangle) Msg { return msg }
 
 func (m cursorModel) Draw(screen Screen, area Rectangle) {
@@ -63,7 +63,7 @@ var _ Model[labelModel] = labelModel("")
 
 func (labelModel) Init() Cmd                           { return nil }
 func (m labelModel) Update(Msg) (labelModel, Cmd)      { return m, nil }
-func (m labelModel) View() Element                     { return m }
+func (m labelModel) View() Widget                      { return m }
 func (labelModel) Handle(msg Msg, _ Rectangle) Msg     { return msg }
 func (labelModel) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
 func (labelModel) Layout(limits layout.Limits) layout.Size {
@@ -108,7 +108,7 @@ func TestApplicationDraw(t *testing.T) {
 	})
 }
 
-// lengthModel's element turns a string into its length, and Update quits on an int, keeping it.
+// lengthModel's widget turns a string into its length, and Update quits on an int, keeping it.
 type lengthModel struct {
 	got *int
 }
@@ -121,7 +121,7 @@ func (m lengthModel) Update(msg Msg) (lengthModel, Cmd) {
 	}
 	return m, nil
 }
-func (m lengthModel) View() Element        { return m }
+func (m lengthModel) View() Widget         { return m }
 func (lengthModel) Draw(Screen, Rectangle) {}
 func (lengthModel) Handle(msg Msg, _ Rectangle) Msg {
 	if s, ok := msg.(string); ok {
@@ -131,7 +131,7 @@ func (lengthModel) Handle(msg Msg, _ Rectangle) Msg {
 }
 
 func TestApplicationRun(t *testing.T) {
-	t.Run("passes messages from commands through the element", func(t *testing.T) {
+	t.Run("passes messages from commands through the widget", func(t *testing.T) {
 		screen, err := tcell.NewTerminfoScreenFromTty(vt.NewMockTerm(vt.MockOptSize{X: 4, Y: 2}))
 		if err != nil {
 			t.Fatal(err)

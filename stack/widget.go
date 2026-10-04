@@ -1,4 +1,4 @@
-// Package stack draws elements on top of each other, for overlays such as modal dialogs.
+// Package stack draws widgets on top of each other, for overlays such as modal dialogs.
 package stack
 
 import (
@@ -8,13 +8,13 @@ import (
 
 // Widget draws its children on top of each other in the same area.
 type Widget struct {
-	children []tview.Element
+	children []tview.Widget
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a stack of children, the first at the bottom, skipping nil ones.
-func New(children ...tview.Element) Widget {
+func New(children ...tview.Widget) Widget {
 	var w Widget
 	for _, child := range children {
 		w = w.Push(child)
@@ -23,7 +23,7 @@ func New(children ...tview.Element) Widget {
 }
 
 // Push adds child on top of the others, unless it is nil.
-func (w Widget) Push(child tview.Element) Widget {
+func (w Widget) Push(child tview.Widget) Widget {
 	if child != nil {
 		w.children = append(w.children[:len(w.children):len(w.children)], child)
 	}

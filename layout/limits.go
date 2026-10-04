@@ -13,9 +13,9 @@ type Axes struct {
 // Infinity is the bound of Limits along an axis that is infinite.
 const Infinity = 1 << 30
 
-// Limits is a set of size constraints for laying out an element.
+// Limits is a set of size constraints for laying out a widget.
 type Limits struct {
-	// Min and Max are the smallest and largest size the element may take.
+	// Min and Max are the smallest and largest size the widget may take.
 	Min, Max Size
 	// Compression is whether Fill lengths are compressed to the size of the content.
 	Compression Axes
@@ -111,12 +111,12 @@ func resolve(lower, upper int, compression, infinite bool, length Length, intrin
 	}
 }
 
-// Atomic returns the size that fits limits for an element of a width and height with no content of its own.
+// Atomic returns the size that fits limits for a widget of a width and height with no content of its own.
 func Atomic(limits Limits, width, height Length) Size {
 	return limits.Width(width).Height(height).Resolve(width, height, Size{})
 }
 
-// Sized returns the size that fits limits for an element of a width and height whose content has the intrinsic size that content returns within the limits. content is only called if its result can change the size.
+// Sized returns the size that fits limits for a widget of a width and height whose content has the intrinsic size that content returns within the limits. content is only called if its result can change the size.
 func Sized(limits Limits, width, height Length, content func(Limits) Size) Size {
 	limits = limits.Width(width).Height(height)
 	var intrinsic Size

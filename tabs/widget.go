@@ -12,7 +12,7 @@ import (
 type Widget struct {
 	labels                         []string
 	active                         int
-	content                        tview.Element
+	content                        tview.Widget
 	style, activeStyle, arrowStyle tview.Style
 	alignment                      tview.Alignment
 	separator                      string
@@ -23,7 +23,7 @@ type Widget struct {
 	onSelect                       func(index int) tview.Msg
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns centered tabs with labels separated by a space, the active one reversed, and no arrows.
 func New(labels ...string) Widget {
@@ -44,8 +44,8 @@ func (w Widget) Active(index int) Widget {
 	return w
 }
 
-// Content sets the element of the active tab.
-func (w Widget) Content(content tview.Element) Widget {
+// Content sets the widget of the active tab.
+func (w Widget) Content(content tview.Widget) Widget {
 	w.content = content
 	return w
 }

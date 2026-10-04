@@ -22,7 +22,7 @@ type Widget struct {
 	focused       bool
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a text view of text that wraps on words and fills its parent. It scrolls only once ScrollState and OnChange are set.
 func New(text richtext.Text) Widget {

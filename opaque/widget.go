@@ -1,4 +1,4 @@
-// Package opaque keeps mouse messages from passing through an element to the ones stacked below it.
+// Package opaque keeps mouse messages from passing through a widget to the ones stacked below it.
 package opaque
 
 import (
@@ -8,13 +8,13 @@ import (
 
 // Widget drops the mouse messages within its area that its child does not turn into another message.
 type Widget struct {
-	child tview.Element
+	child tview.Widget
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New wraps child so that mouse messages within its area do not reach the children of a stack below it.
-func New(child tview.Element) Widget {
+func New(child tview.Widget) Widget {
 	return Widget{child: child}
 }
 

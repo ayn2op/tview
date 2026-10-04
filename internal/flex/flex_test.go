@@ -9,7 +9,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
-// sized is an element with a fixed width and height that records the area it handles a message in.
+// sized is a widget with a fixed width and height that records the area it handles a message in.
 type sized struct {
 	width, height layout.Length
 	area          *tview.Rectangle
@@ -29,8 +29,8 @@ func (s sized) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	return msg
 }
 
-func wide(width layout.Length) tview.Element  { return sized{width: width, height: layout.Fill} }
-func tall(height layout.Length) tview.Element { return sized{width: layout.Fill, height: height} }
+func wide(width layout.Length) tview.Widget  { return sized{width: width, height: layout.Fill} }
+func tall(height layout.Length) tview.Widget { return sized{width: layout.Fill, height: height} }
 
 func TestWidgetAreas(t *testing.T) {
 	area := tview.Rectangle{X: 1, Y: 2, Width: 10, Height: 4}

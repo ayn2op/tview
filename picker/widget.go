@@ -1,4 +1,4 @@
-// Package picker provides a declarative element that filters a list of items with a query.
+// Package picker provides a declarative widget that filters a list of items with a query.
 package picker
 
 import (
@@ -36,7 +36,7 @@ type Widget struct {
 	onCancel            tview.Msg
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a picker of items, with searchState as its query, the matches, and the selection.
 func New(items Items, searchState *SearchState) Widget {
@@ -114,7 +114,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	return w.layout().Handle(msg, area)
 }
 
-func (w Widget) layout() tview.Element {
+func (w Widget) layout() tview.Widget {
 	query := textinput.New(&w.searchState.query).
 		Focused(true).
 		OnChange(w.queryChange)
@@ -128,7 +128,7 @@ func (w Widget) layout() tview.Element {
 
 func (w Widget) listView() list.Widget {
 	s, items := w.searchState, w.items
-	return list.New(s.list, s.count(items), func(i int) tview.Element { return text.New(items[s.index(i)].Text) }).
+	return list.New(s.list, s.count(items), func(i int) tview.Widget { return text.New(items[s.index(i)].Text) }).
 		SelectedStyle(tcell.StyleDefault.Reverse(true)).
 		ScrollBar(w.scrollBar, w.scrollBarVisibility).
 		Keybind(w.listKeybind).

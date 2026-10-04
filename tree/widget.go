@@ -38,7 +38,7 @@ type Widget struct {
 	onSelect       func(*Node) tview.Msg
 }
 
-var _ tview.Element = Widget{}
+var _ tview.Widget = Widget{}
 
 // New returns a tree of the nodes under root, with selectionState as its current node and scroll position, that draws lines between nodes and fills its parent. It is interactive only once OnChange is set.
 func New(root *Node, selectionState SelectionState) Widget {

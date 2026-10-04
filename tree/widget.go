@@ -131,11 +131,11 @@ func (w Widget) Layout(limits layout.Limits) layout.Size {
 	return layout.Atomic(limits, width, height)
 }
 
-// row is a node shown on one line: the row of its parent, its level, and where its lines and text start.
+// row is a node shown on one line: the row of its parent, and where its lines and text start.
 type row struct {
-	node          *Node
-	parent        int
-	level, gx, tx int
+	node   *Node
+	parent int
+	gx, tx int
 }
 
 // rows returns the shown nodes, with the children of expanded nodes below them.
@@ -150,7 +150,7 @@ func (w Widget) rows() (rows []row) {
 			gx, tx = 0, 0
 		}
 		if level >= w.topLevel {
-			rows = append(rows, row{node: node, parent: parent, level: level, gx: gx, tx: tx})
+			rows = append(rows, row{node: node, parent: parent, gx: gx, tx: tx})
 			parent = len(rows) - 1
 		}
 		if node.expanded {

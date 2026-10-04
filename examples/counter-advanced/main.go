@@ -31,6 +31,8 @@ type model struct {
 	focus focus
 }
 
+var _ tview.Model[model] = model{}
+
 func (m model) Init() tview.Cmd {
 	return tview.SetTitle("Counter")
 }

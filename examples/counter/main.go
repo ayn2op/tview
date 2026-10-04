@@ -16,6 +16,8 @@ type incrementMsg struct{}
 
 type model struct{ count int }
 
+var _ tview.Model[model] = model{}
+
 func (m model) Init() tview.Cmd {
 	return tview.SetTitle("Counter")
 }

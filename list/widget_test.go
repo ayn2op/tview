@@ -159,11 +159,35 @@ func TestWidgetDraw(t *testing.T) {
 		screen := screentest.New(t, 3, 3)
 		selectionState := NewSelectionState()
 		selectionState.SetCursor(-1)
-		New(selectionState, 1, func(int) tview.Widget { return filled{} }).Draw(screen, tview.Rectangle{Y: 1, Width: 3, Height: 1})
+		New(selectionState, 1, func(int) tview.Widget { return filled{} }).ScrollBar(scrollbar.New(), ScrollBarVisibilityNever).Draw(screen, tview.Rectangle{Y: 1, Width: 3, Height: 1})
 		if got := screentest.Row(screen, 0, 3) + screentest.Row(screen, 1, 3) + screentest.Row(screen, 2, 3); got != "   xxx   " {
 			t.Fatalf("rows = %q", got)
 		}
 	})
+	t.Run("lays items that fit out at one width", func(t *testing.T) {
+		widths := map[int]bool{}
+		w := New(NewSelectionState(), 1, func(int) tview.Widget { return measured{widths: widths} }).OnChange(func(c Change) tview.Msg { return c })
+		w.Draw(screentest.New(t, 3, 2), area)
+		w.Handle(mouse(0, 0, tview.MouseMove), area)
+		if len(widths) != 1 || !widths[2] {
+			t.Fatalf("widths = %v", widths)
+		}
+	})
+}
+
+// measured is an item that records the widths it is laid out and drawn at.
+type measured struct {
+	row
+	widths map[int]bool
+}
+
+func (m measured) Layout(limits layout.Limits) layout.Size {
+	m.widths[limits.Max.Width] = true
+	return m.row.Layout(limits)
+}
+
+func (m measured) Draw(screen tview.Screen, area tview.Rectangle) {
+	m.widths[area.Width] = true
 }
 
 // filled is an item that fills more than the area it is given.

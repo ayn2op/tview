@@ -12,7 +12,7 @@ import (
 type ScrollBarVisibility uint8
 
 const (
-	// ScrollBarVisibilityAutomatic shows the scroll bar when the items do not fit.
+	// ScrollBarVisibilityAutomatic shows the scroll bar when the items do not fit, keeping its column free when they do.
 	ScrollBarVisibilityAutomatic ScrollBarVisibility = iota
 	ScrollBarVisibilityAlways
 	ScrollBarVisibilityNever
@@ -145,18 +145,13 @@ func (w Widget) layout(view layout.Size) (starts, sizes []int, total int) {
 // resolve lays the list out in area and works out the scroll position from the selection state.
 func (w Widget) resolve(area tview.Rectangle) view {
 	v := view{items: area}
-	// Lay out beside the scroll bar first: a list long enough to need it is then laid out once.
+	// The scroll bar column is reserved even while the bar is hidden, so items are laid out once and always at the same width.
 	if area.Width > 1 && (w.visibility == ScrollBarVisibilityAlways || w.visibility == ScrollBarVisibilityAutomatic) {
 		v.items.Width--
-		v.starts, v.sizes, v.total = w.layout(v.items.Size())
-		if w.visibility == ScrollBarVisibilityAlways || v.total > area.Height {
-			v.bar = tview.Rectangle{X: area.X + v.items.Width, Y: area.Y, Width: 1, Height: area.Height}
-		} else {
-			v.items.Width++
-			v.starts, v.sizes, v.total = w.layout(v.items.Size())
-		}
-	} else {
-		v.starts, v.sizes, v.total = w.layout(area.Size())
+	}
+	v.starts, v.sizes, v.total = w.layout(v.items.Size())
+	if v.items.Width < area.Width && (w.visibility == ScrollBarVisibilityAlways || v.total > area.Height) {
+		v.bar = tview.Rectangle{X: area.X + v.items.Width, Y: area.Y, Width: 1, Height: area.Height}
 	}
 
 	c := w.selectionState

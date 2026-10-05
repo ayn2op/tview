@@ -27,4 +27,7 @@ func TestNormalizeKey(t *testing.T) {
 	if !Matches(tcell.NewEventKey(tcell.KeyRune, "a", tcell.ModNone), NewSingleKeybind("a", "a")) {
 		t.Fatal("Matches(rune a) = false")
 	}
+	if !Matches(tcell.NewEventKey(tcell.KeyRune, " ", tcell.ModNone), New("space")) {
+		t.Fatal("Matches(space) = false")
+	}
 }

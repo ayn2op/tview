@@ -155,6 +155,9 @@ func String(msg tview.KeyMsg) string {
 	if primary == "" && key == tcell.KeyRune {
 		primary = msg.Str()
 	}
+	if primary == " " {
+		primary = "space"
+	}
 	if primary == "" {
 		return normalizeKey(msg.Name())
 	}

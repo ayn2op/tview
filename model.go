@@ -15,7 +15,7 @@ type Model[M any] interface {
 	Init() Cmd
 	// Update returns the model changed in response to a message and a command to run, or nil.
 	Update(Msg) (M, Cmd)
-	// View returns the widget that draws the model.
+	// View returns the widget that draws the model, or nil.
 	View() Widget
 }
 

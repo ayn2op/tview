@@ -351,14 +351,19 @@ func (a *Application[M]) draw() {
 	screen.Clear()
 	// Each frame starts without a cursor, so only a widget drawn in it can show one.
 	screen.HideCursor()
-	a.model.View().Draw(screen, Rectangle{Width: drawWidth, Height: drawHeight})
+	if view := a.model.View(); view != nil {
+		view.Draw(screen, Rectangle{Width: drawWidth, Height: drawHeight})
+	}
 	screen.Show()
 }
 
 // handle passes a message through the model's widget before updating the model with it.
 func (a *Application[M]) handle(msg Msg) {
-	width, height := a.screen.Size()
-	if msg = a.model.View().Handle(msg, Rectangle{Width: width, Height: height}); msg != nil {
+	if view := a.model.View(); view != nil {
+		width, height := a.screen.Size()
+		msg = view.Handle(msg, Rectangle{Width: width, Height: height})
+	}
+	if msg != nil {
 		a.updateModel(msg)
 	}
 }

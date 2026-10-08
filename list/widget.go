@@ -3,6 +3,7 @@ package list
 
 import (
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/internal/clip"
 	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/scrollbar"
 	"github.com/gdamore/tcell/v3"
@@ -171,7 +172,8 @@ func (w Widget) resolve(area tview.Rectangle) view {
 // Draw draws the visible items, with the selected one in the selected style, and the scroll bar.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	v := w.resolve(area)
-	clipped := &clippedScreen{Screen: screen, area: v.items}
+	// Items partly scrolled out of view are cut off.
+	clipped := &clip.Screen{Screen: screen, Area: v.items}
 	for i := range w.count {
 		top := v.items.Y + v.starts[i] - v.offset
 		if top >= v.items.Y+v.items.Height {

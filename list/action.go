@@ -22,7 +22,7 @@ const (
 	ActionScrollBottom
 )
 
-// DefaultKeybind binds up, down, home, and end to moving the selection, and pgup, pgdn, ctrl+home, and ctrl+end to scrolling.
+// DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "up":

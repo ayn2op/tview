@@ -20,7 +20,7 @@ const (
 	ActionPageDown
 )
 
-// DefaultKeybind binds the arrows and hjkl, home and g, end and G, and pgup, ctrl+b, pgdn, and ctrl+f.
+// DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "up", "k":

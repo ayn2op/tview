@@ -14,7 +14,7 @@ const (
 	ActionNext
 )
 
-// DefaultKeybind binds ctrl+h and ctrl+l.
+// DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "ctrl+h":

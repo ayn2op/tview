@@ -14,7 +14,7 @@ const (
 	ActionCancel
 )
 
-// DefaultKeybind binds enter and esc.
+// DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "enter":

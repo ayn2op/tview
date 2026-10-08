@@ -17,7 +17,7 @@ const (
 	ActionCancel
 )
 
-// DefaultKeybind binds tab, down, and right to the next button, shift+tab, up, and left to the previous one, enter to pressing it, and esc to canceling.
+// DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "shift+tab", "up", "left":

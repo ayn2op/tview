@@ -13,7 +13,7 @@ const (
 	ActionPress
 )
 
-// DefaultKeybind binds enter.
+// DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	if keybind.String(key) == "enter" {
 		return ActionPress

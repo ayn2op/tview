@@ -5,6 +5,8 @@ type SelectionState struct {
 	current *Node
 	// offset is the number of rows scrolled off the top.
 	offset int
+	// column is the number of cells scrolled off the left.
+	column int
 	// center asks the next view to scroll the current node to the middle.
 	center bool
 	// dragging is set while a drag to scroll is in progress, which last was at row dragY.
@@ -24,11 +26,11 @@ func (s *SelectionState) SetCurrentNode(node *Node) {
 
 // Change is an update to SelectionState produced by a tree, such as moving the cursor or scrolling.
 type Change struct {
-	current       *Node
-	offset, dragY int
-	dragging      bool
+	current               *Node
+	offset, column, dragY int
+	dragging              bool
 }
 
 func (s *SelectionState) Apply(change Change) {
-	s.current, s.offset, s.dragging, s.dragY, s.center = change.current, change.offset, change.dragging, change.dragY, false
+	s.current, s.offset, s.column, s.dragging, s.dragY, s.center = change.current, change.offset, change.column, change.dragging, change.dragY, false
 }

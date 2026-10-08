@@ -21,7 +21,7 @@ const (
 	ActionNewline
 )
 
-// DefaultKeybind binds the keys of the same names, and enter to a newline.
+// DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "left":

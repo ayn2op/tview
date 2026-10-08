@@ -7,7 +7,9 @@ import (
 	"github.com/ayn2op/tview/layout"
 
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/internal/clip"
 	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
 )
 
 const (
@@ -170,12 +172,14 @@ type view struct {
 	rows    []row
 	current int
 	offset  int
+	column  int
+	width   int
 	height  int
 }
 
-// resolve lays the tree out for height rows: the row of the current node, falling back to the first selectable one, and the scroll position.
-func (w Widget) resolve(height int) view {
-	v := view{rows: w.rows(), current: -1, height: height}
+// resolve lays the tree out for an area of width by height: the row of the current node, falling back to the first selectable one, and the scroll position.
+func (w Widget) resolve(width, height int) view {
+	v := view{rows: w.rows(), current: -1, width: width, height: height}
 	if c := w.selectionState.current; c != nil {
 		v.current = slices.IndexFunc(v.rows, func(r row) bool { return r.node == c && c.selectable })
 		if v.current < 0 {
@@ -187,11 +191,35 @@ func (w Widget) resolve(height int) view {
 		v.offset = v.current - height/2
 	}
 	v.offset = v.clamp(v.offset)
+	v.column = w.clampColumn(v, w.selectionState.column)
 	return v
 }
 
 func (v view) clamp(offset int) int {
 	return min(max(offset, 0), max(len(v.rows)-v.height, 0))
+}
+
+// clampColumn keeps column within the widest row.
+func (w Widget) clampColumn(v view, column int) int {
+	if column <= 0 {
+		return 0
+	}
+	widest := 0
+	for _, r := range v.rows {
+		widest = max(widest, r.tx+uniseg.StringWidth(w.marker(r.node))+r.node.line.Width())
+	}
+	return min(column, max(widest-v.width, 0))
+}
+
+// marker returns the marker drawn before node's text.
+func (w Widget) marker(node *Node) string {
+	if node.expandable || len(node.children) > 0 {
+		if node.expanded {
+			return w.markers.Expanded
+		}
+		return w.markers.Collapsed
+	}
+	return w.markers.Leaf
 }
 
 // node returns the node of row index, or nil if there is none.
@@ -204,8 +232,10 @@ func (v view) node(index int) *Node {
 
 // Draw draws the visible rows with their lines, markers, and text, the current node in its selected style.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
-	v := w.resolve(area.Height)
-	x, width, set := area.X, area.Width, w.graphicsSet
+	v := w.resolve(area.Width, area.Height)
+	// Clip what is scrolled off the left.
+	screen = &clip.Screen{Screen: screen, Area: area}
+	x, width, set := area.X-v.column, area.Width+v.column, w.graphicsSet
 	for index := v.offset; index < len(v.rows) && index-v.offset < area.Height; index++ {
 		current, y := v.rows[index], area.Y+index-v.offset
 		node := current.node
@@ -235,22 +265,12 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 			continue
 		}
 
-		marker := w.markers.Leaf
-		if node.expandable || len(node.children) > 0 {
-			marker = w.markers.Collapsed
-			if node.expanded {
-				marker = w.markers.Expanded
-			}
-		}
 		markerStyle := tcell.StyleDefault
 		if len(node.line) > 0 {
 			markerStyle = node.line[0].Style
 		}
 		textX := current.tx
-		if marker != "" {
-			markerWidth := tview.Print(screen, marker, x+textX, y, width-textX, tview.AlignmentLeft, markerStyle)
-			textX += markerWidth
-		}
+		textX += tview.Print(screen, w.marker(node), x+textX, y, width-textX, tview.AlignmentLeft, markerStyle)
 		for _, segment := range node.line {
 			if textX >= width {
 				break
@@ -259,8 +279,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 			if index == v.current {
 				style = tview.MergeStyle(style, node.selectedTextStyle)
 			}
-			segmentWidth := tview.Print(screen, segment.Text, x+textX, y, width-textX, tview.AlignmentLeft, style)
-			textX += segmentWidth
+			textX += tview.Print(screen, segment.Text, x+textX, y, width-textX, tview.AlignmentLeft, style)
 		}
 	}
 }
@@ -285,8 +304,8 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	default:
 		return msg
 	}
-	v := w.resolve(area.Height)
-	a := Change{current: v.node(v.current), offset: v.offset, dragging: w.selectionState.dragging, dragY: w.selectionState.dragY}
+	v := w.resolve(area.Width, area.Height)
+	a := Change{current: v.node(v.current), offset: v.offset, column: v.column, dragging: w.selectionState.dragging, dragY: w.selectionState.dragY}
 	center := false
 	switch m := msg.(type) {
 	case ActionMsg:
@@ -307,6 +326,18 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 			}
 		case ActionSelect:
 			return w.selectNode(a.current)
+		case ActionScrollUp:
+			a.offset--
+		case ActionScrollDown:
+			a.offset++
+		case ActionScrollTop:
+			a.offset = 0
+		case ActionScrollBottom:
+			a.offset = len(v.rows)
+		case ActionScrollLeft:
+			a.column--
+		case ActionScrollRight:
+			a.column++
 		default:
 			return msg
 		}
@@ -333,6 +364,10 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 			a.offset--
 		case tview.MouseScrollDown:
 			a.offset++
+		case tview.MouseScrollLeft:
+			a.column -= area.Width / 2
+		case tview.MouseScrollRight:
+			a.column += area.Width / 2
 		default:
 			return msg
 		}
@@ -342,7 +377,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if index := slices.IndexFunc(v.rows, func(r row) bool { return r.node == a.current }); center && index >= 0 {
 		a.offset = index - v.height/2
 	}
-	a.offset = v.clamp(a.offset)
+	a.offset, a.column = v.clamp(a.offset), w.clampColumn(v, a.column)
 	return w.onChange(a)
 }
 

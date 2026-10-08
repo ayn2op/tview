@@ -10,15 +10,23 @@ type Action int
 
 const (
 	ActionNone Action = iota
+
 	ActionUp
 	ActionDown
 	ActionTop
 	ActionBottom
 	ActionMoveToParent
 	ActionSelect
+
+	ActionScrollUp
+	ActionScrollDown
+	ActionScrollTop
+	ActionScrollBottom
+	ActionScrollLeft
+	ActionScrollRight
 )
 
-// DefaultKeybind binds up, down, home, end, K, and enter.
+// DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "up":
@@ -33,6 +41,18 @@ func DefaultKeybind(key tview.KeyMsg) Action {
 		return ActionMoveToParent
 	case "enter":
 		return ActionSelect
+	case "pgup":
+		return ActionScrollUp
+	case "pgdn":
+		return ActionScrollDown
+	case "ctrl+home":
+		return ActionScrollTop
+	case "ctrl+end":
+		return ActionScrollBottom
+	case "left":
+		return ActionScrollLeft
+	case "right":
+		return ActionScrollRight
 	}
 	return ActionNone
 }

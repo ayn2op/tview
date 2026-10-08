@@ -19,7 +19,7 @@ const (
 	ActionSubmit
 )
 
-// DefaultKeybind binds the keys of the same names, and enter to submitting.
+// DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
 	case "left":

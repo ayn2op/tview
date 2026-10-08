@@ -7,7 +7,6 @@ import (
 	"github.com/ayn2op/tview/layout"
 
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/internal/clip"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
@@ -42,7 +41,7 @@ type Widget struct {
 
 var _ tview.Widget = Widget{}
 
-// New returns a tree of the nodes under root, with selectionState as its current node and scroll position, that draws lines between nodes and fills its parent. It is interactive only once OnChange is set.
+// New returns a tree of the nodes under root, with selectionState as its current node. It is interactive only once OnChange is set.
 func New(root *Node, selectionState SelectionState) Widget {
 	return Widget{
 		root:           root,
@@ -129,8 +128,25 @@ func (w Widget) Size() (width, height layout.Length) {
 
 // Layout returns the size of the tree within limits.
 func (w Widget) Layout(limits layout.Limits) layout.Size {
-	width, height := w.Size()
-	return layout.Atomic(limits, width, height)
+	return layout.Sized(limits, w.width, w.height, func(layout.Limits) layout.Size {
+		rows := w.rows()
+		return layout.Size{Width: w.widest(rows), Height: len(rows)}
+	})
+}
+
+// Target returns the row of the current node, or no rows for none.
+func (w Widget) Target(int) (top, height int) {
+	if current := w.resolve().current; current >= 0 {
+		return current, 1
+	}
+	return 0, 0
+}
+
+// RowsWidth returns the width of the widest of height rows from top.
+func (w Widget) RowsWidth(top, height int) int {
+	rows := w.rows()
+	top = min(max(top, 0), len(rows))
+	return w.widest(rows[top:min(top+max(height, 0), len(rows))])
 }
 
 // row is a node shown on one line: the row of its parent, and where its lines and text start.
@@ -167,48 +183,30 @@ func (w Widget) rows() (rows []row) {
 	return rows
 }
 
-// view is the tree laid out in an area.
+// view is the rows of the tree and the one of the current node, or -1.
 type view struct {
 	rows    []row
 	current int
-	offset  int
-	column  int
-	width   int
-	height  int
 }
 
-// resolve lays the tree out for an area of width by height: the row of the current node, falling back to the first selectable one, and the scroll position.
-func (w Widget) resolve(width, height int) view {
-	v := view{rows: w.rows(), current: -1, width: width, height: height}
+// resolve returns the rows and the row of the current node, falling back to the first selectable one.
+func (w Widget) resolve() view {
+	v := view{rows: w.rows(), current: -1}
 	if c := w.selectionState.current; c != nil {
 		v.current = slices.IndexFunc(v.rows, func(r row) bool { return r.node == c && c.selectable })
 		if v.current < 0 {
 			v.current = slices.IndexFunc(v.rows, func(r row) bool { return r.node.selectable })
 		}
 	}
-	v.offset = w.selectionState.offset
-	if w.selectionState.center && v.current >= 0 {
-		v.offset = v.current - height/2
-	}
-	v.offset = v.clamp(v.offset)
-	v.column = w.clampColumn(v, w.selectionState.column)
 	return v
 }
 
-func (v view) clamp(offset int) int {
-	return min(max(offset, 0), max(len(v.rows)-v.height, 0))
-}
-
-// clampColumn keeps column within the widest row.
-func (w Widget) clampColumn(v view, column int) int {
-	if column <= 0 {
-		return 0
+// widest returns the width of the widest of rows.
+func (w Widget) widest(rows []row) (widest int) {
+	for _, r := range rows {
+		widest = max(widest, r.tx+uniseg.StringWidth(w.marker(r.node))+r.node.lineWidth)
 	}
-	widest := 0
-	for _, r := range v.rows {
-		widest = max(widest, r.tx+uniseg.StringWidth(w.marker(r.node))+r.node.line.Width())
-	}
-	return min(column, max(widest-v.width, 0))
+	return widest
 }
 
 // marker returns the marker drawn before node's text.
@@ -230,14 +228,14 @@ func (v view) node(index int) *Node {
 	return v.rows[index].node
 }
 
-// Draw draws the visible rows with their lines, markers, and text, the current node in its selected style.
+// Draw draws the rows with their lines, markers, and text, the current node in its selected style.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
-	v := w.resolve(area.Width, area.Height)
-	// Clip what is scrolled off the left.
-	screen = &clip.Screen{Screen: screen, Area: area}
-	x, width, set := area.X-v.column, area.Width+v.column, w.graphicsSet
-	for index := v.offset; index < len(v.rows) && index-v.offset < area.Height; index++ {
-		current, y := v.rows[index], area.Y+index-v.offset
+	v := w.resolve()
+	x, width, set := area.X, area.Width, w.graphicsSet
+	// Rows off the screen, as in a viewport, are skipped.
+	_, bottom := screen.Size()
+	for index := max(-area.Y, 0); index < len(v.rows) && index < min(area.Height, bottom-area.Y); index++ {
+		current, y := v.rows[index], area.Y+index
 		node := current.node
 		if w.graphics {
 			// Branches of ancestors that are not last children continue past this row.
@@ -284,7 +282,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle turns keys and ActionMsgs (while focused) and the mouse within area into a Change once OnChange is set, and ActionSelect and clicks on nodes into the OnSelect message. Other messages pass through unchanged.
+// Handle turns keys and ActionMsgs (while focused) into a Change once OnChange is set, and ActionSelect and clicks on nodes into the OnSelect message. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if w.onChange == nil {
 		return msg
@@ -294,91 +292,45 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 			msg = ActionMsg(action)
 		}
 	}
-	// Laying the tree out is the costly part, so messages the tree ignores return before it.
-	switch msg.(type) {
+	switch m := msg.(type) {
 	case ActionMsg:
 		if !w.focused {
 			return msg
 		}
-	case tview.MouseMsg:
-	default:
-		return msg
-	}
-	v := w.resolve(area.Width, area.Height)
-	a := Change{current: v.node(v.current), offset: v.offset, column: v.column, dragging: w.selectionState.dragging, dragY: w.selectionState.dragY}
-	center := false
-	switch m := msg.(type) {
-	case ActionMsg:
+		v := w.resolve()
+		current := v.current
 		switch Action(m) {
 		case ActionDown:
-			a.current, center = v.node(v.step(v.current, 1)), true
+			current = v.step(current, 1)
 		case ActionUp:
-			a.current, center = v.node(v.step(v.current, -1)), true
+			current = v.step(current, -1)
 		case ActionTop:
-			a.current, center = v.node(v.step(-1, 1)), true
+			current = v.step(-1, 1)
 		case ActionBottom:
-			a.current, center = v.node(v.step(len(v.rows), -1)), true
+			current = v.step(len(v.rows), -1)
 		case ActionMoveToParent:
-			if v.current >= 0 {
-				if parent := v.rows[v.current].parent; parent >= 0 && v.rows[parent].node.selectable {
-					a.current, center = v.rows[parent].node, true
+			if current >= 0 {
+				if parent := v.rows[current].parent; parent >= 0 && v.rows[parent].node.selectable {
+					current = parent
 				}
 			}
 		case ActionSelect:
-			return w.selectNode(a.current)
-		case ActionScrollUp:
-			a.offset--
-		case ActionScrollDown:
-			a.offset++
-		case ActionScrollTop:
-			a.offset = 0
-		case ActionScrollBottom:
-			a.offset = len(v.rows)
-		case ActionScrollLeft:
-			a.column--
-		case ActionScrollRight:
-			a.column++
+			return w.selectNode(v.node(current))
 		default:
 			return msg
 		}
+		return w.onChange(Change{current: v.node(current)})
 	case tview.MouseMsg:
 		x, y := m.Position()
-		if a.dragging && m.Action == tview.MouseMove && m.Buttons()&tcell.Button1 != 0 {
-			a.offset, a.dragY = a.offset+a.dragY-y, y
-			break
-		}
-		if !area.Contains(x, y) {
+		if m.Action != tview.MouseLeftClick || !area.Contains(x, y) {
 			return msg
 		}
-		switch m.Action {
-		case tview.MouseLeftDown:
-			a.dragging, a.dragY = true, y
-		case tview.MouseLeftUp:
-			a.dragging = false
-		case tview.MouseLeftClick:
-			if node := v.node(v.offset + y - area.Y); node != nil && node.selectable {
-				return w.selectNode(node)
-			}
-			return nil
-		case tview.MouseScrollUp:
-			a.offset--
-		case tview.MouseScrollDown:
-			a.offset++
-		case tview.MouseScrollLeft:
-			a.column -= area.Width / 2
-		case tview.MouseScrollRight:
-			a.column += area.Width / 2
-		default:
-			return msg
+		if node := w.resolve().node(y - area.Y); node != nil && node.selectable {
+			return w.selectNode(node)
 		}
-	default:
-		return msg
+		return nil
 	}
-	if index := slices.IndexFunc(v.rows, func(r row) bool { return r.node == a.current }); center && index >= 0 {
-		a.offset = index - v.height/2
-	}
-	a.offset, a.column = v.clamp(a.offset), w.clampColumn(v, a.column)
-	return w.onChange(a)
+	return msg
 }
 
 // step returns the next selectable row after index in direction, or index if there is none.

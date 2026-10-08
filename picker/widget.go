@@ -11,6 +11,7 @@ import (
 	"github.com/ayn2op/tview/scrollbar"
 	"github.com/ayn2op/tview/text"
 	"github.com/ayn2op/tview/textinput"
+	"github.com/ayn2op/tview/viewport"
 	"github.com/gdamore/tcell/v3"
 	"github.com/sahilm/fuzzy"
 )
@@ -30,7 +31,7 @@ type Widget struct {
 	keybind             func(tview.KeyMsg) Action
 	listKeybind         func(tview.KeyMsg) list.Action
 	scrollBar           scrollbar.Widget
-	scrollBarVisibility list.ScrollBarVisibility
+	scrollBarVisibility viewport.ScrollBarVisibility
 	onChange            func(Change) tview.Msg
 	onSelect            func(Item) tview.Msg
 	onCancel            tview.Msg
@@ -40,7 +41,7 @@ var _ tview.Widget = Widget{}
 
 // New returns a picker of items, with searchState as its query, the matches, and the selection.
 func New(items Items, searchState *SearchState) Widget {
-	return Widget{items: items, searchState: searchState, keybind: DefaultKeybind, listKeybind: list.DefaultKeybind, scrollBar: scrollbar.New()}
+	return Widget{items: items, searchState: searchState, keybind: DefaultKeybind, listKeybind: list.DefaultKeybind, scrollBar: scrollbar.New(), scrollBarVisibility: viewport.ScrollBarVisibilityAutomatic}
 }
 
 // Keybind sets the function that turns keys into Actions, or ActionNone for keys it does not bind, DefaultKeybind unless set.
@@ -56,7 +57,7 @@ func (w Widget) ListKeybind(f func(tview.KeyMsg) list.Action) Widget {
 }
 
 // ScrollBar sets the list's scroll bar and when it is shown.
-func (w Widget) ScrollBar(scrollBar scrollbar.Widget, visibility list.ScrollBarVisibility) Widget {
+func (w Widget) ScrollBar(scrollBar scrollbar.Widget, visibility viewport.ScrollBarVisibility) Widget {
 	w.scrollBar, w.scrollBarVisibility = scrollBar, visibility
 	return w
 }
@@ -126,14 +127,17 @@ func (w Widget) layout() tview.Widget {
 	return column.New(column.New(header).Height(layout.Fixed(inputHeight)), w.listView())
 }
 
-func (w Widget) listView() list.Widget {
+func (w Widget) listView() viewport.Widget {
 	s, items := w.searchState, w.items
-	return list.New(s.list, s.count(items), func(i int) tview.Widget { return text.New(items[s.index(i)].Text) }).
+	l := list.New(s.list, s.count(items), func(i int) tview.Widget { return text.New(items[s.index(i)].Text) }).
 		SelectedStyle(tcell.StyleDefault.Reverse(true)).
-		ScrollBar(w.scrollBar, w.scrollBarVisibility).
 		Keybind(w.listKeybind).
 		Focused(true).
 		OnChange(func(a list.Change) tview.Msg { return w.change(Change{list: a}) })
+	return viewport.New(l, s.scroll).
+		Target(l.Target).
+		ScrollBar(w.scrollBar, w.scrollBarVisibility).
+		OnChange(func(a viewport.Change) tview.Msg { return w.change(Change{scroll: a, isScroll: true}) })
 }
 
 // queryChange turns an edit of the query into a Change, matching the items against the query if the edit changed it.

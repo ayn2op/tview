@@ -6,6 +6,7 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
+	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -32,40 +33,21 @@ func TestWidgetDraw(t *testing.T) {
 	}
 }
 
-func TestWidgetDrawScrolled(t *testing.T) {
+func TestWidgetLayout(t *testing.T) {
 	nodes := testTree()
 	nodes["a1"].SetLine(NewNode("long name").Line())
-	area := tview.Rectangle{Width: 6, Height: 3}
-	var selectionState SelectionState
-	scroll := func(msg tview.Msg) {
-		selectionState.Apply(interactive(nodes["root"], selectionState).Handle(msg, area).(Change))
+	limits := layout.Limits{Max: layout.Size{Width: 6, Height: 2}, Infinite: layout.Axes{Width: true, Height: true}}
+	if got := interactive(nodes["root"], SelectionState{}).Layout(limits); got != (layout.Size{Width: 12, Height: 3}) {
+		t.Fatalf("size = %+v, want 12 by 3", got)
 	}
-	wheel := func(action tview.MouseAction) tview.Msg {
-		return tview.MouseMsg{EventMouse: tcell.NewEventMouse(0, 0, tcell.ButtonNone, tcell.ModNone), Action: action}
-	}
-	draw := func() []string {
-		screen := screentest.New(t, 6, 3)
-		interactive(nodes["root"], selectionState).Draw(screen, area)
-		return []string{screentest.Row(screen, 0, 6), screentest.Row(screen, 1, 6), screentest.Row(screen, 2, 6)}
-	}
+}
 
-	scroll(ActionMsg(ActionScrollRight))
-	scroll(ActionMsg(ActionScrollRight))
-	if got, want := draw(), []string{"      ", "─long ", "      "}; !slices.Equal(got, want) {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-	// The widest row is 12 cells, so the view stops 6 cells in.
-	scroll(wheel(tview.MouseScrollRight))
-	scroll(wheel(tview.MouseScrollRight))
-	if got, want := draw(), []string{"      ", "g name", "      "}; !slices.Equal(got, want) {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-	scroll(wheel(tview.MouseScrollLeft))
-	for range 4 {
-		scroll(ActionMsg(ActionScrollLeft))
-	}
-	if got, want := draw(), []string{"a     ", "└──lon", "b     "}; !slices.Equal(got, want) {
-		t.Fatalf("got %q, want %q", got, want)
+func TestWidgetTarget(t *testing.T) {
+	nodes := testTree()
+	var selectionState SelectionState
+	selectionState.SetCurrentNode(nodes["b"])
+	if top, height := interactive(nodes["root"], selectionState).Target(0); top != 2 || height != 1 {
+		t.Fatalf("target = %d, %d", top, height)
 	}
 }
 
@@ -123,26 +105,6 @@ func TestWidgetHandle(t *testing.T) {
 		send(nodes, &selectionState, ActionMsg(ActionDown))
 		if selectionState.CurrentNode() != nodes["a1"] {
 			t.Fatalf("current = %v", selectionState.CurrentNode().Line())
-		}
-	})
-	t.Run("scrolling keeps the selection", func(t *testing.T) {
-		nodes := testTree()
-		var selectionState SelectionState
-		selectionState.SetCurrentNode(nodes["a"])
-		short := tview.Rectangle{Width: 6, Height: 2}
-		for _, step := range []struct {
-			action Action
-			want   string
-		}{{ActionScrollDown, "└──a1 "}, {ActionScrollUp, "a     "}, {ActionScrollBottom, "└──a1 "}, {ActionScrollTop, "a     "}} {
-			selectionState.Apply(interactive(nodes["root"], selectionState).Handle(ActionMsg(step.action), short).(Change))
-			screen := screentest.New(t, 6, 2)
-			interactive(nodes["root"], selectionState).Draw(screen, short)
-			if got := screentest.Row(screen, 0, 6); got != step.want {
-				t.Fatalf("action %d: top row = %q, want %q", step.action, got, step.want)
-			}
-			if selectionState.CurrentNode() != nodes["a"] {
-				t.Fatalf("action %d: current = %v", step.action, selectionState.CurrentNode().Line())
-			}
 		}
 	})
 	t.Run("unfocused passes keys and actions through", func(t *testing.T) {

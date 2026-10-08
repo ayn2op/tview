@@ -1,11 +1,11 @@
-package textview
+package viewport
 
 import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/keybind"
 )
 
-// Action is what a key makes a focused text view do.
+// Action is what a key makes a viewport do.
 type Action int
 
 const (
@@ -23,21 +23,21 @@ const (
 // DefaultKeybind is the default keybind.
 func DefaultKeybind(key tview.KeyMsg) Action {
 	switch keybind.String(key) {
-	case "up", "k":
+	case "up":
 		return ActionUp
-	case "down", "j":
+	case "down":
 		return ActionDown
-	case "left", "h":
+	case "left":
 		return ActionLeft
-	case "right", "l":
+	case "right":
 		return ActionRight
-	case "home", "g":
+	case "home":
 		return ActionTop
-	case "end", "G":
+	case "end":
 		return ActionBottom
-	case "pgup", "ctrl+b":
+	case "pgup":
 		return ActionPageUp
-	case "pgdn", "ctrl+f":
+	case "pgdn":
 		return ActionPageDown
 	}
 	return ActionNone

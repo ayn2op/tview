@@ -1,17 +1,8 @@
 package tree
 
-// SelectionState is a tree's current node and how far it is scrolled. The model owns it and applies the Changes a tree produces with Apply.
+// SelectionState is a tree's current node. The model owns it and applies the Changes a tree produces with Apply.
 type SelectionState struct {
 	current *Node
-	// offset is the number of rows scrolled off the top.
-	offset int
-	// column is the number of cells scrolled off the left.
-	column int
-	// center asks the next view to scroll the current node to the middle.
-	center bool
-	// dragging is set while a drag to scroll is in progress, which last was at row dragY.
-	dragging bool
-	dragY    int
 }
 
 // CurrentNode returns the selected node, or nil for none.
@@ -19,18 +10,16 @@ func (s *SelectionState) CurrentNode() *Node {
 	return s.current
 }
 
-// SetCurrentNode selects node, or none if it is nil, and scrolls it to the middle of the view.
+// SetCurrentNode selects node, or none if it is nil.
 func (s *SelectionState) SetCurrentNode(node *Node) {
-	s.current, s.center = node, true
+	s.current = node
 }
 
-// Change is an update to SelectionState produced by a tree, such as moving the cursor or scrolling.
+// Change is an update to SelectionState produced by a tree.
 type Change struct {
-	current               *Node
-	offset, column, dragY int
-	dragging              bool
+	current *Node
 }
 
 func (s *SelectionState) Apply(change Change) {
-	s.current, s.offset, s.column, s.dragging, s.dragY, s.center = change.current, change.offset, change.column, change.dragging, change.dragY, false
+	s.current = change.current
 }

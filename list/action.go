@@ -10,16 +10,10 @@ type Action int
 
 const (
 	ActionNone Action = iota
-
 	ActionSelectUp
 	ActionSelectDown
 	ActionSelectTop
 	ActionSelectBottom
-
-	ActionScrollUp
-	ActionScrollDown
-	ActionScrollTop
-	ActionScrollBottom
 )
 
 // DefaultKeybind is the default keybind.
@@ -33,14 +27,6 @@ func DefaultKeybind(key tview.KeyMsg) Action {
 		return ActionSelectTop
 	case "end":
 		return ActionSelectBottom
-	case "pgup":
-		return ActionScrollUp
-	case "pgdn":
-		return ActionScrollDown
-	case "ctrl+home":
-		return ActionScrollTop
-	case "ctrl+end":
-		return ActionScrollBottom
 	}
 	return ActionNone
 }

@@ -18,6 +18,8 @@ type Node struct {
 
 	// The item's text.
 	line richtext.Line
+	// lineWidth caches the width of line.
+	lineWidth int
 
 	// The style of selected text.
 	selectedTextStyle tview.Style
@@ -37,8 +39,10 @@ type Node struct {
 
 // NewNode returns a new tree node.
 func NewNode(value string) *Node {
+	line := richtext.NewLine(richtext.NewSegment(value, tcell.StyleDefault))
 	return &Node{
-		line:              richtext.NewLine(richtext.NewSegment(value, tcell.StyleDefault)),
+		line:              line,
+		lineWidth:         line.Width(),
 		selectedTextStyle: tcell.StyleDefault.Reverse(true),
 		indent:            2,
 		expanded:          true,
@@ -94,7 +98,7 @@ func (n *Node) Line() richtext.Line {
 
 // SetLine sets the node's styled text line.
 func (n *Node) SetLine(line richtext.Line) *Node {
-	n.line = line.Clone()
+	n.line, n.lineWidth = line.Clone(), line.Width()
 
 	return n
 }

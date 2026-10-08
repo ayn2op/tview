@@ -3,12 +3,15 @@ package picker
 import (
 	"github.com/ayn2op/tview/list"
 	"github.com/ayn2op/tview/textinput"
+	"github.com/ayn2op/tview/viewport"
 )
 
 // SearchState is a picker's query, the items that match it, and the selection among them. The model owns it and applies the Changes a picker produces with Apply.
 type SearchState struct {
 	query textinput.EditState
 	list  list.SelectionState
+	// scroll is how far the list is scrolled.
+	scroll viewport.ScrollState
 	// matches are the indexes of the items that match the query, used while the query is not empty.
 	matches []int
 }
@@ -25,6 +28,7 @@ func (s *SearchState) Reset() {
 	s.query = textinput.EditState{}
 	s.list = list.NewSelectionState()
 	s.list.SetCursor(0)
+	s.scroll = viewport.ScrollState{}
 	s.matches = nil
 }
 
@@ -58,20 +62,28 @@ type Change struct {
 	query   textinput.Change
 	matches []int
 	list    list.Change
+	scroll  viewport.Change
 	isQuery bool
+	// isScroll is set when the list was scrolled.
+	isScroll bool
 	// filtered is set when the query changed, so matches and cursor are for the new query.
 	filtered bool
 	cursor   int
 }
 
 func (s *SearchState) Apply(change Change) {
-	if !change.isQuery {
+	switch {
+	case change.isScroll:
+		s.scroll.Apply(change.scroll)
+	case !change.isQuery:
 		s.list.Apply(change.list)
-		return
-	}
-	s.query.Apply(change.query)
-	if change.filtered {
-		s.matches = change.matches
-		s.list.SetCursor(change.cursor)
+		s.scroll.ScrollToTarget()
+	default:
+		s.query.Apply(change.query)
+		if change.filtered {
+			s.matches = change.matches
+			s.list.SetCursor(change.cursor)
+			s.scroll.ScrollToTarget()
+		}
 	}
 }

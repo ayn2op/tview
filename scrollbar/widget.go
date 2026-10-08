@@ -211,5 +211,5 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle passes msg through unchanged; the list drawing the scroll bar handles clicks on it.
+// Handle passes msg through unchanged; the viewport drawing the scroll bar handles clicks on it.
 func (Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }

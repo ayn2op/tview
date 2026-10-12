@@ -140,7 +140,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle turns keys and ActionMsgs (while focused) and clicks on items into a Change once OnChange is set. Other messages pass through unchanged.
+// Handle turns keys and ActionMsgs (while focused) and clicks on items into a Change once OnChange is set, unless the item clicked handles the click itself. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if w.onChange == nil {
 		return msg
@@ -170,14 +170,23 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		}
 	case tview.MouseMsg:
 		x, y := m.Position()
-		if m.Action != tview.MouseLeftDown || !area.Contains(x, y) {
+		pressed := m.Action == tview.MouseLeftDown || m.Action == tview.MouseMove && m.Buttons()&tcell.ButtonPrimary != 0
+		if !pressed || !area.Contains(x, y) {
 			return msg
 		}
 		starts, sizes, _ := w.layout(area.Width)
 		for i := range w.count {
 			if row := y - area.Y; row >= starts[i] && row < starts[i]+sizes[i] {
+				// The item under the pointer takes a press or drag first, as a button or slider in it would.
+				itemArea := tview.Rectangle{X: area.X, Y: area.Y + starts[i], Width: area.Width, Height: sizes[i]}
+				if handled := w.item(i).Handle(msg, itemArea); handled != msg {
+					return handled
+				}
 				cursor = i
 			}
+		}
+		if m.Action != tview.MouseLeftDown {
+			return msg
 		}
 	default:
 		return msg

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/button"
 	"github.com/ayn2op/tview/internal/screentest"
 	"github.com/gdamore/tcell/v3"
 )
@@ -187,5 +188,17 @@ func TestItemHeight(t *testing.T) {
 				t.Fatalf("rows = %d, want %d", sizes[0], tt.want)
 			}
 		})
+	}
+}
+
+func TestWidgetHandleItem(t *testing.T) {
+	area := tview.Rectangle{Width: 3, Height: 2}
+	w := New(NewSelectionState(), 2, func(i int) tview.Widget {
+		return button.New().Height(layout.Fixed(1)).OnClick(i)
+	}).OnChange(func(c Change) tview.Msg { return c })
+
+	// The item clicked takes the click, which then does not select it.
+	if got := w.Handle(mouse(0, 1, tview.MouseLeftDown), area); got != 1 {
+		t.Fatalf("got %v, want 1", got)
 	}
 }

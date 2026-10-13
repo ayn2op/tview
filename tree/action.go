@@ -5,7 +5,7 @@ import (
 	"github.com/ayn2op/tview/keybind"
 )
 
-// Action is what a key makes a tree do. Apps that handle keys themselves send it with Perform.
+// Action is what a key makes a tree do.
 type Action int
 
 const (

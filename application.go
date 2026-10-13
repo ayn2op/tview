@@ -194,7 +194,7 @@ func (a *Application[M]) Run() error {
 				a.mouseDownX, a.mouseDownY = msg.Position()
 			}
 		default:
-			// Messages from commands reach the widget too, so widgets can handle ones like tree.ActionMsg.
+			// Messages from commands reach the widget too.
 			a.handle(msg)
 		}
 

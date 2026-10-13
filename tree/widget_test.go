@@ -18,14 +18,17 @@ func testTree() map[string]*Node {
 	return nodes
 }
 
-func interactive(root *Node, selectionState SelectionState) Widget {
-	return New(root, selectionState).TopLevel(1).Markers(Markers{}).Focused(true).OnChange(func(a Change) tview.Msg { return a }).OnSelect(func(n *Node) tview.Msg { return n })
+// changed is the node a tree made current.
+type changed struct{ node *Node }
+
+func interactive(root, current *Node) Widget {
+	return New(root, current).TopLevel(1).Markers(Markers{}).Focused(true).OnChange(func(n *Node) tview.Msg { return changed{n} }).OnSelect(func(n *Node) tview.Msg { return n })
 }
 
 func TestWidgetDraw(t *testing.T) {
 	screen := screentest.New(t, 6, 3)
-	var selectionState SelectionState
-	interactive(testTree()["root"], selectionState).Draw(screen, tview.Rectangle{Width: 6, Height: 3})
+	var current *Node
+	interactive(testTree()["root"], current).Draw(screen, tview.Rectangle{Width: 6, Height: 3})
 	for y, want := range []string{"a     ", "└──a1 ", "b     "} {
 		if got := screentest.Row(screen, y, 6); got != want {
 			t.Fatalf("row %d = %q, want %q", y, got, want)
@@ -37,16 +40,15 @@ func TestWidgetLayout(t *testing.T) {
 	nodes := testTree()
 	nodes["a1"].SetLine(NewNode("long name").Line())
 	limits := layout.Limits{Max: layout.Size{Width: 6, Height: 2}, Infinite: layout.Axes{Width: true, Height: true}}
-	if got := interactive(nodes["root"], SelectionState{}).Layout(limits); got != (layout.Size{Width: 12, Height: 3}) {
+	if got := interactive(nodes["root"], nil).Layout(limits); got != (layout.Size{Width: 12, Height: 3}) {
 		t.Fatalf("size = %+v, want 12 by 3", got)
 	}
 }
 
 func TestWidgetTarget(t *testing.T) {
 	nodes := testTree()
-	var selectionState SelectionState
-	selectionState.SetCurrentNode(nodes["b"])
-	if top, height := interactive(nodes["root"], selectionState).Target(0); top != 2 || height != 1 {
+	current := nodes["b"]
+	if top, height := interactive(nodes["root"], current).Target(0); top != 2 || height != 1 {
 		t.Fatalf("target = %d, %d", top, height)
 	}
 }
@@ -54,11 +56,11 @@ func TestWidgetTarget(t *testing.T) {
 func TestWidgetHandle(t *testing.T) {
 	area := tview.Rectangle{Width: 6, Height: 3}
 	key := func(k tcell.Key, str string) tview.KeyMsg { return tcell.NewEventKey(k, str, tcell.ModNone) }
-	// send passes msg through the tree and applies the Change it produces, if any, returning the other result.
-	send := func(nodes map[string]*Node, selectionState *SelectionState, msg tview.Msg) tview.Msg {
-		out := interactive(nodes["root"], *selectionState).Handle(msg, area)
-		if change, ok := out.(Change); ok {
-			selectionState.Apply(change)
+	// send passes msg through the tree and makes current the node it changes to, if any, returning the other result.
+	send := func(nodes map[string]*Node, current **Node, msg tview.Msg) tview.Msg {
+		out := interactive(nodes["root"], *current).Handle(msg, area)
+		if c, ok := out.(changed); ok {
+			*current = c.node
 			return nil
 		}
 		return out
@@ -66,65 +68,51 @@ func TestWidgetHandle(t *testing.T) {
 
 	t.Run("down selects the next node", func(t *testing.T) {
 		nodes := testTree()
-		var selectionState SelectionState
-		selectionState.SetCurrentNode(nodes["a"])
-		send(nodes, &selectionState, key(tcell.KeyDown, ""))
-		if selectionState.CurrentNode() != nodes["a1"] {
-			t.Fatalf("current = %v", selectionState.CurrentNode().Line())
+		current := nodes["a"]
+		send(nodes, &current, key(tcell.KeyDown, ""))
+		if current != nodes["a1"] {
+			t.Fatalf("current = %v", current.Line())
 		}
 	})
 	t.Run("move to parent", func(t *testing.T) {
 		nodes := testTree()
-		var selectionState SelectionState
-		selectionState.SetCurrentNode(nodes["a1"])
-		send(nodes, &selectionState, key(tcell.KeyRune, "K"))
-		if selectionState.CurrentNode() != nodes["a"] {
-			t.Fatalf("current = %v", selectionState.CurrentNode().Line())
+		current := nodes["a1"]
+		send(nodes, &current, key(tcell.KeyRune, "K"))
+		if current != nodes["a"] {
+			t.Fatalf("current = %v", current.Line())
 		}
 	})
 	t.Run("select", func(t *testing.T) {
 		nodes := testTree()
-		var selectionState SelectionState
-		selectionState.SetCurrentNode(nodes["b"])
-		if got := send(nodes, &selectionState, key(tcell.KeyEnter, "")); got != nodes["b"] {
+		current := nodes["b"]
+		if got := send(nodes, &current, key(tcell.KeyEnter, "")); got != nodes["b"] {
 			t.Fatalf("got %v", got)
 		}
 	})
 	t.Run("click selects the node", func(t *testing.T) {
 		nodes := testTree()
-		var selectionState SelectionState
+		var current *Node
 		click := tview.MouseMsg{EventMouse: tcell.NewEventMouse(1, 1, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftClick}
-		if got := send(nodes, &selectionState, click); got != nodes["a1"] {
+		if got := send(nodes, &current, click); got != nodes["a1"] {
 			t.Fatalf("got %v", got)
 		}
 	})
-	t.Run("down action selects the next node", func(t *testing.T) {
+	t.Run("unfocused passes keys through", func(t *testing.T) {
 		nodes := testTree()
-		var selectionState SelectionState
-		selectionState.SetCurrentNode(nodes["a"])
-		send(nodes, &selectionState, ActionMsg(ActionDown))
-		if selectionState.CurrentNode() != nodes["a1"] {
-			t.Fatalf("current = %v", selectionState.CurrentNode().Line())
-		}
-	})
-	t.Run("unfocused passes keys and actions through", func(t *testing.T) {
-		nodes := testTree()
-		var selectionState SelectionState
+		var current *Node
 		down := key(tcell.KeyDown, "")
-		for _, msg := range []tview.Msg{down, ActionMsg(ActionDown)} {
-			if got := interactive(nodes["root"], selectionState).Focused(false).Handle(msg, area); got != msg {
-				t.Fatalf("got %v, want %v", got, msg)
-			}
+		if got := interactive(nodes["root"], current).Focused(false).Handle(down, area); got != down {
+			t.Fatalf("got %v, want %v", got, down)
 		}
 	})
 	t.Run("collapsed children are skipped", func(t *testing.T) {
 		nodes := testTree()
-		var selectionState SelectionState
+		var current *Node
 		nodes["a"].SetExpanded(false)
-		selectionState.SetCurrentNode(nodes["a"])
-		send(nodes, &selectionState, key(tcell.KeyDown, ""))
-		if selectionState.CurrentNode() != nodes["b"] {
-			t.Fatalf("current = %v", selectionState.CurrentNode().Line())
+		current = nodes["a"]
+		send(nodes, &current, key(tcell.KeyDown, ""))
+		if current != nodes["b"] {
+			t.Fatalf("current = %v", current.Line())
 		}
 	})
 }

@@ -12,15 +12,15 @@ type cancelMsg struct{}
 func TestWidgetHandle(t *testing.T) {
 	area := tview.Rectangle{Width: 20, Height: 5}
 	items := Items{{Text: "apple"}, {Text: "banana"}}
-	// send handles msg the way a model does: it applies the Change the picker produced and returns any other message.
+	// send handles msg the way a model does: it takes the search state the picker produced and returns any other message.
 	send := func(s *SearchState, msg tview.Msg) tview.Msg {
 		msg = New(items, s).
-			OnChange(func(a Change) tview.Msg { return a }).
+			OnChange(func(s *SearchState) tview.Msg { return s }).
 			OnSelect(func(item Item) tview.Msg { return item }).
 			OnCancel(cancelMsg{}).
 			Handle(msg, area)
-		if a, ok := msg.(Change); ok {
-			s.Apply(a)
+		if next, ok := msg.(*SearchState); ok {
+			*s = *next
 			return nil
 		}
 		return msg
@@ -53,8 +53,8 @@ func TestWidgetHandle(t *testing.T) {
 	t.Run("list keybinds move the list, not the query", func(t *testing.T) {
 		s := NewSearchState()
 		send(&s, tcell.NewEventKey(tcell.KeyEnd, "", tcell.ModNone))
-		if s.list.Cursor() != 1 {
-			t.Fatalf("list cursor = %d, want 1", s.list.Cursor())
+		if s.cursor != 1 {
+			t.Fatalf("list cursor = %d, want 1", s.cursor)
 		}
 	})
 	t.Run("select returns the item under the cursor", func(t *testing.T) {

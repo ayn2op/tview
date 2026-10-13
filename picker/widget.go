@@ -26,15 +26,18 @@ const inputHeight = 2
 
 // Widget is a query above the list of items that match it.
 type Widget struct {
-	items               Items
-	searchState         *SearchState
-	keybind             func(tview.KeyMsg) Action
-	listKeybind         func(tview.KeyMsg) list.Action
+	items       Items
+	searchState *SearchState
+
 	scrollBar           scrollbar.Widget
 	scrollBarVisibility viewport.ScrollBarVisibility
-	onChange            func(Change) tview.Msg
-	onSelect            func(Item) tview.Msg
-	onCancel            tview.Msg
+
+	keybind     func(tview.KeyMsg) Action
+	listKeybind func(tview.KeyMsg) list.Action
+
+	onChange func(*SearchState) tview.Msg
+	onSelect func(Item) tview.Msg
+	onCancel tview.Msg
 }
 
 var _ tview.Widget = Widget{}
@@ -62,8 +65,8 @@ func (w Widget) ScrollBar(scrollBar scrollbar.Widget, visibility viewport.Scroll
 	return w
 }
 
-// OnChange sets the function that turns a change to the search state into a message.
-func (w Widget) OnChange(onChange func(Change) tview.Msg) Widget {
+// OnChange sets the function that turns the search state that typing, moving the selection or scrolling leaves into a message.
+func (w Widget) OnChange(onChange func(*SearchState) tview.Msg) Widget {
 	w.onChange = onChange
 	return w
 }
@@ -116,9 +119,9 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 }
 
 func (w Widget) layout() tview.Widget {
-	query := textinput.New(&w.searchState.query).
+	query := textinput.New(w.searchState.query, w.searchState.queryCursor).
 		Focused(true).
-		OnChange(w.queryChange)
+		OnInput(w.queryChange)
 	// A line below the query separates it from the list.
 	var line tview.BorderSet
 	line.Bottom = separator
@@ -129,39 +132,55 @@ func (w Widget) layout() tview.Widget {
 
 func (w Widget) listView() viewport.Widget {
 	s, items := w.searchState, w.items
-	l := list.New(s.list, s.count(items), func(i int) tview.Widget { return text.New(items[s.index(i)].Text) }).
+	l := list.New(s.cursor, s.count(items), func(i int) tview.Widget { return text.New(items[s.index(i)].Text) }).
 		SelectedStyle(tcell.StyleDefault.Reverse(true)).
 		Keybind(w.listKeybind).
 		Focused(true).
-		OnChange(func(a list.Change) tview.Msg { return w.change(Change{list: a}) })
+		OnChange(func(cursor int) tview.Msg {
+			return w.change(func(s *SearchState) {
+				s.cursor = cursor
+				s.scroll.ScrollToTarget()
+			})
+		})
 	return viewport.New(l, s.scroll).
-		Target(l.Target).
+		Target(l.Target(s.cursor)).
 		ScrollBar(w.scrollBar, w.scrollBarVisibility).
-		OnChange(func(a viewport.Change) tview.Msg { return w.change(Change{scroll: a, isScroll: true}) })
+		OnChange(func(scroll *viewport.ScrollState) tview.Msg {
+			return w.change(func(s *SearchState) { s.scroll = *scroll })
+		})
 }
 
-// queryChange turns an edit of the query into a Change, matching the items against the query if the edit changed it.
-func (w Widget) queryChange(a textinput.Change) tview.Msg {
-	query := w.searchState.query
-	before := query.Value()
-	query.Apply(a)
-	change := Change{query: a, isQuery: true}
-	if value := query.Value(); value != before {
+// queryChange turns an edit of the query into the OnChange message, matching the items against the query if the edit changed it.
+func (w Widget) queryChange(value string, cursor int) tview.Msg {
+	return w.change(func(s *SearchState) {
+		changed := value != s.query
+		s.query, s.queryCursor = value, cursor
+		if !changed {
+			return
+		}
+
+		s.matches = nil
 		count := len(w.items)
 		if value != "" {
 			for _, match := range fuzzy.FindFrom(value, w.items) {
-				change.matches = append(change.matches, match.Index)
+				s.matches = append(s.matches, match.Index)
 			}
-			count = len(change.matches)
+
+			count = len(s.matches)
 		}
-		change.filtered, change.cursor = true, min(0, count-1)
-	}
-	return w.change(change)
+
+		s.cursor = min(0, count-1)
+		s.scroll.ScrollToTarget()
+	})
 }
 
-func (w Widget) change(a Change) tview.Msg {
+// change returns the OnChange message for the search state that edit leaves.
+func (w Widget) change(edit func(*SearchState)) tview.Msg {
 	if w.onChange == nil {
 		return nil
 	}
-	return w.onChange(a)
+
+	s := *w.searchState
+	edit(&s)
+	return w.onChange(&s)
 }

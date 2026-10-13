@@ -1,6 +1,6 @@
 package viewport
 
-// ScrollState is how far a viewport is scrolled. The model owns it and applies the Changes a viewport produces with Apply.
+// ScrollState is how far a viewport is scrolled. The model owns it and replaces it with the one a viewport produces.
 type ScrollState struct {
 	x, y int
 	// toTarget keeps the target in the middle, and atEnd the last row at the bottom.
@@ -18,14 +18,4 @@ func (s *ScrollState) ScrollToTarget() {
 // ScrollToEnd scrolls to the last row.
 func (s *ScrollState) ScrollToEnd() {
 	s.toTarget, s.atEnd = false, true
-}
-
-// Change is an update to ScrollState produced by a viewport.
-type Change struct {
-	x, y, grab                int
-	dragging, toTarget, atEnd bool
-}
-
-func (s *ScrollState) Apply(change Change) {
-	*s = ScrollState{x: change.x, y: change.y, toTarget: change.toTarget, atEnd: change.atEnd, dragging: change.dragging, grab: change.grab}
 }

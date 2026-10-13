@@ -8,31 +8,34 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
-// Widget draws items, with the one its SelectionState selects in the selected style, and turns keys and the mouse into Changes.
+// Widget draws items, with the one at the cursor in the selected style, and turns keys and the mouse into the item to move the cursor to.
 type Widget struct {
-	selectionState SelectionState
-	count          int
-	item           func(index int) tview.Widget
-	width, height  layout.Length
-	gap            int
-	selectedStyle  tview.Style
-	keybind        func(tview.KeyMsg) Action
-	focused        bool
-	onChange       func(Change) tview.Msg
+	cursor int
+	count  int
+	item   func(index int) tview.Widget
+
+	width, height layout.Length
+	gap           int
+	selectedStyle tview.Style
+
+	keybind func(tview.KeyMsg) Action
+	focused bool
+
+	onChange func(cursor int) tview.Msg
 }
 
 var _ tview.Widget = Widget{}
 
-// New returns a list of count items built by item, with selectionState as its cursor.
-func New(selectionState SelectionState, count int, item func(index int) tview.Widget) Widget {
+// New returns a list of count items built by item, with the cursor on item cursor, or on none if it is negative. The model owns the cursor.
+func New(cursor, count int, item func(index int) tview.Widget) Widget {
 	return Widget{
-		selectionState: selectionState,
-		count:          count,
-		item:           item,
-		width:          layout.Fill,
-		height:         layout.Fill,
-		selectedStyle:  tcell.StyleDefault.Reverse(true),
-		keybind:        DefaultKeybind,
+		cursor:        cursor,
+		count:         count,
+		item:          item,
+		width:         layout.Fill,
+		height:        layout.Fill,
+		selectedStyle: tcell.StyleDefault.Reverse(true),
+		keybind:       DefaultKeybind,
 	}
 }
 
@@ -72,8 +75,8 @@ func (w Widget) Focused(focused bool) Widget {
 	return w
 }
 
-// OnChange makes the list interactive, with the message f returns for the Change.
-func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
+// OnChange makes the list interactive, with the message f returns for the item to move the cursor to.
+func (w Widget) OnChange(f func(cursor int) tview.Msg) Widget {
 	w.onChange = f
 	return w
 }
@@ -105,20 +108,22 @@ func (w Widget) layout(width int) (starts, sizes []int, total int) {
 	return starts, sizes, total
 }
 
-// Target returns the rows of the item selected last at a width, or no rows for none.
-func (w Widget) Target(width int) (top, height int) {
-	i := w.selectionState.target
-	if i < 0 || i >= w.count {
-		return 0, 0
+// Target returns the rows of item index at a width, or no rows if there is no such item, for a viewport to keep in view.
+func (w Widget) Target(index int) func(width int) (top, height int) {
+	return func(width int) (top, height int) {
+		if index < 0 || index >= w.count {
+			return 0, 0
+		}
+
+		starts, sizes, _ := w.layout(width)
+		return starts[index], sizes[index]
 	}
-	starts, sizes, _ := w.layout(width)
-	return starts[i], sizes[i]
 }
 
 // Draw draws the items, with the selected one in the selected style.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	starts, sizes, _ := w.layout(area.Width)
-	cursor := min(w.selectionState.cursor, w.count-1)
+	cursor := min(w.cursor, w.count-1)
 	clipped := &clip.Screen{Screen: screen, Area: area}
 	// Items off the screen, as in a viewport, are skipped.
 	_, bottom := screen.Size()
@@ -140,23 +145,18 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle turns keys and ActionMsgs (while focused) and clicks on items into a Change once OnChange is set, unless the item clicked handles the click itself. Other messages pass through unchanged.
+// Handle turns keys (while focused) and clicks on items into the OnChange message, unless the item clicked handles the click itself. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if w.onChange == nil {
 		return msg
 	}
-	if key, ok := msg.(tview.KeyMsg); ok && w.focused {
-		if action := w.keybind(key); action != ActionNone {
-			msg = ActionMsg(action)
-		}
-	}
-	cursor := min(w.selectionState.cursor, w.count-1)
+	cursor := min(w.cursor, w.count-1)
 	switch m := msg.(type) {
-	case ActionMsg:
+	case tview.KeyMsg:
 		if !w.focused {
 			return msg
 		}
-		switch Action(m) {
+		switch w.keybind(m) {
 		case ActionSelectDown:
 			cursor = min(cursor+1, w.count-1)
 		case ActionSelectUp:
@@ -170,14 +170,15 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		}
 	case tview.MouseMsg:
 		x, y := m.Position()
-		pressed := m.Action == tview.MouseLeftDown || m.Action == tview.MouseMove && m.Buttons()&tcell.ButtonPrimary != 0
-		if !pressed || !area.Contains(x, y) {
+		// A drag reaches every item wherever the pointer went, as does the release that ends it, for a slider pressed in one to follow the pointer.
+		drag := m.Action == tview.MouseLeftUp || m.Action == tview.MouseMove && m.Buttons()&tcell.ButtonPrimary != 0
+		if !drag && (m.Action != tview.MouseLeftDown || !area.Contains(x, y)) {
 			return msg
 		}
 		starts, sizes, _ := w.layout(area.Width)
 		for i := range w.count {
-			if row := y - area.Y; row >= starts[i] && row < starts[i]+sizes[i] {
-				// The item under the pointer takes a press or drag first, as a button or slider in it would.
+			if row := y - area.Y; drag || row >= starts[i] && row < starts[i]+sizes[i] {
+				// The item pressed takes the press first, as a button or slider in it would.
 				itemArea := tview.Rectangle{X: area.X, Y: area.Y + starts[i], Width: area.Width, Height: sizes[i]}
 				if handled := w.item(i).Handle(msg, itemArea); handled != msg {
 					return handled
@@ -185,11 +186,11 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 				cursor = i
 			}
 		}
-		if m.Action != tview.MouseLeftDown {
+		if drag {
 			return msg
 		}
 	default:
 		return msg
 	}
-	return w.onChange(Change{cursor: cursor})
+	return w.onChange(cursor)
 }

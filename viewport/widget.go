@@ -6,6 +6,7 @@ import (
 	"github.com/ayn2op/tview/internal/clip"
 	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/scrollbar"
+	"github.com/gdamore/tcell/v3"
 )
 
 // ScrollBarVisibility is when a viewport shows its scroll bar.
@@ -20,19 +21,23 @@ const (
 
 // Widget shows the part of its child that it is scrolled to.
 type Widget struct {
-	child         tview.Widget
-	scrollState   ScrollState
+	child       tview.Widget
+	scrollState ScrollState
+
 	width, height layout.Length
 	axes          layout.Axes
 	target        func(width int) (top, height int)
 	contentWidth  func(top, height int) int
-	scrollBar     scrollbar.Widget
-	visibility    ScrollBarVisibility
 	trackEnd      bool
-	keybind       func(tview.KeyMsg) Action
-	focused       bool
-	onChange      func(Change) tview.Msg
-	onChildMsg    func(Change, tview.Msg) tview.Msg
+
+	scrollBar  scrollbar.Widget
+	visibility ScrollBarVisibility
+
+	keybind func(tview.KeyMsg) Action
+	focused bool
+
+	onChange   func(*ScrollState) tview.Msg
+	onChildMsg func(*ScrollState, tview.Msg) tview.Msg
 }
 
 var _ tview.Widget = Widget{}
@@ -104,14 +109,14 @@ func (w Widget) Focused(focused bool) Widget {
 	return w
 }
 
-// OnChange makes the viewport scroll, with the message f returns for the Change.
-func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
+// OnChange makes the viewport scroll, with the message f returns for the ScrollState it scrolls to.
+func (w Widget) OnChange(f func(*ScrollState) tview.Msg) Widget {
 	w.onChange = f
 	return w
 }
 
-// OnChildMsg sets the function that joins a message of the child with the Change that saves the position shown, when the viewport is not scrolled to it, as while it keeps its target in view.
-func (w Widget) OnChildMsg(f func(Change, tview.Msg) tview.Msg) Widget {
+// OnChildMsg sets the function that joins a message of the child with the ScrollState that saves the position shown, when the viewport is not scrolled to it, as while it keeps its target in view.
+func (w Widget) OnChildMsg(f func(*ScrollState, tview.Msg) tview.Msg) Widget {
 	w.onChildMsg = f
 	return w
 }
@@ -195,7 +200,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle passes msg to the child and turns what it leaves into a Change.
+// Handle passes msg to the child and turns what it leaves into the OnChange message.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	switch msg.(type) {
 	case tview.KeyMsg, tview.MouseMsg:
@@ -204,19 +209,21 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		return w.child.Handle(msg, area)
 	}
 	v := w.resolve(area)
-	a := Change{x: v.x, y: v.y, dragging: w.scrollState.dragging, grab: w.scrollState.grab}
+	a := ScrollState{x: v.x, y: v.y, dragging: w.scrollState.dragging, grab: w.scrollState.grab}
 	m, isMouse := msg.(tview.MouseMsg)
 	if isMouse && w.onChange != nil && w.barMouse(m, v, &a) {
 		return w.change(v, a)
 	}
-	if !isMouse || v.port.Contains(m.Position()) {
+	// A drag reaches the child wherever the pointer went, as does the release that ends it, for what was pressed in it to follow the pointer.
+	drag := isMouse && (m.Action == tview.MouseLeftUp || m.Action == tview.MouseMove && m.Buttons()&tcell.ButtonPrimary != 0)
+	if !isMouse || drag || v.port.Contains(m.Position()) {
 		received := msg
 		if msg = w.child.Handle(msg, v.child()); msg == nil {
 			return nil
 		}
 		if w.onChildMsg != nil && msg != received && v.x != w.scrollState.x {
 			a.toTarget, a.atEnd = w.scrollState.toTarget, w.scrollState.atEnd
-			return w.onChildMsg(a, msg)
+			return w.onChildMsg(&a, msg)
 		}
 	}
 	if w.onChange == nil {
@@ -269,12 +276,12 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	return w.change(v, a)
 }
 
-func (w Widget) change(v view, a Change) tview.Msg {
+func (w Widget) change(v view, a ScrollState) tview.Msg {
 	v = w.clamp(v, a.x, a.y)
 	a.x, a.y = v.x, v.y
 	_, maxY := v.max()
 	a.atEnd = w.trackEnd && a.y == maxY
-	return w.onChange(a)
+	return w.onChange(&a)
 }
 
 // bar returns the scroll bar for the view.
@@ -283,7 +290,7 @@ func (w Widget) bar(v view) scrollbar.Widget {
 }
 
 // barMouse applies m to a if it is on the scroll bar or drags its thumb, and reports whether it was: the begin and end symbols scroll a row, the track pages, and the thumb starts a drag.
-func (w Widget) barMouse(m tview.MouseMsg, v view, a *Change) bool {
+func (w Widget) barMouse(m tview.MouseMsg, v view, a *ScrollState) bool {
 	x, y := m.Position()
 	row := y - v.bar.Y
 	if a.dragging {

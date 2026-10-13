@@ -13,26 +13,32 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// Widget draws EditState and turns typing into Changes.
+// Widget draws a text with a cursor in it and turns typing into the text and cursor it leaves.
 type Widget struct {
-	editState     *EditState
+	text string
+	// cursor is the byte offset of the cursor in text, always at a grapheme boundary.
+	cursor int
+
 	width, height layout.Length
 	placeholder   string
 	style         tview.Style
-	keybind       func(tview.KeyMsg) Action
-	onChange      func(Change) tview.Msg
-	focused       bool
+
+	keybind func(tview.KeyMsg) Action
+	focused bool
+
+	onInput func(text string, cursor int) tview.Msg
 }
 
 var _ tview.Widget = Widget{}
 
-// New returns a text area showing editState that fills its parent.
-func New(editState *EditState) Widget {
+// New returns a text area showing text, with the cursor at the byte offset cursor in it, that fills its parent. The model owns both.
+func New(text string, cursor int) Widget {
 	return Widget{
-		editState: editState,
-		width:     layout.Fill,
-		height:    layout.Fill,
-		keybind:   DefaultKeybind,
+		text:    text,
+		cursor:  min(max(cursor, 0), len(text)),
+		width:   layout.Fill,
+		height:  layout.Fill,
+		keybind: DefaultKeybind,
 	}
 }
 
@@ -66,9 +72,9 @@ func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	return w
 }
 
-// OnChange turns typing into the message f returns for the Change, which the model applies with EditState.Apply.
-func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
-	w.onChange = f
+// OnInput turns typing and moving the cursor into the message f returns for the text and cursor they leave.
+func (w Widget) OnInput(f func(text string, cursor int) tview.Msg) Widget {
+	w.onInput = f
 	return w
 }
 
@@ -86,7 +92,7 @@ func (w Widget) Size() (width, height layout.Length) {
 // Layout returns the size of the text area within limits, as tall as its wrapped lines where it shrinks.
 func (w Widget) Layout(limits layout.Limits) layout.Size {
 	return layout.Sized(limits, w.width, w.height, func(limits layout.Limits) layout.Size {
-		return layout.Size{Height: max(len(wrap(w.editState.Value(), limits.Max.Width)), 1)}
+		return layout.Size{Height: max(len(wrap(w.text, limits.Max.Width)), 1)}
 	})
 }
 
@@ -134,39 +140,34 @@ func at(value string, l line, column int) int {
 	return offset
 }
 
-// scroll returns the first visible line that keeps the cursor row visible in height lines.
-func scroll(first, cursorRow, height int) int {
-	return max(min(first, cursorRow), cursorRow-height+1, 0)
-}
-
 // Draw fills area with the style and draws the visible lines, or the placeholder while the value is empty, showing the cursor while focused.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', w.style)
 	if area.Width <= 0 || area.Height <= 0 {
 		return
 	}
-	c := w.editState
-	if c.value == "" && w.placeholder != "" {
+	if w.text == "" && w.placeholder != "" {
 		tview.Print(screen, w.placeholder, area.X, area.Y, area.Width, tview.AlignmentLeft, w.style.Dim(true))
 	}
-	lines := wrap(c.value, area.Width)
-	cursorRow, column := locate(c.value, lines, c.cursor)
-	first := scroll(c.row, cursorRow, area.Height)
+	lines := wrap(w.text, area.Width)
+	cursorRow, column := locate(w.text, lines, w.cursor)
+	// The first visible line is the one that keeps the cursor row visible.
+	first := max(cursorRow-area.Height+1, 0)
 	for i := 0; i < area.Height && first+i < len(lines); i++ {
 		l := lines[first+i]
-		tview.Print(screen, c.value[l.start:l.end], area.X, area.Y+i, area.Width, tview.AlignmentLeft, w.style)
+		tview.Print(screen, w.text[l.start:l.end], area.X, area.Y+i, area.Width, tview.AlignmentLeft, w.style)
 	}
 	if w.focused {
 		screen.ShowCursor(area.X+column, area.Y+cursorRow-first)
 	}
 }
 
-// Handle turns editing keys and paste into a Change while focused. Other messages pass through unchanged.
+// Handle turns editing keys and paste into the OnInput message while focused. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
-	if !w.focused || w.onChange == nil {
+	if !w.focused || w.onInput == nil {
 		return msg
 	}
-	value, cursor := w.editState.value, w.editState.cursor
+	value, cursor := w.text, w.cursor
 	switch m := msg.(type) {
 	case tview.KeyMsg:
 		action := w.keybind(m)
@@ -184,8 +185,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	default:
 		return msg
 	}
-	cursorRow, _ := locate(value, wrap(value, area.Width), cursor)
-	return w.onChange(Change{value: value, cursor: cursor, row: scroll(w.editState.row, cursorRow, area.Height)})
+	return w.onInput(value, cursor)
 }
 
 // edit applies action to value and cursor, with lines being value wrapped.

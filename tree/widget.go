@@ -23,35 +23,39 @@ type Markers struct {
 	Leaf      string
 }
 
-// Widget draws the nodes under a root and turns keys and the mouse into Changes.
+// Widget draws the nodes under a root and turns keys and the mouse into the node to make current.
 type Widget struct {
-	root           *Node
-	selectionState SelectionState
-	width, height  layout.Length
-	topLevel       int
-	markers        Markers
-	graphics       bool
-	graphicsSet    tview.BorderSet
-	graphicsStyle  tview.Style
-	keybind        func(tview.KeyMsg) Action
-	focused        bool
-	onChange       func(Change) tview.Msg
-	onSelect       func(*Node) tview.Msg
+	root    *Node
+	current *Node
+
+	width, height layout.Length
+	topLevel      int
+
+	markers       Markers
+	graphics      bool
+	graphicsSet   tview.BorderSet
+	graphicsStyle tview.Style
+
+	keybind func(tview.KeyMsg) Action
+	focused bool
+
+	onChange func(*Node) tview.Msg
+	onSelect func(*Node) tview.Msg
 }
 
 var _ tview.Widget = Widget{}
 
-// New returns a tree of the nodes under root, with selectionState as its current node. It is interactive only once OnChange is set.
-func New(root *Node, selectionState SelectionState) Widget {
+// New returns a tree of the nodes under root, with current as its current node, or nil for none. The model owns the current node. It is interactive only once OnChange is set.
+func New(root, current *Node) Widget {
 	return Widget{
-		root:           root,
-		selectionState: selectionState,
-		width:          layout.Fill,
-		height:         layout.Fill,
-		markers:        Markers{Expanded: expandedMarker, Collapsed: collapsedMarker},
-		graphics:       true,
-		graphicsSet:    tview.BorderSetPlain(),
-		keybind:        DefaultKeybind,
+		root:        root,
+		current:     current,
+		width:       layout.Fill,
+		height:      layout.Fill,
+		markers:     Markers{Expanded: expandedMarker, Collapsed: collapsedMarker},
+		graphics:    true,
+		graphicsSet: tview.BorderSetPlain(),
+		keybind:     DefaultKeybind,
 	}
 }
 
@@ -109,8 +113,8 @@ func (w Widget) Focused(focused bool) Widget {
 	return w
 }
 
-// OnChange makes the tree interactive, turning keys and the mouse into the message f returns for the Change, which the model applies with SelectionState.Apply.
-func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
+// OnChange makes the tree interactive, turning keys and the mouse into the message f returns for the node to make current.
+func (w Widget) OnChange(f func(current *Node) tview.Msg) Widget {
 	w.onChange = f
 	return w
 }
@@ -192,7 +196,7 @@ type view struct {
 // resolve returns the rows and the row of the current node, falling back to the first selectable one.
 func (w Widget) resolve() view {
 	v := view{rows: w.rows(), current: -1}
-	if c := w.selectionState.current; c != nil {
+	if c := w.current; c != nil {
 		v.current = slices.IndexFunc(v.rows, func(r row) bool { return r.node == c && c.selectable })
 		if v.current < 0 {
 			v.current = slices.IndexFunc(v.rows, func(r row) bool { return r.node.selectable })
@@ -282,24 +286,19 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 }
 
-// Handle turns keys and ActionMsgs (while focused) into a Change once OnChange is set, and ActionSelect and clicks on nodes into the OnSelect message. Other messages pass through unchanged.
+// Handle turns keys (while focused) into the OnChange message, and ActionSelect and clicks on nodes into the OnSelect message. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	if w.onChange == nil {
 		return msg
 	}
-	if key, ok := msg.(tview.KeyMsg); ok && w.focused {
-		if action := w.keybind(key); action != ActionNone {
-			msg = ActionMsg(action)
-		}
-	}
 	switch m := msg.(type) {
-	case ActionMsg:
+	case tview.KeyMsg:
 		if !w.focused {
 			return msg
 		}
 		v := w.resolve()
 		current := v.current
-		switch Action(m) {
+		switch w.keybind(m) {
 		case ActionDown:
 			current = v.step(current, 1)
 		case ActionUp:
@@ -319,7 +318,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		default:
 			return msg
 		}
-		return w.onChange(Change{current: v.node(current)})
+		return w.onChange(v.node(current))
 	case tview.MouseMsg:
 		x, y := m.Position()
 		if m.Action != tview.MouseLeftClick || !area.Contains(x, y) {

@@ -21,10 +21,13 @@ func mouse(x, y int, action tview.MouseAction) tview.MouseMsg {
 	return tview.MouseMsg{EventMouse: tcell.NewEventMouse(x, y, tcell.ButtonNone, tcell.ModNone), Action: action}
 }
 
+// current is the node a tree made current.
+type current struct{ *tree.Node }
+
 // treeModel is a tree of four rows, the third wider than the area, in a viewport that scrolls both ways.
 type treeModel struct {
 	root        *tree.Node
-	selection   tree.SelectionState
+	selection   *tree.Node
 	scrollState ScrollState
 }
 
@@ -40,22 +43,22 @@ var treeArea = tview.Rectangle{X: 1, Y: 1, Width: 6, Height: 2}
 
 func (m *treeModel) view() Widget {
 	t := tree.New(m.root, m.selection).TopLevel(1).Markers(tree.Markers{}).Focused(true).
-		OnChange(func(c tree.Change) tview.Msg { return c }).
+		OnChange(func(n *tree.Node) tview.Msg { return current{n} }).
 		OnSelect(func(n *tree.Node) tview.Msg { return n })
 	return New(t, m.scrollState).
 		Target(t.Target).
 		Axes(layout.Axes{Width: true, Height: true}).
 		Focused(true).
-		OnChange(func(c Change) tview.Msg { return c })
+		OnChange(func(s *ScrollState) tview.Msg { return *s })
 }
 
 func (m *treeModel) send(msg tview.Msg) tview.Msg {
 	switch out := m.view().Handle(msg, treeArea).(type) {
-	case tree.Change:
-		m.selection.Apply(out)
+	case current:
+		m.selection = out.Node
 		m.scrollState.ScrollToTarget()
-	case Change:
-		m.scrollState.Apply(out)
+	case ScrollState:
+		m.scrollState = out
 	default:
 		return out
 	}
@@ -105,11 +108,11 @@ func TestWidget(t *testing.T) {
 	})
 	t.Run("the target is kept in the middle", func(t *testing.T) {
 		m := newTreeModel()
-		m.selection.SetCurrentNode(m.root.Children()[0])
+		m.selection = m.root.Children()[0]
 		for range 3 {
 			m.send(key(tcell.KeyDown))
 		}
-		if got := m.selection.CurrentNode(); got != m.root.Children()[3] {
+		if got := m.selection; got != m.root.Children()[3] {
 			t.Fatalf("current = %v", got.Line())
 		}
 		check(t, m, blank, " long n ", " d      ", blank)
@@ -125,49 +128,49 @@ func TestWidget(t *testing.T) {
 		m := newTreeModel()
 		tr := tree.New(m.root, m.selection).TopLevel(1).Markers(tree.Markers{})
 		view := m.view().ContentWidth(tr.RowsWidth)
-		if out := view.Handle(key(tcell.KeyRight), treeArea); out != tview.Msg(Change{}) {
+		if out := view.Handle(key(tcell.KeyRight), treeArea); out != tview.Msg(ScrollState{}) {
 			t.Fatalf("got %+v, want no scrolling past a and b", out)
 		}
 		m.send(key(tcell.KeyPgDn))
-		if out := m.view().ContentWidth(tr.RowsWidth).Handle(key(tcell.KeyRight), treeArea); out != tview.Msg(Change{x: 1, y: 2}) {
+		if out := m.view().ContentWidth(tr.RowsWidth).Handle(key(tcell.KeyRight), treeArea); out != tview.Msg(ScrollState{x: 1, y: 2}) {
 			t.Fatalf("got %+v, want a cell right at long name", out)
 		}
 	})
 	t.Run("scrolling away from wide rows resets the sideways position", func(t *testing.T) {
 		m := newTreeModel()
 		tr := tree.New(m.root, m.selection).TopLevel(1).Markers(tree.Markers{})
-		var got Change
+		var got ScrollState
 		for _, msg := range []tview.Msg{key(tcell.KeyPgDn), key(tcell.KeyRight), key(tcell.KeyPgUp), key(tcell.KeyPgDn)} {
-			got = m.view().ContentWidth(tr.RowsWidth).Handle(msg, treeArea).(Change)
-			m.scrollState.Apply(got)
+			got = m.view().ContentWidth(tr.RowsWidth).Handle(msg, treeArea).(ScrollState)
+			m.scrollState = got
 		}
-		if got != (Change{y: 2}) {
+		if got != (ScrollState{y: 2}) {
 			t.Fatalf("got %+v, want back at long name and not scrolled right", got)
 		}
 	})
 	t.Run("following the selection away from wide rows resets the sideways position", func(t *testing.T) {
 		type moved struct {
-			scroll Change
+			scroll ScrollState
 			msg    tview.Msg
 		}
 		m := newTreeModel()
 		for i := range 8 {
 			m.root.AddChild(tree.NewNode(strconv.Itoa(i)))
 		}
-		m.selection.SetCurrentNode(m.root.Children()[2])
+		m.selection = m.root.Children()[2]
 		send := func(msg tview.Msg) {
 			tr := tree.New(m.root, m.selection).TopLevel(1).Markers(tree.Markers{})
-			out := m.view().ContentWidth(tr.RowsWidth).OnChildMsg(func(c Change, msg tview.Msg) tview.Msg { return moved{c, msg} }).Handle(msg, treeArea)
+			out := m.view().ContentWidth(tr.RowsWidth).OnChildMsg(func(s *ScrollState, msg tview.Msg) tview.Msg { return moved{*s, msg} }).Handle(msg, treeArea)
 			if joined, ok := out.(moved); ok {
-				m.scrollState.Apply(joined.scroll)
+				m.scrollState = joined.scroll
 				out = joined.msg
 			}
 			switch out := out.(type) {
-			case tree.Change:
-				m.selection.Apply(out)
+			case current:
+				m.selection = out.Node
 				m.scrollState.ScrollToTarget()
-			case Change:
-				m.scrollState.Apply(out)
+			case ScrollState:
+				m.scrollState = out
 			}
 		}
 		send(key(tcell.KeyPgDn))
@@ -178,8 +181,8 @@ func TestWidget(t *testing.T) {
 		for range 4 {
 			send(key(tcell.KeyUp))
 		}
-		if m.scrollState.x != 0 || m.selection.CurrentNode() != m.root.Children()[2] {
-			t.Fatalf("x = %d at %v, want 0 at long name", m.scrollState.x, m.selection.CurrentNode().Line())
+		if m.scrollState.x != 0 || m.selection != m.root.Children()[2] {
+			t.Fatalf("x = %d at %v, want 0 at long name", m.scrollState.x, m.selection.Line())
 		}
 	})
 	t.Run("does not scroll without OnChange", func(t *testing.T) {
@@ -191,24 +194,24 @@ func TestWidget(t *testing.T) {
 }
 
 // numbers returns a list of count rows labeled 0, 1, and so on, in a viewport with a scroll bar without end symbols.
-func numbers(selection list.SelectionState, scrollState ScrollState, count int) Widget {
+func numbers(selection int, scrollState ScrollState, count int) Widget {
 	l := list.New(selection, count, func(i int) tview.Widget { return text.New(strconv.Itoa(i)) })
 	return New(l, scrollState).
-		Target(l.Target).
+		Target(l.Target(selection)).
 		ScrollBar(scrollbar.New().BeginSymbol("").EndSymbol(""), ScrollBarVisibilityAutomatic).
 		TrackEnd(true).
-		OnChange(func(c Change) tview.Msg { return c })
+		OnChange(func(s *ScrollState) tview.Msg { return *s })
 }
 
-// apply sends msgs through numbers in area, applying each Change.
+// apply sends msgs through numbers in area, scrolling to what each produces.
 func apply(t *testing.T, scrollState ScrollState, count int, area tview.Rectangle, msgs ...tview.Msg) ScrollState {
 	t.Helper()
 	for _, msg := range msgs {
-		change, ok := numbers(list.NewSelectionState(), scrollState, count).Handle(msg, area).(Change)
+		change, ok := numbers(-1, scrollState, count).Handle(msg, area).(ScrollState)
 		if !ok {
-			t.Fatalf("%v: want a Change", msg)
+			t.Fatalf("%v: want a ScrollState", msg)
 		}
-		scrollState.Apply(change)
+		scrollState = change
 	}
 	return scrollState
 }
@@ -235,20 +238,20 @@ func TestScrollBar(t *testing.T) {
 	})
 	t.Run("a scroll bar too short to draw takes no clicks", func(t *testing.T) {
 		short := tview.Rectangle{Width: 4, Height: 2}
-		msg := numbers(list.NewSelectionState(), ScrollState{}, 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 1, tview.MouseLeftDown), short)
-		if a, ok := msg.(Change); !ok || a.y != 0 {
+		msg := numbers(-1, ScrollState{}, 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 1, tview.MouseLeftDown), short)
+		if a, ok := msg.(ScrollState); !ok || a.y != 0 {
 			t.Fatalf("got %v, want y 0", msg)
 		}
 	})
 	t.Run("the end symbol scrolls a step", func(t *testing.T) {
-		msg := numbers(list.NewSelectionState(), ScrollState{}, 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftDown), area)
-		if a, ok := msg.(Change); !ok || a.y != 1 {
+		msg := numbers(-1, ScrollState{}, 10).ScrollBar(scrollbar.New(), ScrollBarVisibilityAutomatic).Handle(mouse(3, 3, tview.MouseLeftDown), area)
+		if a, ok := msg.(ScrollState); !ok || a.y != 1 {
 			t.Fatalf("got %v, want y 1", msg)
 		}
 	})
 	t.Run("moving the mouse without dragging passes through", func(t *testing.T) {
 		move := mouse(1, 3, tview.MouseMove)
-		if got := numbers(list.NewSelectionState(), ScrollState{}, 50).Handle(move, area); got != tview.Msg(move) {
+		if got := numbers(-1, ScrollState{}, 50).Handle(move, area); got != tview.Msg(move) {
 			t.Fatalf("got %v", got)
 		}
 	})
@@ -256,7 +259,7 @@ func TestScrollBar(t *testing.T) {
 
 func TestScrollTo(t *testing.T) {
 	area := tview.Rectangle{Width: 3, Height: 2}
-	rows := func(t *testing.T, selection list.SelectionState, scrollState ScrollState, count int) string {
+	rows := func(t *testing.T, selection int, scrollState ScrollState, count int) string {
 		t.Helper()
 		screen := screentest.New(t, 3, 2)
 		numbers(selection, scrollState, count).ScrollBar(scrollbar.New(), ScrollBarVisibilityNever).Draw(screen, area)
@@ -269,30 +272,27 @@ func TestScrollTo(t *testing.T) {
 		scrollState.ScrollToEnd()
 		return apply(t, scrollState, 5, area, msgs...)
 	}
-	t.Run("the target stays in view once deselected", func(t *testing.T) {
-		selection := list.NewSelectionState()
-		selection.SetCursor(3)
-		selection.SetCursor(-1)
+	t.Run("the target is kept in view", func(t *testing.T) {
 		var scrollState ScrollState
 		scrollState.ScrollToTarget()
-		if got := rows(t, selection, scrollState, 9); got != "23" {
+		if got := rows(t, 3, scrollState, 9); got != "23" {
 			t.Fatalf("rows = %q", got)
 		}
 	})
 	t.Run("stays at the end when an item is added", func(t *testing.T) {
-		if got := rows(t, list.NewSelectionState(), atEnd(t), 6); got != "45" {
+		if got := rows(t, -1, atEnd(t), 6); got != "45" {
 			t.Fatalf("rows = %q", got)
 		}
 	})
 	t.Run("scrolling back to the end tracks it again", func(t *testing.T) {
 		scrollState := atEnd(t, mouse(0, 0, tview.MouseScrollUp), mouse(0, 0, tview.MouseScrollDown))
-		if got := rows(t, list.NewSelectionState(), scrollState, 6); got != "45" {
+		if got := rows(t, -1, scrollState, 6); got != "45" {
 			t.Fatalf("rows = %q", got)
 		}
 	})
 	t.Run("scrolled up stays put", func(t *testing.T) {
 		scrollState := atEnd(t, mouse(0, 0, tview.MouseScrollUp))
-		if got := rows(t, list.NewSelectionState(), scrollState, 6); got != "23" {
+		if got := rows(t, -1, scrollState, 6); got != "23" {
 			t.Fatalf("rows = %q", got)
 		}
 	})

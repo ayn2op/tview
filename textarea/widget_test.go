@@ -10,18 +10,26 @@ import (
 
 func key(k tcell.Key, str string) tview.KeyMsg { return tcell.NewEventKey(k, str, tcell.ModNone) }
 
-// apply sends msgs through a focused text area showing editState in area, applying each Change, and returns the editState.
-func apply(t *testing.T, editState EditState, area tview.Rectangle, msgs ...tview.Msg) EditState {
+// input is the text and cursor that typing in a text area left.
+type input struct {
+	text   string
+	cursor int
+}
+
+func onInput(text string, cursor int) tview.Msg { return input{text, cursor} }
+
+// apply sends msgs through a focused text area showing text with the cursor at its end in area, and returns what they leave.
+func apply(t *testing.T, text string, area tview.Rectangle, msgs ...tview.Msg) input {
 	t.Helper()
+	got := input{text, len(text)}
 	for _, msg := range msgs {
-		out := New(&editState).Focused(true).OnChange(func(a Change) tview.Msg { return a }).Handle(msg, area)
-		change, ok := out.(Change)
+		out, ok := New(got.text, got.cursor).Focused(true).OnInput(onInput).Handle(msg, area).(input)
 		if !ok {
-			t.Fatalf("%v: got %v, want a Change", msg, out)
+			t.Fatalf("%v: got %v, want input", msg, out)
 		}
-		editState.Apply(change)
+		got = out
 	}
-	return editState
+	return got
 }
 
 func TestWidgetHandle(t *testing.T) {
@@ -40,22 +48,15 @@ func TestWidgetHandle(t *testing.T) {
 		{"paste", "", []tview.Msg{tview.PasteMsg("a\r\nb")}, "a\nb", 3},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := apply(t, NewEditState(tt.value), area, tt.msgs...)
-			if got.value != tt.want || got.cursor != tt.wantCursor {
-				t.Fatalf("got %q at %d, want %q at %d", got.value, got.cursor, tt.want, tt.wantCursor)
+			got := apply(t, tt.value, area, tt.msgs...)
+			if got.text != tt.want || got.cursor != tt.wantCursor {
+				t.Fatalf("got %q at %d, want %q at %d", got.text, got.cursor, tt.want, tt.wantCursor)
 			}
 		})
 	}
 
-	t.Run("scrolls to keep the cursor visible", func(t *testing.T) {
-		got := apply(t, NewEditState(""), tview.Rectangle{Width: 5, Height: 2}, key(tcell.KeyEnter, ""), key(tcell.KeyEnter, ""))
-		if got.row != 1 {
-			t.Fatalf("row = %d, want 1", got.row)
-		}
-	})
 	t.Run("passes other keys and unfocused input through", func(t *testing.T) {
-		editState := NewEditState("x")
-		w := New(&editState).OnChange(func(a Change) tview.Msg { return a })
+		w := New("x", 1).OnInput(onInput)
 		tab := key(tcell.KeyTab, "")
 		if got := w.Focused(true).Handle(tab, area); got != tab {
 			t.Fatalf("got %v", got)
@@ -66,21 +67,17 @@ func TestWidgetHandle(t *testing.T) {
 	})
 }
 
-func TestStateUndo(t *testing.T) {
-	editState := apply(t, NewEditState(""), tview.Rectangle{Width: 5, Height: 1}, key(tcell.KeyRune, "a"), key(tcell.KeyRune, "b"))
-	editState.Undo()
-	if editState.Value() != "a" || editState.Cursor() != 1 {
-		t.Fatalf("got %q at %d, want %q at 1", editState.Value(), editState.Cursor(), "a")
-	}
-}
-
 func TestWidgetDraw(t *testing.T) {
-	screen := screentest.New(t, 5, 2)
-	editState := NewEditState("ab cd ef")
-	New(&editState).Draw(screen, tview.Rectangle{Width: 5, Height: 2})
-	for y, want := range []string{"ab   ", "cd ef"} {
-		if got := screentest.Row(screen, y, 5); got != want {
-			t.Fatalf("row %d = %q, want %q", y, got, want)
+	draw := func(t *testing.T, text string, want ...string) {
+		screen := screentest.New(t, 5, 2)
+		New(text, len(text)).Draw(screen, tview.Rectangle{Width: 5, Height: 2})
+		for y, want := range want {
+			if got := screentest.Row(screen, y, 5); got != want {
+				t.Fatalf("row %d = %q, want %q", y, got, want)
+			}
 		}
 	}
+
+	t.Run("wrapped", func(t *testing.T) { draw(t, "ab cd ef", "ab   ", "cd ef") })
+	t.Run("scrolled to keep the cursor visible", func(t *testing.T) { draw(t, "a\nb\nc", "b    ", "c    ") })
 }

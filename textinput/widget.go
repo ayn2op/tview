@@ -12,26 +12,32 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// Widget draws EditState and turns typing into Changes.
+// Widget draws a text with a cursor in it and turns typing into the text and cursor it leaves.
 type Widget struct {
-	editState *EditState
-	width     layout.Length
-	style     tview.Style
-	mask      string
-	keybind   func(tview.KeyMsg) Action
-	onChange  func(Change) tview.Msg
-	onSubmit  tview.Msg
-	focused   bool
+	text string
+	// cursor is the byte offset of the cursor in text, always at a grapheme boundary.
+	cursor int
+
+	width layout.Length
+	style tview.Style
+	mask  string
+
+	keybind func(tview.KeyMsg) Action
+	focused bool
+
+	onInput  func(text string, cursor int) tview.Msg
+	onSubmit tview.Msg
 }
 
 var _ tview.Widget = Widget{}
 
-// New returns a one-line text input showing editState that fills its parent's width.
-func New(editState *EditState) Widget {
+// New returns a one-line text input showing text, with the cursor at the byte offset cursor in it, that fills its parent's width. The model owns both.
+func New(text string, cursor int) Widget {
 	return Widget{
-		editState: editState,
-		width:     layout.Fill,
-		keybind:   DefaultKeybind,
+		text:    text,
+		cursor:  min(max(cursor, 0), len(text)),
+		width:   layout.Fill,
+		keybind: DefaultKeybind,
 	}
 }
 
@@ -59,9 +65,9 @@ func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	return w
 }
 
-// OnChange turns typing into the message f returns for the Change, which the model applies with EditState.Apply.
-func (w Widget) OnChange(f func(Change) tview.Msg) Widget {
-	w.onChange = f
+// OnInput turns typing and moving the cursor into the message f returns for the text and cursor they leave.
+func (w Widget) OnInput(f func(text string, cursor int) tview.Msg) Widget {
+	w.onInput = f
 	return w
 }
 
@@ -107,10 +113,9 @@ func skip(text string, n int) string {
 	return text
 }
 
-// scroll returns the scroll offset that keeps the cursor visible in width cells.
-func (w Widget) scroll(value string, cursor, offset, width int) int {
-	column := uniseg.StringWidth(w.shown(value[:cursor]))
-	return max(min(offset, column), column-width+1, 0)
+// scroll returns how many cells are scrolled off the left edge to keep the cursor visible in width cells.
+func (w Widget) scroll(width int) int {
+	return max(uniseg.StringWidth(w.shown(w.text[:w.cursor]))-width+1, 0)
 }
 
 // Draw fills the first row of area with the style and draws the value, showing the cursor while focused.
@@ -121,20 +126,19 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	for x := area.X; x < area.X+area.Width; x++ {
 		screen.Put(x, area.Y, " ", w.style)
 	}
-	c := w.editState
-	offset := w.scroll(c.value, c.cursor, c.offset, area.Width)
-	tview.Print(screen, skip(w.shown(c.value), offset), area.X, area.Y, area.Width, tview.AlignmentLeft, w.style)
+	offset := w.scroll(area.Width)
+	tview.Print(screen, skip(w.shown(w.text), offset), area.X, area.Y, area.Width, tview.AlignmentLeft, w.style)
 	if w.focused {
-		screen.ShowCursor(area.X+uniseg.StringWidth(w.shown(c.value[:c.cursor]))-offset, area.Y)
+		screen.ShowCursor(area.X+uniseg.StringWidth(w.shown(w.text[:w.cursor]))-offset, area.Y)
 	}
 }
 
-// Handle turns editing keys and paste into a Change while focused, and ActionSubmit into the OnSubmit message. Other messages pass through unchanged.
+// Handle turns editing keys and paste into the OnInput message while focused, and ActionSubmit into the OnSubmit message. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
-	if !w.focused || w.onChange == nil {
+	if !w.focused || w.onInput == nil {
 		return msg
 	}
-	value, cursor := w.editState.value, w.editState.cursor
+	value, cursor := w.text, w.cursor
 	switch m := msg.(type) {
 	case tview.KeyMsg:
 		action := w.keybind(m)
@@ -157,7 +161,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	default:
 		return msg
 	}
-	return w.onChange(Change{value: value, cursor: cursor, offset: w.scroll(value, cursor, w.editState.offset, area.Width)})
+	return w.onInput(value, cursor)
 }
 
 // edit applies action to value and cursor.

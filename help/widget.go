@@ -130,9 +130,9 @@ func (w Widget) EllipsisStyle(style tview.Style) Widget {
 	return w
 }
 
-// Size returns Fill, as the help takes the area its parent gives it. Layout reports the rows it needs.
+// Size returns Fill and Shrink, as the help is as tall as the rows it needs.
 func (Widget) Size() (width, height layout.Length) {
-	return layout.Fill, layout.Fill
+	return layout.Fill, layout.Shrink
 }
 
 // Layout returns the size of the help within limits, as tall as the rows it takes at the width of limits, where a width of 0 is unlimited.

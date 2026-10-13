@@ -66,24 +66,6 @@ func TestWidgetAreas(t *testing.T) {
 	}
 }
 
-func TestWidgetSize(t *testing.T) {
-	t.Run("shrink fits fixed children", func(t *testing.T) {
-		l := New(true,
-			sized{width: layout.Fixed(2), height: layout.Fixed(1)},
-			sized{width: layout.Fixed(3), height: layout.Fixed(2)},
-		).Width(layout.Shrink).Height(layout.Shrink).Spacing(1)
-		if width, height := l.Size(); width != layout.Fixed(6) || height != layout.Fixed(2) {
-			t.Fatalf("size = %+v x %+v", width, height)
-		}
-	})
-	t.Run("keeps other lengths", func(t *testing.T) {
-		l := New(false).Height(layout.Fixed(3))
-		if width, height := l.Size(); width != layout.Fill || height != layout.Fixed(3) {
-			t.Fatalf("size = %+v x %+v", width, height)
-		}
-	})
-}
-
 func TestWidgetHandle(t *testing.T) {
 	var left, right tview.Rectangle
 	l := New(true,
@@ -113,4 +95,41 @@ func TestWidgetHandle(t *testing.T) {
 
 func (s sized) Layout(limits layout.Limits) layout.Size {
 	return layout.Atomic(limits, s.width, s.height)
+}
+
+// wrapped is as tall as 12 cells of text wrapped to its width.
+type wrapped struct{ sized }
+
+func (wrapped) Size() (width, height layout.Length) { return layout.Fill, layout.Shrink }
+
+func (wrapped) Layout(limits layout.Limits) layout.Size {
+	return layout.Sized(limits, layout.Fill, layout.Shrink, func(limits layout.Limits) layout.Size {
+		return layout.Size{Height: (12 + limits.Max.Width - 1) / max(limits.Max.Width, 1)}
+	})
+}
+
+func TestWidgetLayout(t *testing.T) {
+	fixed := New(true,
+		sized{width: layout.Fixed(2), height: layout.Fixed(1)},
+		sized{width: layout.Fixed(3), height: layout.Fixed(2)},
+	).Width(layout.Shrink).Height(layout.Shrink).Spacing(1)
+	if got := fixed.Layout(layout.Limits{Max: layout.Size{Width: 10, Height: 10}}); got != (layout.Size{Width: 6, Height: 2}) {
+		t.Fatalf("fixed = %+v", got)
+	}
+
+	limits := layout.Limits{Max: layout.Size{Width: 7}, Infinite: layout.Axes{Height: true}}
+	row := New(true, sized{width: layout.Fixed(2), height: layout.Fixed(2)}, wrapped{}).Spacing(1).Height(layout.Shrink)
+	if got := row.Layout(limits); got != (layout.Size{Width: 7, Height: 3}) {
+		t.Fatalf("row = %+v", got)
+	}
+
+	column := New(false, tall(layout.Fixed(1)), row).Height(layout.Shrink)
+	if got := column.Layout(limits); got != (layout.Size{Width: 7, Height: 4}) {
+		t.Fatalf("column = %+v", got)
+	}
+
+	want := []tview.Rectangle{{Width: 7, Height: 1}, {Y: 1, Width: 7, Height: 3}}
+	if got := column.areas(tview.Rectangle{Width: 7, Height: 4}); !slices.Equal(got, want) {
+		t.Fatalf("areas = %+v", got)
+	}
 }

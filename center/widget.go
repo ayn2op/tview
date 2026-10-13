@@ -13,7 +13,7 @@ type Widget struct {
 
 var _ tview.Widget = Widget{}
 
-// New places child in the middle of its area at the child's Fixed size. A child that fills along an axis takes the whole area along it.
+// New places child in the middle of its area at the size of its Layout. A child that fills along an axis takes the whole area along it.
 func New(child tview.Widget) Widget {
 	return Widget{child: child}
 }
@@ -39,14 +39,9 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 }
 
 func (w Widget) area(area tview.Rectangle) tview.Rectangle {
-	width, height := w.child.Size()
-	if cells := width.Cells(); cells > 0 && cells < area.Width {
-		area.X += (area.Width - cells) / 2
-		area.Width = cells
-	}
-	if cells := height.Cells(); cells > 0 && cells < area.Height {
-		area.Y += (area.Height - cells) / 2
-		area.Height = cells
-	}
+	size := w.child.Layout(layout.Limits{Max: layout.Size{Width: area.Width, Height: area.Height}})
+	area.X += (area.Width - size.Width) / 2
+	area.Y += (area.Height - size.Height) / 2
+	area.Width, area.Height = size.Width, size.Height
 	return area
 }

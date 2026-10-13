@@ -6,11 +6,12 @@ import (
 	"github.com/ayn2op/tview/layout"
 )
 
-// Widget lays out its children along one axis. Children take their width and height from their Size.
+// Widget lays out its children along one axis. Children that do not fill it are measured with their Layout.
 type Widget struct {
 	horizontal    bool
 	width, height layout.Length
 	spacing       int
+	alignment     tview.Alignment
 	children      []tview.Widget
 }
 
@@ -51,52 +52,126 @@ func (w Widget) Spacing(spacing int) Widget {
 	return w
 }
 
-// Size returns the width and height of the layout, resolving layout.Shrink to the size of its fixed-size children.
+// Align sets where the children that do not fill the layout across its axis go across it: at its start unless set.
+func (w Widget) Align(alignment tview.Alignment) Widget {
+	w.alignment = alignment
+	return w
+}
+
+// Size returns the width and height of the layout.
 func (w Widget) Size() (width, height layout.Length) {
-	width, height = w.width, w.height
-	if width.IsShrink() || height.IsShrink() {
-		contentWidth, contentHeight := w.contentSize()
-		if width.IsShrink() {
-			width = layout.Fixed(contentWidth)
-		}
-		if height.IsShrink() {
-			height = layout.Fixed(contentHeight)
-		}
-	}
-	return width, height
+	return w.width, w.height
 }
 
-// Layout returns the size of the layout within limits.
+// Layout returns the size of the layout within limits, laying out its children where it shrinks to them.
 func (w Widget) Layout(limits layout.Limits) layout.Size {
-	width, height := w.Size()
-	return layout.Atomic(limits, width, height)
+	return layout.Sized(limits, w.width, w.height, func(limits layout.Limits) layout.Size {
+		_, main, cross := w.resolve(limits)
+		width, height := pack(w.horizontal, main, cross)
+		return layout.Size{Width: width, Height: height}
+	})
 }
 
-// contentSize returns the space the fixed-size children need: their sum along the axis plus spacing, and their maximum across it.
-func (w Widget) contentSize() (width, height int) {
-	var along, across int
-	for _, child := range w.children {
-		childAlong, childAcross := w.axes(child)
-		along += childAlong.Cells()
-		across = max(across, childAcross.Cells())
+// pack returns main and cross as a width and height, or a width and height as main and cross.
+func pack[T any](horizontal bool, main, cross T) (T, T) {
+	if horizontal {
+		return main, cross
 	}
-	along += w.spacing * max(len(w.children)-1, 0)
-	if w.horizontal {
-		return along, across
+
+	return cross, main
+}
+
+// resolve returns the size of each child within limits and the space they take along the axis and across it.
+// Children that do not fill the axis are laid out first, and the others share what is left.
+// Where the cross axis shrinks or scrolls, the children that fill it are laid out last, within what the others take across it.
+func (w Widget) resolve(limits layout.Limits) (sizes []layout.Size, main, cross int) {
+	mainCompress, crossCompress := pack(w.horizontal, limits.Compression.Width, limits.Compression.Height)
+	mainInfinite, crossInfinite := pack(w.horizontal, limits.Infinite.Width, limits.Infinite.Height)
+	crossDynamic := crossCompress || crossInfinite
+	available, maxCross := pack(w.horizontal, limits.Max.Width, limits.Max.Height)
+	spacing := w.spacing * max(len(w.children)-1, 0)
+	available -= spacing
+
+	sizes = make([]layout.Size, len(w.children))
+	lay := func(i, minMain, maxMain, maxCross int, compress, crossInfinite bool) int {
+		var child layout.Limits
+		child.Min.Width, child.Min.Height = pack(w.horizontal, minMain, 0)
+		child.Max.Width, child.Max.Height = pack(w.horizontal, max(maxMain, 0), maxCross)
+		child.Compression.Width, child.Compression.Height = pack(w.horizontal, compress, false)
+		child.Infinite.Width, child.Infinite.Height = pack(w.horizontal, mainInfinite, crossInfinite)
+		sizes[i] = w.children[i].Layout(child)
+		childMain, childCross := pack(w.horizontal, sizes[i].Width, sizes[i].Height)
+		cross = max(cross, childCross)
+		return childMain
 	}
-	return across, along
+
+	const (
+		static = iota
+		crossFluid
+		crossFluidDeferred
+		mainFluid
+	)
+	categories, portions := make([]int, len(w.children)), 0
+	for i, child := range w.children {
+		length, across := w.axes(child)
+		switch {
+		case !mainCompress && length.Portion() > 0:
+			categories[i] = mainFluid
+			portions += length.Portion()
+		case crossDynamic && across.Portion() > 0 && length.IsFixed():
+			categories[i] = crossFluidDeferred
+			available -= length.Cells()
+		case crossDynamic && across.Portion() > 0:
+			categories[i] = crossFluid
+		default:
+			available -= lay(i, 0, available, maxCross, mainCompress, crossInfinite)
+		}
+	}
+
+	for i := range w.children {
+		if categories[i] == crossFluid {
+			available -= lay(i, 0, available, cross, mainCompress, false)
+		}
+	}
+
+	available = max(available, 0)
+	for i, child := range w.children {
+		length, across := w.axes(child)
+		if categories[i] != mainFluid {
+			continue
+		}
+
+		// Portions are handed out from what is left so rounding never loses a cell.
+		share := available * length.Portion() / portions
+		available -= share
+		portions -= length.Portion()
+		if crossDynamic && across.Portion() > 0 {
+			lay(i, share, share, cross, false, false)
+		} else {
+			lay(i, share, share, maxCross, false, crossInfinite)
+		}
+	}
+
+	for i, child := range w.children {
+		if length, _ := w.axes(child); categories[i] == crossFluidDeferred {
+			lay(i, 0, length.Cells(), cross, false, false)
+		}
+	}
+
+	for _, size := range sizes {
+		childMain, _ := pack(w.horizontal, size.Width, size.Height)
+		main += childMain
+	}
+
+	return sizes, main + spacing, cross
 }
 
 // axes returns the length of child along the layout's axis and across it.
 func (w Widget) axes(child tview.Widget) (along, across layout.Length) {
 	width, height := child.Size()
-	if w.horizontal {
-		return width, height
-	}
-	return height, width
+	return pack(w.horizontal, width, height)
 }
 
-// Draw draws each child in its area.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	for i, childArea := range w.areas(area) {
 		w.children[i].Draw(screen, childArea)
@@ -113,42 +188,26 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	return msg
 }
 
-// areas returns the area of each child within area.
+// areas returns the area of each child within area, one after the other from its start.
 func (w Widget) areas(area tview.Rectangle) []tview.Rectangle {
-	length := area.Height
-	if w.horizontal {
-		length = area.Width
-	}
-
-	lengths := make([]layout.Length, len(w.children))
-	free, portions := length-w.spacing*max(len(w.children)-1, 0), 0
-	for i, child := range w.children {
-		lengths[i], _ = w.axes(child)
-		if lengths[i].Cells() > 0 {
-			free -= lengths[i].Cells()
-		} else {
-			portions += lengths[i].Portion()
-		}
-	}
-	free = max(free, 0)
-
-	areas := make([]tview.Rectangle, len(w.children))
+	sizes, _, _ := w.resolve(layout.Limits{Max: layout.Size{Width: area.Width, Height: area.Height}})
+	_, across := pack(w.horizontal, area.Width, area.Height)
+	areas := make([]tview.Rectangle, len(sizes))
 	pos := 0
-	for i, childLength := range lengths {
-		size := childLength.Cells()
-		if size <= 0 && portions > 0 {
-			// Portions are handed out from what is left so rounding never loses a cell.
-			size = free * childLength.Portion() / portions
-			free -= size
-			portions -= childLength.Portion()
+	for i, size := range sizes {
+		main, cross := pack(w.horizontal, size.Width, size.Height)
+		offset := 0
+		switch w.alignment {
+		case tview.AlignmentCenter:
+			offset = (across - cross) / 2
+		case tview.AlignmentRight:
+			offset = across - cross
 		}
-		size = max(min(size, length-pos), 0)
-		if w.horizontal {
-			areas[i] = tview.Rectangle{X: area.X + pos, Y: area.Y, Width: size, Height: area.Height}
-		} else {
-			areas[i] = tview.Rectangle{X: area.X, Y: area.Y + pos, Width: area.Width, Height: size}
-		}
-		pos = min(pos+size+w.spacing, length)
+
+		x, y := pack(w.horizontal, pos, offset)
+		areas[i] = tview.Rectangle{X: area.X + x, Y: area.Y + y, Width: size.Width, Height: size.Height}
+		pos += main + w.spacing
 	}
+
 	return areas
 }

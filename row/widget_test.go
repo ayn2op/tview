@@ -17,9 +17,10 @@ func TestRow(t *testing.T) {
 	}
 }
 
-func TestWidgetSize(t *testing.T) {
-	width, height := New(text.New("ab"), text.New("cde")).Width(layout.Shrink).Height(layout.Shrink).Spacing(1).Size()
-	if width != layout.Fixed(6) || height != layout.Fixed(1) {
-		t.Fatalf("size = %+v x %+v", width, height)
+func TestWidgetLayout(t *testing.T) {
+	limits := layout.Limits{Max: layout.Size{Width: 10, Height: 10}}
+	got := New(text.New("ab"), text.New("cde")).Width(layout.Shrink).Height(layout.Shrink).Spacing(1).Layout(limits)
+	if got != (layout.Size{Width: 6, Height: 1}) {
+		t.Fatalf("size = %+v", got)
 	}
 }

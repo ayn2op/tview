@@ -23,9 +23,18 @@ func Fixed(cells int) Length {
 // Shrink takes the size of the widget's content.
 var Shrink = Length{shrink: true}
 
-// ShrinkAtMost takes the size of the widget's content, up to cells cells.
-func ShrinkAtMost(cells int) Length {
-	return Length{shrink: true, max: cells}
+// Max returns l taking cells cells at most, or l unbounded for 0. A Fixed length stays as it is.
+func (l Length) Max(cells int) Length {
+	if !l.IsFixed() {
+		l.max = cells
+	}
+
+	return l
+}
+
+// MaxCells returns the most cells l takes as set by Max, or 0 if it is unbounded.
+func (l Length) MaxCells() int {
+	return l.max
 }
 
 // Cells returns the size of a Fixed length, and 0 for others.

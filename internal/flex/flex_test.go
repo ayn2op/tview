@@ -52,6 +52,10 @@ func TestWidgetAreas(t *testing.T) {
 			{X: 1, Y: 2, Width: 4, Height: 4},
 			{X: 7, Y: 2, Width: 4, Height: 4},
 		}},
+		{"row maximum", New(true, wide(layout.Fill.Max(2)), wide(layout.Fill)), []tview.Rectangle{
+			{X: 1, Y: 2, Width: 2, Height: 4},
+			{X: 3, Y: 2, Width: 8, Height: 4},
+		}},
 		{"column overflow", New(false, tall(layout.Fixed(3)), tall(layout.Fixed(3)), tall(layout.Fill)), []tview.Rectangle{
 			{X: 1, Y: 2, Width: 10, Height: 3},
 			{X: 1, Y: 5, Width: 10, Height: 1},

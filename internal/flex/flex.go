@@ -135,20 +135,34 @@ func (w Widget) resolve(limits layout.Limits) (sizes []layout.Size, main, cross 
 	}
 
 	available = max(available, 0)
-	for i, child := range w.children {
-		length, across := w.axes(child)
-		if categories[i] != mainFluid {
-			continue
-		}
-
-		// Portions are handed out from what is left so rounding never loses a cell.
-		share := available * length.Portion() / portions
+	fill := func(i, share int) {
+		length, across := w.axes(w.children[i])
 		available -= share
 		portions -= length.Portion()
+		categories[i] = static
 		if crossDynamic && across.Portion() > 0 {
 			lay(i, share, share, cross, false, false)
 		} else {
 			lay(i, share, share, maxCross, false, crossInfinite)
+		}
+	}
+
+	// The children that take less than their share leave the rest of it to the others.
+	for bounded := true; bounded; {
+		bounded = false
+		for i, child := range w.children {
+			length, _ := w.axes(child)
+			if limit := length.MaxCells(); categories[i] == mainFluid && limit > 0 && limit < available*length.Portion()/portions {
+				fill(i, limit)
+				bounded = true
+			}
+		}
+	}
+
+	for i, child := range w.children {
+		if length, _ := w.axes(child); categories[i] == mainFluid {
+			// Portions are handed out from what is left so rounding never loses a cell.
+			fill(i, available*length.Portion()/portions)
 		}
 	}
 

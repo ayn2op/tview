@@ -51,6 +51,13 @@ func constrain(lower, upper int, compression, infinite bool, length Length) (int
 	switch {
 	case length.IsShrink():
 		compression = true
+		if length.max > 0 {
+			if !infinite {
+				length.max = min(length.max, upper)
+			}
+
+			lower, upper, infinite = min(lower, length.max), length.max, false
+		}
 	case length.IsFixed():
 		cells := length.Cells()
 		if !infinite {

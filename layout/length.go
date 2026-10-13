@@ -3,8 +3,8 @@ package layout
 
 // Length is how much space a widget takes along one axis of its parent.
 type Length struct {
-	cells, portion int
-	shrink         bool
+	cells, portion, max int
+	shrink              bool
 }
 
 // Fill takes an equal share of the free space. It is the default for every widget.
@@ -22,6 +22,11 @@ func Fixed(cells int) Length {
 
 // Shrink takes the size of the widget's content.
 var Shrink = Length{shrink: true}
+
+// ShrinkAtMost takes the size of the widget's content, up to cells cells.
+func ShrinkAtMost(cells int) Length {
+	return Length{shrink: true, max: cells}
+}
 
 // Cells returns the size of a Fixed length, and 0 for others.
 func (l Length) Cells() int {

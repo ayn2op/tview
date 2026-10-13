@@ -10,6 +10,7 @@ import (
 	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/richtext"
 	"github.com/ayn2op/tview/row"
+	"github.com/ayn2op/tview/textview"
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
@@ -97,17 +98,11 @@ func (w Widget) OnDone(f func(index int, label string) tview.Msg) Widget {
 	return w
 }
 
-// layout returns the dialog's box and the area it takes within area.
-func (w Widget) layout(area tview.Rectangle) (tview.Widget, tview.Rectangle) {
-	maxContentWidth := max(area.Width-4, 1)
-	buttonsWidth := 0
-	for _, label := range w.buttons {
-		buttonsWidth += uniseg.StringWidth(label) + 6
-	}
-	contentWidth := min(max(min(80, maxContentWidth), buttonsWidth-2), maxContentWidth)
-	lines := richtext.WordWrap(w.text, contentWidth)
-	lines = lines[:min(len(lines), max(area.Height-6, 0))]
+// contentWidth is how wide the message is at most, unless the buttons are wider.
+const contentWidth = 80
 
+// view returns the dialog in the middle of its area: a box as tall as the message and the buttons below it.
+func (w Widget) view() tview.Widget {
 	buttons := row.New().Width(layout.Shrink).Height(layout.Shrink).Spacing(2)
 	for i, label := range w.buttons {
 		b := button.New().
@@ -123,15 +118,20 @@ func (w Widget) layout(area tview.Rectangle) (tview.Widget, tview.Rectangle) {
 		}
 		buttons = buttons.Push(b)
 	}
-	content := column.New(
-		text{lines: lines, style: tcell.StyleDefault.Background(w.background).Foreground(w.textColor)},
-		column.New().Height(layout.Fixed(1)),
-		center.New(buttons),
-	)
-	dialog := box.New(content).Borders(tview.BordersAll).Background(w.background).Padding(1, 1, 1, 1)
 
-	width, height := min(contentWidth+4, area.Width), min(len(lines)+6, area.Height)
-	return dialog, tview.Rectangle{X: area.X + (area.Width-width)/2, Y: area.Y + (area.Height-height)/2, Width: width, Height: height}
+	style := tcell.StyleDefault.Background(w.background).Foreground(w.textColor)
+	message := textview.New(richtext.New(richtext.NewLine(richtext.NewSegment(w.text, style)))).
+		Alignment(tview.AlignmentCenter).
+		Style(style)
+	// The message fills what the buttons leave, so they stay in view when it does not fit.
+	content := column.New(message, buttons).Spacing(1).Align(tview.AlignmentCenter).Height(layout.Shrink)
+	width := max(contentWidth, buttons.Layout(layout.Limits{Infinite: layout.Axes{Width: true, Height: true}}).Width)
+	return center.New(box.New(content).
+		Borders(tview.BordersAll).
+		Background(w.background).
+		Padding(1, 1, 1, 1).
+		Width(layout.Fixed(width + 4)).
+		Height(layout.Shrink))
 }
 
 // Size returns Fill, as the dialog takes its whole area.
@@ -146,11 +146,7 @@ func (Widget) Layout(limits layout.Limits) layout.Size {
 
 // Draw draws the dialog in the middle of area.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
-	if area.Width <= 0 || area.Height <= 0 {
-		return
-	}
-	dialog, rect := w.layout(area)
-	dialog.Draw(screen, rect)
+	w.view().Draw(screen, area)
 }
 
 // Handle turns ActionNext and ActionPrevious into the OnFocus message, ActionCancel into the OnDone message for canceling, and ActionPress or a click on a button into its OnDone message. Other messages pass through unchanged.
@@ -168,31 +164,5 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 			return w.onDone(-1, "")
 		}
 	}
-	dialog, rect := w.layout(area)
-	return dialog.Handle(msg, rect)
+	return w.view().Handle(msg, area)
 }
-
-// text draws lines centered in the width of its area.
-type text struct {
-	lines []string
-	style tview.Style
-}
-
-// Size returns Fill and a height of one row for each line.
-func (t text) Size() (width, height layout.Length) {
-	return layout.Fill, layout.Fixed(len(t.lines))
-}
-
-func (t text) Layout(limits layout.Limits) layout.Size {
-	return layout.Atomic(limits, layout.Fill, layout.Fixed(len(t.lines)))
-}
-
-func (t text) Draw(screen tview.Screen, area tview.Rectangle) {
-	for i, line := range t.lines {
-		if i < area.Height {
-			tview.Print(screen, line, area.X, area.Y+i, area.Width, tview.AlignmentCenter, t.style)
-		}
-	}
-}
-
-func (text) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }

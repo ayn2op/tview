@@ -83,10 +83,11 @@ func (w Widget) Size() (width, height layout.Length) {
 	return w.width, w.height
 }
 
-// Layout returns the size of the text area within limits.
+// Layout returns the size of the text area within limits, as tall as its wrapped lines where it shrinks.
 func (w Widget) Layout(limits layout.Limits) layout.Size {
-	width, height := w.Size()
-	return layout.Atomic(limits, width, height)
+	return layout.Sized(limits, w.width, w.height, func(limits layout.Limits) layout.Size {
+		return layout.Size{Height: max(len(wrap(w.editState.Value(), limits.Max.Width)), 1)}
+	})
 }
 
 // line is the byte range of one wrapped line of the value.

@@ -1,4 +1,4 @@
-// Package tabs provides a row of tab labels above the content of the active tab.
+// Package tabs provides a row of tab labels.
 package tabs
 
 import (
@@ -8,11 +8,10 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// Widget draws the tab labels on the first row above the content of the active tab. Labels too wide for the row scroll to center the active one. The model owns the tabs and switches between them.
+// Widget draws the tab labels on a row. Labels too wide for the row scroll to center the active one. The model owns the tabs and shows the content of the active one.
 type Widget struct {
 	labels                         []string
 	active                         int
-	content                        tview.Widget
 	style, activeStyle, arrowStyle tview.Style
 	alignment                      tview.Alignment
 	separator                      string
@@ -41,12 +40,6 @@ func New(labels ...string) Widget {
 // Active sets the index of the active tab.
 func (w Widget) Active(index int) Widget {
 	w.active = index
-	return w
-}
-
-// Content sets the widget of the active tab.
-func (w Widget) Content(content tview.Widget) Widget {
-	w.content = content
 	return w
 }
 
@@ -116,17 +109,17 @@ func (w Widget) OnSelect(onSelect func(index int) tview.Msg) Widget {
 	return w
 }
 
-// Size returns Fill, as the tabs takes its whole area.
+// Size returns Fill and a height of one row.
 func (Widget) Size() (width, height layout.Length) {
-	return layout.Fill, layout.Fill
+	return layout.Fill, layout.Fixed(1)
 }
 
-// Layout returns the size of limits, as the tabs takes its whole area.
+// Layout returns the size of the labels within limits.
 func (Widget) Layout(limits layout.Limits) layout.Size {
-	return layout.Atomic(limits, layout.Fill, layout.Fill)
+	return layout.Atomic(limits, layout.Fill, layout.Fixed(1))
 }
 
-// Draw draws the labels on the first row of area, highlighting the active one, and the content below them.
+// Draw draws the labels on the first row of area, highlighting the active one.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	l := w.layout(area)
 	for x := area.X; x < area.X+area.Width; x++ {
@@ -148,12 +141,9 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	if l.endArrow {
 		tview.Print(screen, w.arrowEnd, l.right, area.Y, area.X+area.Width-l.right, tview.AlignmentLeft, w.arrowStyle)
 	}
-	if w.content != nil {
-		w.content.Draw(screen, contentArea(area))
-	}
 }
 
-// Handle turns tab Actions, clicks on the labels, and scrolling over the row of labels into the OnSelect message, and passes other messages to the content below the labels.
+// Handle turns tab Actions, clicks on the labels, and scrolling over them into the OnSelect message. Other messages pass through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 	switch msg := msg.(type) {
 	case tview.KeyMsg:
@@ -187,10 +177,7 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		}
 		return nil
 	}
-	if w.content == nil {
-		return msg
-	}
-	return w.content.Handle(msg, contentArea(area))
+	return msg
 }
 
 // step returns the tab delta tabs from the active one, wrapping around the ends when Wrap is set, and whether there is one.
@@ -208,13 +195,6 @@ func (w Widget) selectTab(index int) tview.Msg {
 		return nil
 	}
 	return w.onSelect(index)
-}
-
-// contentArea returns the area of the content, below the labels.
-func contentArea(area tview.Rectangle) tview.Rectangle {
-	area.Y++
-	area.Height = max(area.Height-1, 0)
-	return area
 }
 
 // layout is where the labels are drawn on the first row of an area.

@@ -198,6 +198,10 @@ func (a *Application[M]) Run() error {
 			a.handle(msg)
 		}
 
+		// Queued events are handled before drawing, so a burst of them, such as scrolling with a touchpad, is drawn once rather than a frame each, which would fall behind them.
+		if len(a.screen.EventQ()) > 0 {
+			continue
+		}
 		a.draw()
 	}
 	return nil

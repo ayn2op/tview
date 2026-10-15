@@ -132,7 +132,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		}
 		l.print(screen, w.paddingLeft+label+w.paddingRight, l.xs[i], l.widths[i], area.Y, style)
 		if i < len(w.labels)-1 {
-			l.print(screen, w.separator, l.xs[i+1]-l.gap, l.gap, area.Y, w.style)
+			l.print(screen, w.separator, l.xs[i+1]-l.spacing, l.spacing, area.Y, w.style)
 		}
 	}
 	if l.startArrow {
@@ -199,9 +199,9 @@ func (w Widget) selectTab(index int) tview.Msg {
 
 // layout is where the labels are drawn on the first row of an area.
 type labelLayout struct {
-	// xs and widths are where each padded label starts and how wide it is, with gap cells between labels for the separator.
+	// xs and widths are where each padded label starts and how wide it is, with spacing cells between labels for the separator.
 	xs, widths []int
-	gap        int
+	spacing    int
 	// left and right bound the columns the labels are drawn in, the rest of the row is kept for the arrows.
 	left, right int
 	// startArrow and endArrow are set while labels are hidden past an arrow.
@@ -210,12 +210,12 @@ type labelLayout struct {
 
 // layout places the labels in area by the alignment, or when they do not fit, centers the active one without scrolling past the first or last label.
 func (w Widget) layout(area tview.Rectangle) labelLayout {
-	l := labelLayout{gap: uniseg.StringWidth(w.separator), left: area.X, right: area.X + area.Width}
-	stripWidth := -l.gap // no separator after the last label
+	l := labelLayout{spacing: uniseg.StringWidth(w.separator), left: area.X, right: area.X + area.Width}
+	stripWidth := -l.spacing // no separator after the last label
 	for _, label := range w.labels {
 		width := uniseg.StringWidth(w.paddingLeft + label + w.paddingRight)
-		l.xs, l.widths = append(l.xs, stripWidth+l.gap), append(l.widths, width)
-		stripWidth += width + l.gap
+		l.xs, l.widths = append(l.xs, stripWidth+l.spacing), append(l.widths, width)
+		stripWidth += width + l.spacing
 	}
 	offset := l.left
 	switch {

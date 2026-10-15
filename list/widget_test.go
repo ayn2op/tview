@@ -136,13 +136,17 @@ func (filled) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg
 
 func TestWidgetLayout(t *testing.T) {
 	limits := layout.Limits{Max: layout.Size{Width: 4, Height: 2}, Infinite: layout.Axes{Height: true}}
-	if got := numbers(-1, 5).Gap(1).Layout(limits); got != (layout.Size{Width: 4, Height: 9}) {
+	if got := numbers(-1, 5).Spacing(func(int) int { return 1 }).Layout(limits); got != (layout.Size{Width: 4, Height: 9}) {
 		t.Fatalf("size = %+v, want 4 by 9", got)
+	}
+	// Only the odd items have spacing above them.
+	if got := numbers(-1, 5).Spacing(func(i int) int { return i % 2 }).Layout(limits); got != (layout.Size{Width: 4, Height: 7}) {
+		t.Fatalf("size = %+v, want 4 by 7", got)
 	}
 }
 
 func TestWidgetTarget(t *testing.T) {
-	if top, height := numbers(-1, 5).Gap(1).Target(3)(4); top != 6 || height != 1 {
+	if top, height := numbers(-1, 5).Spacing(func(int) int { return 1 }).Target(3)(4); top != 6 || height != 1 {
 		t.Fatalf("target = %d, %d", top, height)
 	}
 }

@@ -15,7 +15,7 @@ type Widget struct {
 	item   func(index int) tview.Widget
 
 	width, height layout.Length
-	gap           int
+	spacing       func(index int) int
 	selectedStyle tview.Style
 
 	keybind func(tview.KeyMsg) Action
@@ -51,9 +51,9 @@ func (w Widget) Height(height layout.Length) Widget {
 	return w
 }
 
-// Gap sets the number of empty rows between items.
-func (w Widget) Gap(gap int) Widget {
-	w.gap = gap
+// Spacing sets the function that returns the number of empty rows above each item after the first.
+func (w Widget) Spacing(f func(index int) int) Widget {
+	w.spacing = f
 	return w
 }
 
@@ -99,8 +99,8 @@ func (w Widget) layout(width int) (starts, sizes []int, total int) {
 	limits := layout.Limits{Max: layout.Size{Width: width}, Infinite: layout.Axes{Height: true}}
 	starts, sizes = make([]int, w.count), make([]int, w.count)
 	for i := range w.count {
-		if i > 0 {
-			total += w.gap
+		if i > 0 && w.spacing != nil {
+			total += w.spacing(i)
 		}
 		starts[i], sizes[i] = total, w.item(i).Layout(limits).Height
 		total += sizes[i]

@@ -19,6 +19,16 @@ const (
 	ScrollBarVisibilityAlways
 )
 
+// Anchor is the edge of its child a viewport keeps its scroll position from on an axis, which stays in place as the child grows or shrinks at the other edge.
+type Anchor uint8
+
+const (
+	// AnchorStart keeps the scroll position from the start of the child.
+	AnchorStart Anchor = iota
+	// AnchorEnd keeps the scroll position from the end of the child, so what is shown stays in place as the child grows at its start.
+	AnchorEnd
+)
+
 // Widget shows the part of its child that it is scrolled to.
 type Widget struct {
 	child       tview.Widget
@@ -29,6 +39,8 @@ type Widget struct {
 	target        func(width int) (top, height int)
 	contentWidth  func(top, height int) int
 	trackEnd      bool
+	// anchorX and anchorY are the edges the scroll position is kept from.
+	anchorX, anchorY Anchor
 
 	scrollBar  scrollbar.Widget
 	visibility ScrollBarVisibility
@@ -97,6 +109,38 @@ func (w Widget) TrackEnd(track bool) Widget {
 	return w
 }
 
+// AnchorTop anchors the vertical scroll position to the top.
+func (w Widget) AnchorTop() Widget {
+	return w.AnchorY(AnchorStart)
+}
+
+// AnchorBottom anchors the vertical scroll position to the bottom.
+func (w Widget) AnchorBottom() Widget {
+	return w.AnchorY(AnchorEnd)
+}
+
+// AnchorLeft anchors the horizontal scroll position to the left.
+func (w Widget) AnchorLeft() Widget {
+	return w.AnchorX(AnchorStart)
+}
+
+// AnchorRight anchors the horizontal scroll position to the right.
+func (w Widget) AnchorRight() Widget {
+	return w.AnchorX(AnchorEnd)
+}
+
+// AnchorX sets the Anchor of the horizontal scroll position.
+func (w Widget) AnchorX(anchor Anchor) Widget {
+	w.anchorX = anchor
+	return w
+}
+
+// AnchorY sets the Anchor of the vertical scroll position.
+func (w Widget) AnchorY(anchor Anchor) Widget {
+	w.anchorY = anchor
+	return w
+}
+
 // Keybind sets the function that turns keys into Actions.
 func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	w.keybind = f
@@ -109,7 +153,7 @@ func (w Widget) Focused(focused bool) Widget {
 	return w
 }
 
-// OnChange makes the viewport scroll, with the message f returns for the ScrollState it scrolls to.
+// OnChange makes the viewport scroll, with the message f returns for the ScrollState it scrolls to, which it produces only when the state changed.
 func (w Widget) OnChange(f func(*ScrollState) tview.Msg) Widget {
 	w.onChange = f
 	return w
@@ -157,28 +201,63 @@ func (w Widget) resolve(area tview.Rectangle) view {
 		v.bar = tview.Rectangle{X: area.X + v.port.Width, Y: area.Y, Width: 1, Height: area.Height}
 	}
 
-	v.x, v.y = w.scrollState.x, w.scrollState.y
+	_, maxY := v.max()
+	y := anchored(w.anchorY, maxY, w.scrollState.y)
 	switch {
 	case w.scrollState.atEnd:
-		_, v.y = v.max()
+		y = maxY
 	case w.scrollState.toTarget && w.target != nil:
 		if top, height := w.target(v.content.Width); height > 0 {
-			v.y = top + height/2 - v.port.Height/2
+			y = top + height/2 - v.port.Height/2
 		}
 	}
-	return w.clamp(v, v.x, v.y)
+	// How far the child scrolls sideways can depend on the rows in view, so x is resolved once y is.
+	v = w.clampY(v, y)
+	maxX, _ := v.max()
+	return clampX(v, anchored(w.anchorX, maxX, w.scrollState.x))
 }
 
 // clamp returns v scrolled to x and y, limited to what can be shown.
 func (w Widget) clamp(v view, x, y int) view {
-	maxX, maxY := v.max()
+	return clampX(w.clampY(v, y), x)
+}
+
+// clampY returns v scrolled to y, limited to what can be shown, with the width of the rows in view.
+func (w Widget) clampY(v view, y int) view {
+	_, maxY := v.max()
 	v.y = min(max(y, 0), maxY)
 	if w.contentWidth != nil {
 		v.content.Width = max(w.contentWidth(v.y, v.port.Height), v.port.Width)
-		maxX, _ = v.max()
 	}
+	return v
+}
+
+// clampX returns v scrolled to x, limited to what can be shown.
+func clampX(v view, x int) view {
+	maxX, _ := v.max()
 	v.x = min(max(x, 0), maxX)
 	return v
+}
+
+// anchored converts between how far an axis is scrolled from the start of the child and from anchor, either way, where it scrolls up to most.
+func anchored(anchor Anchor, most, offset int) int {
+	if anchor == AnchorEnd {
+		return most - offset
+	}
+	return offset
+}
+
+// state returns a, scrolled to v from origin, with x and y from the Anchors rather than the start of the child.
+func (w Widget) state(v view, origin Viewport, a ScrollState) ScrollState {
+	a.viewport, a.origin = w.viewport(v), origin
+	a.x, a.y = a.viewport.x, a.viewport.y
+	return a
+}
+
+// viewport returns what v shows, scrolled from the Anchors.
+func (w Widget) viewport(v view) Viewport {
+	maxX, maxY := v.max()
+	return Viewport{x: anchored(w.anchorX, maxX, v.x), y: anchored(w.anchorY, maxY, v.y), bounds: v.port, content: v.content}
 }
 
 // max returns the furthest the child scrolls.
@@ -221,8 +300,9 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		if msg = w.child.Handle(msg, v.child()); msg == nil {
 			return nil
 		}
-		if w.onChildMsg != nil && msg != received && v.x != w.scrollState.x {
+		if w.onChildMsg != nil && msg != received && w.viewport(v).x != w.scrollState.x {
 			a.toTarget, a.atEnd = w.scrollState.toTarget, w.scrollState.atEnd
+			a = w.state(v, w.viewport(v), a)
 			return w.onChildMsg(&a, msg)
 		}
 	}
@@ -277,10 +357,21 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 }
 
 func (w Widget) change(v view, a ScrollState) tview.Msg {
+	origin := w.viewport(v)
 	v = w.clamp(v, a.x, a.y)
-	a.x, a.y = v.x, v.y
 	_, maxY := v.max()
-	a.atEnd = w.trackEnd && a.y == maxY
+	a.atEnd = w.trackEnd && v.y == maxY
+	a = w.state(v, origin, a)
+	// Nothing is reported while the child fits, as there is nothing to scroll.
+	if maxX, maxY := v.max(); maxX == 0 && maxY == 0 {
+		return nil
+	}
+	// Scrolling past an edge or anything else that leaves the state as it was, wherever it scrolled from, is not reported, though it is still handled.
+	unchanged := w.scrollState
+	unchanged.origin = a.origin
+	if a == unchanged {
+		return nil
+	}
 	return w.onChange(&a)
 }
 

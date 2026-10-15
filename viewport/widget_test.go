@@ -128,11 +128,11 @@ func TestWidget(t *testing.T) {
 		m := newTreeModel()
 		tr := tree.New(m.root, m.selection).TopLevel(1).Markers(tree.Markers{})
 		view := m.view().ContentWidth(tr.RowsWidth)
-		if out := view.Handle(key(tcell.KeyRight), treeArea); out != tview.Msg(ScrollState{}) {
+		if out := view.Handle(key(tcell.KeyRight), treeArea).(ScrollState); out.x != 0 || out.y != 0 {
 			t.Fatalf("got %+v, want no scrolling past a and b", out)
 		}
 		m.send(key(tcell.KeyPgDn))
-		if out := m.view().ContentWidth(tr.RowsWidth).Handle(key(tcell.KeyRight), treeArea); out != tview.Msg(ScrollState{x: 1, y: 2}) {
+		if out := m.view().ContentWidth(tr.RowsWidth).Handle(key(tcell.KeyRight), treeArea).(ScrollState); out.x != 1 || out.y != 2 {
 			t.Fatalf("got %+v, want a cell right at long name", out)
 		}
 	})
@@ -144,7 +144,7 @@ func TestWidget(t *testing.T) {
 			got = m.view().ContentWidth(tr.RowsWidth).Handle(msg, treeArea).(ScrollState)
 			m.scrollState = got
 		}
-		if got != (ScrollState{y: 2}) {
+		if got.x != 0 || got.y != 2 {
 			t.Fatalf("got %+v, want back at long name and not scrolled right", got)
 		}
 	})
@@ -203,15 +203,17 @@ func numbers(selection int, scrollState ScrollState, count int) Widget {
 		OnChange(func(s *ScrollState) tview.Msg { return *s })
 }
 
-// apply sends msgs through numbers in area, scrolling to what each produces.
+// apply sends msgs through numbers in area, scrolling to what each produces, if anything.
 func apply(t *testing.T, scrollState ScrollState, count int, area tview.Rectangle, msgs ...tview.Msg) ScrollState {
 	t.Helper()
 	for _, msg := range msgs {
-		change, ok := numbers(-1, scrollState, count).Handle(msg, area).(ScrollState)
-		if !ok {
-			t.Fatalf("%v: want a ScrollState", msg)
+		switch change := numbers(-1, scrollState, count).Handle(msg, area).(type) {
+		case ScrollState:
+			scrollState = change
+		case nil:
+		default:
+			t.Fatalf("%v: got %v, want a ScrollState or nothing", msg, change)
 		}
-		scrollState = change
 	}
 	return scrollState
 }
@@ -296,4 +298,109 @@ func TestScrollTo(t *testing.T) {
 			t.Fatalf("rows = %q", got)
 		}
 	})
+}
+
+func TestAnchor(t *testing.T) {
+	area := tview.Rectangle{Width: 3, Height: 2}
+	rows := func(t *testing.T, scrollState ScrollState, count int) string {
+		t.Helper()
+		screen := screentest.New(t, 3, 2)
+		numbers(-1, scrollState, count).AnchorBottom().Draw(screen, area)
+		return screentest.Row(screen, 0, 1) + screentest.Row(screen, 1, 1)
+	}
+	scrollUp := func(t *testing.T, count int) ScrollState {
+		t.Helper()
+		var scrollState ScrollState
+		scrollState.ScrollToEnd()
+		return numbers(-1, scrollState, count).AnchorBottom().Handle(mouse(0, 0, tview.MouseScrollUp), area).(ScrollState)
+	}
+	t.Run("the zero state is at the end", func(t *testing.T) {
+		if got := rows(t, ScrollState{}, 5); got != "34" {
+			t.Fatalf("rows = %q", got)
+		}
+	})
+	t.Run("rows added at the start keep what is shown in place", func(t *testing.T) {
+		// Two rows added before 0 number what showed as 2 and 3 as 4 and 5.
+		if got := rows(t, scrollUp(t, 5), 7); got != "45" {
+			t.Fatalf("rows = %q", got)
+		}
+	})
+	t.Run("offsets are from the anchor", func(t *testing.T) {
+		v := scrollUp(t, 5).Viewport()
+		if got := v.AbsoluteOffset(); got != (AbsoluteOffset{Y: 1}) {
+			t.Fatalf("absolute offset = %+v, want y 1 from the bottom", got)
+		}
+		if got := v.AbsoluteOffsetReversed(); got != (AbsoluteOffset{Y: 2}) {
+			t.Fatalf("reversed offset = %+v, want y 2 from the top", got)
+		}
+		if got := v.DistanceToEnd(); got != (AbsoluteOffset{Y: 2}) {
+			t.Fatalf("distance to end = %+v, want y 2 to the top", got)
+		}
+	})
+	t.Run("nothing is reported while the child fits", func(t *testing.T) {
+		if out := numbers(-1, ScrollState{}, 2).AnchorBottom().Handle(mouse(0, 0, tview.MouseScrollUp), area); out != nil {
+			t.Fatalf("got %+v, want nothing", out)
+		}
+	})
+}
+
+func TestViewport(t *testing.T) {
+	area := tview.Rectangle{Width: 3, Height: 2}
+	scrollState := apply(t, ScrollState{}, 5, area, mouse(0, 0, tview.MouseScrollDown))
+	v := scrollState.Viewport()
+	if got := v.AbsoluteOffset(); got != (AbsoluteOffset{Y: 1}) {
+		t.Fatalf("absolute offset = %+v, want y 1", got)
+	}
+	if got := v.AbsoluteOffsetReversed(); got != (AbsoluteOffset{Y: 2}) {
+		t.Fatalf("reversed offset = %+v, want y 2", got)
+	}
+	if got := v.RelativeOffset(); got != (RelativeOffset{Y: 1.0 / 3}) {
+		t.Fatalf("relative offset = %+v, want y 1/3", got)
+	}
+	if got := v.End(); got != (AbsoluteOffset{Y: 3}) {
+		t.Fatalf("end = %+v, want y 3", got)
+	}
+	if v.Bounds().Height != 2 || v.Content().Height != 5 {
+		t.Fatalf("bounds %v content %v", v.Bounds(), v.Content())
+	}
+	if got := scrollState.Origin().AbsoluteOffset(); got != (AbsoluteOffset{}) {
+		t.Fatalf("origin offset = %+v, want 0", got)
+	}
+	t.Run("scrolling past an edge produces nothing", func(t *testing.T) {
+		top := apply(t, ScrollState{}, 5, area, mouse(0, 0, tview.MouseScrollUp))
+		if out := numbers(-1, top, 5).Handle(mouse(0, 0, tview.MouseScrollUp), area); out != nil {
+			t.Fatalf("got %+v, want nothing", out)
+		}
+	})
+}
+
+func TestAnchorRight(t *testing.T) {
+	area := tview.Rectangle{Width: 4, Height: 1}
+	// line returns a viewport of s that scrolls sideways from the right.
+	line := func(s string, scrollState ScrollState) Widget {
+		return New(text.New(s), scrollState).
+			Axes(layout.Axes{Width: true}).
+			AnchorRight().
+			OnChange(func(s *ScrollState) tview.Msg { return *s })
+	}
+	row := func(t *testing.T, w Widget) string {
+		t.Helper()
+		screen := screentest.New(t, 4, 1)
+		w.Draw(screen, area)
+		return screentest.Row(screen, 0, 4)
+	}
+	if got := row(t, line("0123456789", ScrollState{})); got != "6789" {
+		t.Fatalf("zero state shows %q, want the right end", got)
+	}
+	left := line("0123456789", ScrollState{}).Handle(mouse(0, 0, tview.MouseScrollLeft), area).(ScrollState)
+	if got := left.Viewport().AbsoluteOffset(); got != (AbsoluteOffset{X: 2}) {
+		t.Fatalf("absolute offset = %+v, want x 2 from the right", got)
+	}
+	if got := left.Viewport().AbsoluteOffsetReversed(); got != (AbsoluteOffset{X: 4}) {
+		t.Fatalf("reversed offset = %+v, want x 4 from the left", got)
+	}
+	// Two cells added on the left keep what is shown in place.
+	if got := row(t, line("ab0123456789", left)); got != "4567" {
+		t.Fatalf("after growing on the left shows %q, want 4567", got)
+	}
 }

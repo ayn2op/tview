@@ -35,6 +35,15 @@ func TestWidgetDraw(t *testing.T) {
 			t.Fatalf("row = %q", got)
 		}
 	})
+	t.Run("ends lines wider than area at its right edge", func(t *testing.T) {
+		screen := screentest.New(t, 4, 2)
+		New(lines("abcdef", "ab")).Wrap(false).Alignment(tview.AlignmentRight).Draw(screen, tview.Rectangle{Width: 4, Height: 2})
+		for y, want := range []string{"cdef", "  ab"} {
+			if got := screentest.Row(screen, y, 4); got != want {
+				t.Fatalf("row %d = %q, want %q", y, got, want)
+			}
+		}
+	})
 }
 
 func TestWidgetLayout(t *testing.T) {

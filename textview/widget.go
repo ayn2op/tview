@@ -76,7 +76,7 @@ func (w Widget) Size() (width, height layout.Length) {
 // Layout returns the size of the text view within limits, where its content is as wide as the longest line and as tall as the lines the text wraps to.
 func (w Widget) Layout(limits layout.Limits) layout.Size {
 	return layout.Sized(limits, w.width, w.height, func(limits layout.Limits) layout.Size {
-		l := w.layout(limits.Bounds().Width)
+		l := w.layout(limits.Bounds().Width, true)
 		return layout.Size{Width: l.longest, Height: len(l.lines)}
 	})
 }
@@ -87,7 +87,8 @@ type textLayout struct {
 	longest int
 }
 
-func (w Widget) layout(width int) textLayout {
+// layout returns the text wrapped to width, with the width of the longest line only if measureLongest is set.
+func (w Widget) layout(width int, measureLongest bool) textLayout {
 	var l textLayout
 	for _, line := range w.text {
 		wrapped := richtext.Text{line}
@@ -99,7 +100,9 @@ func (w Widget) layout(width int) textLayout {
 		}
 		for _, line := range wrapped {
 			l.lines = append(l.lines, line)
-			l.longest = max(l.longest, line.Width())
+			if measureLongest {
+				l.longest = max(l.longest, line.Width())
+			}
 		}
 	}
 	return l
@@ -124,7 +127,8 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		return
 	}
 
-	l := w.layout(area.Width)
+	// Lines are aligned within the longest and that within area, so only centered lines depend on the longest: left-aligned ones start at the left edge and right-aligned ones end at the right edge.
+	l := w.layout(area.Width, w.alignment == tview.AlignmentCenter)
 	canvas := max(l.longest, area.Width)
 	viewStart := w.origin(l, area.Width)
 	// Lines off the screen, as in a viewport, are skipped.

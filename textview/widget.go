@@ -155,6 +155,10 @@ func (w Widget) drawLine(screen tview.Screen, line richtext.Line, x, y int, area
 				cluster = " "
 			}
 			width = max(width, 1)
+			// What is past the right edge is not drawn.
+			if x >= area.X+area.Width {
+				return
+			}
 			if x >= area.X && x+width <= area.X+area.Width {
 				screen.Put(x, y, cluster, style)
 			}

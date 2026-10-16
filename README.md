@@ -8,6 +8,10 @@ A declarative TUI framework for Go, inspired by [Elm](https://guide.elm-lang.org
 go get github.com/ayn2op/tview
 ```
 
+## Documentation
+
+See the [documentation](https://pkg.go.dev/github.com/ayn2op/tview), which has runnable examples for each package.
+
 ## Used by
 
 - [discordo](https://github.com/ayn2op/discordo)

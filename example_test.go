@@ -1,4 +1,4 @@
-package main
+package tview_test
 
 import (
 	"log"
@@ -12,24 +12,9 @@ import (
 	"github.com/ayn2op/tview/text"
 )
 
-type (
-	incrementMsg struct{}
-	decrementMsg struct{}
-	resetMsg     struct{}
-)
+type incrementMsg struct{}
 
-type focus int
-
-const (
-	focusIncrement focus = iota
-	focusDecrement
-	focusReset
-)
-
-type model struct {
-	count int
-	focus focus
-}
+type model struct{ count int }
 
 var _ tview.Model[model] = model{}
 
@@ -39,15 +24,8 @@ func (m model) Init() tview.Cmd {
 
 func (m model) Update(msg tview.Msg) (model, tview.Cmd) {
 	switch msg := msg.(type) {
-	case resetMsg:
-		m.count = 0
-		m.focus = focusReset
-	case decrementMsg:
-		m.count--
-		m.focus = focusDecrement
 	case incrementMsg:
 		m.count++
-		m.focus = focusIncrement
 	case tview.KeyMsg:
 		if keybind.String(msg) == "q" {
 			return m, tview.Quit()
@@ -61,22 +39,15 @@ func (m model) View() tview.Widget {
 		text.New("Count: "+strconv.Itoa(m.count)),
 		row.New(
 			button.New().
-				Label("Reset").
-				Focused(m.focus == focusReset).
-				OnClick(resetMsg{}),
-			button.New().
-				Label("Decrement").
-				Focused(m.focus == focusDecrement).
-				OnClick(decrementMsg{}),
-			button.New().
 				Label("Increment").
-				Focused(m.focus == focusIncrement).
-				OnClick(incrementMsg{}),
+				OnClick(incrementMsg{}).
+				Focused(true),
 		),
 	)
 }
 
-func main() {
+// A counter that counts clicks on a button and quits on q.
+func Example() {
 	if err := tview.NewApplication(model{}).Run(); err != nil {
 		log.Fatal(err)
 	}

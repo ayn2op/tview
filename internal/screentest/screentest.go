@@ -2,6 +2,8 @@
 package screentest
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -31,4 +33,21 @@ func Row(screen tview.Screen, y, width int) string {
 		s += str
 	}
 	return s
+}
+
+// Print draws widget on a mock screen of the given size and prints its rows without trailing spaces, for examples to show what a widget draws.
+func Print(widget tview.Widget, width, height int) {
+	screen, err := tcell.NewTerminfoScreenFromTty(vt.NewMockTerm(vt.MockOptSize{X: vt.Col(width), Y: vt.Row(height)}))
+	if err != nil {
+		panic(err)
+	}
+	if err := screen.Init(); err != nil {
+		panic(err)
+	}
+	defer screen.Fini()
+
+	widget.Draw(screen, tview.Rectangle{Width: width, Height: height})
+	for y := range height {
+		fmt.Println(strings.TrimRight(Row(screen, y, width), " "))
+	}
 }

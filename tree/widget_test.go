@@ -117,6 +117,67 @@ func TestWidgetHandle(t *testing.T) {
 	})
 }
 
+func TestWidgetSpacing(t *testing.T) {
+	// nodes is a with children a1, which has child x, and a2, with a row above every node after the first.
+	nodes := map[string]*Node{"root": NewNode("root"), "a": NewNode("a"), "a1": NewNode("a1"), "x": NewNode("x"), "a2": NewNode("a2")}
+	nodes["root"].AddChild(nodes["a"])
+	nodes["a"].AddChild(nodes["a1"]).AddChild(nodes["a2"])
+	nodes["a1"].AddChild(nodes["x"])
+	tree := func(current *Node) Widget {
+		return interactive(nodes["root"], current).Spacing(func(*Node) int { return 1 })
+	}
+
+	t.Run("lines continue through the spacing", func(t *testing.T) {
+		screen := screentest.New(t, 7, 7)
+		tree(nil).Draw(screen, tview.Rectangle{Width: 7, Height: 7})
+		for y, want := range []string{"a      ", "│      ", "├──a1  ", "│  │   ", "│  └──x", "│      ", "└──a2  "} {
+			if got := screentest.Row(screen, y, 7); got != want {
+				t.Fatalf("row %d = %q, want %q", y, got, want)
+			}
+		}
+	})
+	t.Run("drawn scrolled past the first rows", func(t *testing.T) {
+		screen := screentest.New(t, 6, 2)
+		tree(nil).Draw(screen, tview.Rectangle{Y: -3, Width: 6, Height: 7})
+		for y, want := range []string{"│  │  ", "│  └──"} {
+			if got := screentest.Row(screen, y, 6); got != want {
+				t.Fatalf("row %d = %q, want %q", y, got, want)
+			}
+		}
+	})
+	t.Run("layout includes the spacing", func(t *testing.T) {
+		limits := layout.Limits{Max: layout.Size{Width: 6, Height: 2}, Infinite: layout.Axes{Width: true, Height: true}}
+		if got := tree(nil).Layout(limits).Height; got != 7 {
+			t.Fatalf("height = %d, want 7", got)
+		}
+	})
+	t.Run("target is the line of the current node", func(t *testing.T) {
+		if top, height := tree(nodes["a2"]).Target(0); top != 6 || height != 1 {
+			t.Fatalf("target = %d, %d", top, height)
+		}
+	})
+	t.Run("rows width counts the nodes on the lines", func(t *testing.T) {
+		if got := tree(nil).RowsWidth(3, 2); got != 7 {
+			t.Fatalf("width = %d, want 7", got)
+		}
+		if got := tree(nil).RowsWidth(5, 1); got != 0 {
+			t.Fatalf("width of spacing = %d, want 0", got)
+		}
+	})
+	t.Run("click on a node selects it", func(t *testing.T) {
+		click := tview.MouseMsg{EventMouse: tcell.NewEventMouse(1, 2, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftClick}
+		if got := tree(nil).Handle(click, tview.Rectangle{Width: 6, Height: 7}); got != nodes["a1"] {
+			t.Fatalf("got %v", got)
+		}
+	})
+	t.Run("click on spacing selects nothing", func(t *testing.T) {
+		click := tview.MouseMsg{EventMouse: tcell.NewEventMouse(1, 1, tcell.ButtonNone, tcell.ModNone), Action: tview.MouseLeftClick}
+		if got := tree(nil).Handle(click, tview.Rectangle{Width: 6, Height: 7}); got != nil {
+			t.Fatalf("got %v", got)
+		}
+	})
+}
+
 func TestNodePathTo(t *testing.T) {
 	nodes := testTree()
 	root := nodes["root"]

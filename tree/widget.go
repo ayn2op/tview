@@ -30,6 +30,7 @@ type Widget struct {
 
 	width, height layout.Length
 	topLevel      int
+	spacing       func(node *Node) int
 
 	markers       Markers
 	graphics      bool
@@ -74,6 +75,12 @@ func (w Widget) Height(height layout.Length) Widget {
 // TopLevel sets the first level shown, where the root is level 0, its children level 1, and so on.
 func (w Widget) TopLevel(level int) Widget {
 	w.topLevel = level
+	return w
+}
+
+// Spacing sets the function that returns the number of empty rows above each shown node after the first. The lines between nodes continue through them.
+func (w Widget) Spacing(f func(node *Node) int) Widget {
+	w.spacing = f
 	return w
 }
 
@@ -134,30 +141,46 @@ func (w Widget) Size() (width, height layout.Length) {
 func (w Widget) Layout(limits layout.Limits) layout.Size {
 	return layout.Sized(limits, w.width, w.height, func(layout.Limits) layout.Size {
 		rows := w.rows()
-		return layout.Size{Width: w.widest(rows), Height: len(rows)}
+		return layout.Size{Width: w.widest(rows), Height: height(rows)}
 	})
 }
 
 // Target returns the row of the current node, or no rows for none.
 func (w Widget) Target(int) (top, height int) {
-	if current := w.resolve().current; current >= 0 {
-		return current, 1
+	if v := w.resolve(); v.current >= 0 {
+		return v.rows[v.current].y, 1
 	}
 	return 0, 0
 }
 
-// RowsWidth returns the width of the widest of height rows from top.
+// RowsWidth returns the width of the widest of the nodes within height rows from top.
 func (w Widget) RowsWidth(top, height int) int {
 	rows := w.rows()
-	top = min(max(top, 0), len(rows))
-	return w.widest(rows[top:min(top+max(height, 0), len(rows))])
+	start := slices.IndexFunc(rows, func(r row) bool { return r.y >= top })
+	if start < 0 {
+		return 0
+	}
+	end := slices.IndexFunc(rows[start:], func(r row) bool { return r.y >= top+height })
+	if end < 0 {
+		end = len(rows) - start
+	}
+	return w.widest(rows[start : start+end])
 }
 
-// row is a node shown on one line: the row of its parent, and where its lines and text start.
+// row is a node shown on one line: the row of its parent, where its lines and text start, and the line it is on, below the spacing above it.
 type row struct {
 	node   *Node
 	parent int
 	gx, tx int
+	y      int
+}
+
+// height returns the number of lines rows take.
+func height(rows []row) int {
+	if len(rows) == 0 {
+		return 0
+	}
+	return rows[len(rows)-1].y + 1
 }
 
 // rows returns the shown nodes, with the children of expanded nodes below them.
@@ -172,7 +195,11 @@ func (w Widget) rows() (rows []row) {
 			gx, tx = 0, 0
 		}
 		if level >= w.topLevel {
-			rows = append(rows, row{node: node, parent: parent, gx: gx, tx: tx})
+			y := height(rows)
+			if len(rows) > 0 && w.spacing != nil {
+				y += w.spacing(node)
+			}
+			rows = append(rows, row{node: node, parent: parent, gx: gx, tx: tx, y: y})
 			parent = len(rows) - 1
 		}
 		if node.expanded {
@@ -238,18 +265,27 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	x, width, set := area.X, area.Width, w.graphicsSet
 	// Rows off the screen, as in a viewport, are skipped.
 	_, bottom := screen.Size()
-	for index := max(-area.Y, 0); index < len(v.rows) && index < min(area.Height, bottom-area.Y); index++ {
-		current, y := v.rows[index], area.Y+index
+	top, end := max(-area.Y, 0), min(area.Height, bottom-area.Y)
+	for index, current := range v.rows {
+		if current.y >= end {
+			break
+		}
 		node := current.node
 		if w.graphics {
-			// Branches of ancestors that are not last children continue past this row.
-			for ancestor := current.parent; ancestor >= 0 && v.rows[ancestor].parent >= 0; ancestor = v.rows[ancestor].parent {
-				a := v.rows[ancestor]
-				parent := v.rows[a.parent].node
-				if a.gx < width && parent.children[len(parent.children)-1] != a.node {
-					screen.Put(x+a.gx, y, set.Right, w.graphicsStyle)
+			// The lines into this row run through the spacing above it.
+			for gap := max(height(v.rows[:index]), top); gap < current.y; gap++ {
+				w.drawBranches(screen, v, current, x, area.Y+gap, width)
+				if current.tx > current.gx && current.gx < width {
+					screen.Put(x+current.gx, area.Y+gap, set.Right, w.graphicsStyle)
 				}
 			}
+		}
+		if current.y < top {
+			continue
+		}
+		y := area.Y + current.y
+		if w.graphics {
+			w.drawBranches(screen, v, current, x, y, width)
 			if current.tx > current.gx && current.gx < width {
 				connector := set.BottomLeft
 				if current.parent >= 0 {
@@ -282,6 +318,17 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 				style = tview.MergeStyle(style, node.selectedTextStyle)
 			}
 			textX += tview.Print(screen, segment.Text, x+textX, y, width-textX, tview.AlignmentLeft, style)
+		}
+	}
+}
+
+// drawBranches draws, on line y, the branches of the ancestors of current that are not last children, which continue past it.
+func (w Widget) drawBranches(screen tview.Screen, v view, current row, x, y, width int) {
+	for ancestor := current.parent; ancestor >= 0 && v.rows[ancestor].parent >= 0; ancestor = v.rows[ancestor].parent {
+		a := v.rows[ancestor]
+		parent := v.rows[a.parent].node
+		if a.gx < width && parent.children[len(parent.children)-1] != a.node {
+			screen.Put(x+a.gx, y, w.graphicsSet.Right, w.graphicsStyle)
 		}
 	}
 }
@@ -324,7 +371,9 @@ func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 		if m.Action != tview.MouseLeftClick || !area.Contains(x, y) {
 			return msg
 		}
-		if node := w.resolve().node(y - area.Y); node != nil && node.selectable {
+		v := w.resolve()
+		index := slices.IndexFunc(v.rows, func(r row) bool { return r.y == y-area.Y })
+		if node := v.node(index); node != nil && node.selectable {
 			return w.selectNode(node)
 		}
 		return nil

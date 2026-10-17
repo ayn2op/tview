@@ -13,7 +13,7 @@ type Widget struct {
 	labels                         []string
 	active                         int
 	style, activeStyle, arrowStyle tview.Style
-	alignment                      tview.Alignment
+	alignment                      tview.HorizontalAlignment
 	separator                      string
 	paddingLeft, paddingRight      string
 	arrowStart, arrowEnd           string
@@ -30,7 +30,7 @@ func New(labels ...string) Widget {
 		labels:          labels,
 		activeStyle:     tcell.StyleDefault.Reverse(true),
 		arrowStyle:      tcell.StyleDefault.Dim(true),
-		alignment:       tview.AlignmentCenter,
+		alignment:       tview.HorizontalAlignmentCenter,
 		separator:       " ",
 		clickableArrows: true,
 		keybind:         DefaultKeybind,
@@ -56,8 +56,8 @@ func (w Widget) ActiveStyle(style tview.Style) Widget {
 }
 
 // Alignment sets where labels that fit are placed in the row.
-func (w Widget) Alignment(alignment tview.Alignment) Widget {
-	w.alignment = alignment
+func (w Widget) Alignment(align tview.HorizontalAlignment) Widget {
+	w.alignment = align
 	return w
 }
 
@@ -136,10 +136,10 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		}
 	}
 	if l.startArrow {
-		tview.Print(screen, w.arrowStart, area.X, area.Y, l.left-area.X, tview.AlignmentLeft, w.arrowStyle)
+		tview.Print(screen, w.arrowStart, area.X, area.Y, l.left-area.X, tview.HorizontalAlignmentLeft, w.arrowStyle)
 	}
 	if l.endArrow {
-		tview.Print(screen, w.arrowEnd, l.right, area.Y, area.X+area.Width-l.right, tview.AlignmentLeft, w.arrowStyle)
+		tview.Print(screen, w.arrowEnd, l.right, area.Y, area.X+area.Width-l.right, tview.HorizontalAlignmentLeft, w.arrowStyle)
 	}
 }
 
@@ -225,9 +225,9 @@ func (w Widget) layout(area tview.Rectangle) labelLayout {
 		width := l.right - l.left
 		center := l.xs[w.active] + l.widths[w.active]/2
 		offset = l.left - min(max(center-width/2, 0), stripWidth-width)
-	case w.alignment == tview.AlignmentCenter:
+	case w.alignment == tview.HorizontalAlignmentCenter:
 		offset += (area.Width - stripWidth) / 2
-	case w.alignment == tview.AlignmentRight:
+	case w.alignment == tview.HorizontalAlignmentRight:
 		offset += area.Width - stripWidth
 	}
 	for i := range l.xs {
@@ -244,15 +244,15 @@ func (w Widget) layout(area tview.Rectangle) labelLayout {
 func (l labelLayout) print(screen tview.Screen, text string, x, width, y int, style tview.Style) {
 	// Right alignment cuts the start of text that begins before the columns, center alignment both ends.
 	end := x + width
-	alignment := tview.AlignmentLeft
+	align := tview.HorizontalAlignmentLeft
 	switch {
 	case x < l.left && end > l.right:
-		alignment = tview.AlignmentCenter
+		align = tview.HorizontalAlignmentCenter
 	case x < l.left:
-		alignment = tview.AlignmentRight
+		align = tview.HorizontalAlignmentRight
 	}
 	from, to := max(x, l.left), min(end, l.right)
-	tview.Print(screen, text, from, y, to-from, alignment, style)
+	tview.Print(screen, text, from, y, to-from, align, style)
 }
 
 // tabAt returns the tab whose label is at column x of the first row of area, or the neighbor of the active tab past an arrow.

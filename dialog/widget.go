@@ -120,11 +120,11 @@ func (w Widget) view() tview.Widget {
 	style := tcell.StyleDefault.Background(w.background).Foreground(w.textColor)
 	message := text.New(w.text).
 		Height(layout.Fill).
-		AlignX(tview.AlignmentCenter).
+		AlignX(tview.HorizontalAlignmentCenter).
 		Wrapping(text.WrappingWordOrGlyph).
 		Style(style)
 	// The message fills what the buttons leave, so they stay in view when it does not fit.
-	content := column.New(message, buttons).Spacing(1).AlignX(tview.AlignmentCenter).Height(layout.Shrink)
+	content := column.New(message, buttons).Spacing(1).AlignX(tview.HorizontalAlignmentCenter).Height(layout.Shrink)
 	width := max(contentWidth, buttons.Layout(layout.Limits{Infinite: layout.Axes{Width: true, Height: true}}).Width)
 	return center.New(box.New(content).
 		Borders(tview.BordersAll).

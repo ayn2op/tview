@@ -308,7 +308,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 			markerStyle = node.spans[0].Style
 		}
 		textX := current.tx
-		textX += tview.Print(screen, w.marker(node), x+textX, y, width-textX, tview.AlignmentLeft, markerStyle)
+		textX += tview.Print(screen, w.marker(node), x+textX, y, width-textX, tview.HorizontalAlignmentLeft, markerStyle)
 		for _, span := range node.spans {
 			if textX >= width {
 				break
@@ -317,7 +317,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 			if index == v.current {
 				style = tview.MergeStyle(style, node.selectedTextStyle)
 			}
-			textX += tview.Print(screen, span.Text, x+textX, y, width-textX, tview.AlignmentLeft, style)
+			textX += tview.Print(screen, span.Text, x+textX, y, width-textX, tview.HorizontalAlignmentLeft, style)
 		}
 	}
 }

@@ -38,8 +38,8 @@ func (w Widget) Spacing(spacing int) Widget {
 }
 
 // AlignY sets where the children shorter than the row go: at its top unless set.
-func (w Widget) AlignY(alignment tview.Alignment) Widget {
-	return Widget{w.flex.Align(alignment)}
+func (w Widget) AlignY(align tview.VerticalAlignment) Widget {
+	return Widget{w.flex.Align(flex.FromVertical(align))}
 }
 
 // Wrap returns the row starting a new line where the next child would overflow it, with as many rows between lines as there are cells between children.
@@ -72,8 +72,8 @@ func (w Wrapping) VerticalSpacing(spacing int) Wrapping {
 }
 
 // AlignX sets where each line goes within the widest: at its left unless set.
-func (w Wrapping) AlignX(alignment tview.Alignment) Wrapping {
-	return Wrapping{w.flex.AlignLines(alignment)}
+func (w Wrapping) AlignX(align tview.HorizontalAlignment) Wrapping {
+	return Wrapping{w.flex.AlignLines(flex.FromHorizontal(align))}
 }
 
 // Size returns the width and height of the row.

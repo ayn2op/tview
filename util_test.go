@@ -13,17 +13,17 @@ func TestPrint(t *testing.T) {
 		name      string
 		text      string
 		width     int
-		alignment tview.Alignment
+		alignment tview.HorizontalAlignment
 		want      string
 		drawn     int
 	}{
-		{"left", "ab", 6, tview.AlignmentLeft, "ab    ", 2},
-		{"center", "ab", 6, tview.AlignmentCenter, "  ab  ", 2},
-		{"right", "ab", 6, tview.AlignmentRight, "    ab", 2},
-		{"cut at the end", "abcdefgh", 6, tview.AlignmentLeft, "abcdef", 6},
-		{"cut at the start", "abcdefgh", 6, tview.AlignmentRight, "cdefgh", 6},
-		{"cut at both ends", "abcdefgh", 6, tview.AlignmentCenter, "bcdefg", 6},
-		{"wide cluster that does not fit", "abcde👍", 6, tview.AlignmentLeft, "abcde ", 5},
+		{"left", "ab", 6, tview.HorizontalAlignmentLeft, "ab    ", 2},
+		{"center", "ab", 6, tview.HorizontalAlignmentCenter, "  ab  ", 2},
+		{"right", "ab", 6, tview.HorizontalAlignmentRight, "    ab", 2},
+		{"cut at the end", "abcdefgh", 6, tview.HorizontalAlignmentLeft, "abcdef", 6},
+		{"cut at the start", "abcdefgh", 6, tview.HorizontalAlignmentRight, "cdefgh", 6},
+		{"cut at both ends", "abcdefgh", 6, tview.HorizontalAlignmentCenter, "bcdefg", 6},
+		{"wide cluster that does not fit", "abcde👍", 6, tview.HorizontalAlignmentLeft, "abcde ", 5},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			screen := screentest.New(t, 6, 1)

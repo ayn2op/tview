@@ -12,7 +12,7 @@ func ExampleNew() {
 		Borders(tview.BordersAll).
 		Title("Inbox").
 		Footer("1 new").
-		FooterAlignment(tview.AlignmentRight)
+		FooterAlignment(tview.HorizontalAlignmentRight)
 	screentest.Print(b, 12, 3)
 	// Output:
 	// ┌───Inbox──┐

@@ -23,7 +23,7 @@ type Widget struct {
 	paddingLeft, paddingRight       int
 	title, footer                   string
 	titleStyle, footerStyle         tview.Style
-	titleAlignment, footerAlignment tview.Alignment
+	titleAlignment, footerAlignment tview.HorizontalAlignment
 }
 
 var _ tview.Widget = Widget{}
@@ -35,8 +35,8 @@ func New(child tview.Widget) Widget {
 		width:           layout.Fill,
 		height:          layout.Fill,
 		borderSet:       tview.BorderSetPlain(),
-		titleAlignment:  tview.AlignmentCenter,
-		footerAlignment: tview.AlignmentCenter,
+		titleAlignment:  tview.HorizontalAlignmentCenter,
+		footerAlignment: tview.HorizontalAlignmentCenter,
 	}
 }
 
@@ -95,8 +95,8 @@ func (w Widget) TitleStyle(style tview.Style) Widget {
 }
 
 // TitleAlignment sets the alignment of the title.
-func (w Widget) TitleAlignment(alignment tview.Alignment) Widget {
-	w.titleAlignment = alignment
+func (w Widget) TitleAlignment(align tview.HorizontalAlignment) Widget {
+	w.titleAlignment = align
 	return w
 }
 
@@ -113,8 +113,8 @@ func (w Widget) FooterStyle(style tview.Style) Widget {
 }
 
 // FooterAlignment sets the alignment of the footer.
-func (w Widget) FooterAlignment(alignment tview.Alignment) Widget {
-	w.footerAlignment = alignment
+func (w Widget) FooterAlignment(align tview.HorizontalAlignment) Widget {
+	w.footerAlignment = align
 	return w
 }
 
@@ -201,13 +201,13 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 }
 
 // label draws text on row y inside the corners of area, ending it with an ellipsis if it is cut off.
-func label(screen tview.Screen, text string, area tview.Rectangle, y int, alignment tview.Alignment, style tview.Style) {
+func label(screen tview.Screen, text string, area tview.Rectangle, y int, align tview.HorizontalAlignment, style tview.Style) {
 	if text == "" || area.Width < 4 {
 		return
 	}
-	if tview.Print(screen, text, area.X+1, y, area.Width-2, alignment, style) < uucode.StringWidth(text) {
+	if tview.Print(screen, text, area.X+1, y, area.Width-2, align, style) < uucode.StringWidth(text) {
 		x := area.X + area.Width - 2
-		if alignment == tview.AlignmentRight {
+		if align == tview.HorizontalAlignmentRight {
 			x = area.X + 1
 		}
 		screen.Put(x, y, ellipsis, style)

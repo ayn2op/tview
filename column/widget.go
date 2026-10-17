@@ -38,8 +38,8 @@ func (w Widget) Spacing(spacing int) Widget {
 }
 
 // AlignX sets where the children narrower than the column go: at its left unless set.
-func (w Widget) AlignX(alignment tview.Alignment) Widget {
-	return Widget{w.flex.Align(alignment)}
+func (w Widget) AlignX(align tview.HorizontalAlignment) Widget {
+	return Widget{w.flex.Align(flex.FromHorizontal(align))}
 }
 
 // Wrap returns the column starting a new line where the next child would overflow it, with as many columns between lines as there are cells between children.
@@ -72,8 +72,8 @@ func (w Wrapping) HorizontalSpacing(spacing int) Wrapping {
 }
 
 // AlignY sets where each line goes within the tallest: at its top unless set.
-func (w Wrapping) AlignY(alignment tview.Alignment) Wrapping {
-	return Wrapping{w.flex.AlignLines(alignment)}
+func (w Wrapping) AlignY(align tview.VerticalAlignment) Wrapping {
+	return Wrapping{w.flex.AlignLines(flex.FromVertical(align))}
 }
 
 // Size returns the width and height of the column.

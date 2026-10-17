@@ -10,7 +10,7 @@ import (
 type Wrapping struct {
 	flex        Widget
 	lineSpacing int
-	alignLines  tview.Alignment
+	alignLines  Alignment
 }
 
 var _ tview.Widget = Wrapping{}
@@ -27,8 +27,8 @@ func (w Wrapping) LineSpacing(spacing int) Wrapping {
 }
 
 // AlignLines sets where each line goes along the axis, within the longest line: at its start unless set.
-func (w Wrapping) AlignLines(alignment tview.Alignment) Wrapping {
-	w.alignLines = alignment
+func (w Wrapping) AlignLines(align Alignment) Wrapping {
+	w.alignLines = align
 	return w
 }
 

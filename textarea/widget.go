@@ -147,7 +147,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		return
 	}
 	if w.text == "" && w.placeholder != "" {
-		tview.Print(screen, w.placeholder, area.X, area.Y, area.Width, tview.AlignmentLeft, w.style.Dim(true))
+		tview.Print(screen, w.placeholder, area.X, area.Y, area.Width, tview.HorizontalAlignmentLeft, w.style.Dim(true))
 	}
 	lines := wrap(w.text, area.Width)
 	cursorRow, column := locate(w.text, lines, w.cursor)
@@ -155,7 +155,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	first := max(cursorRow-area.Height+1, 0)
 	for i := 0; i < area.Height && first+i < len(lines); i++ {
 		l := lines[first+i]
-		tview.Print(screen, w.text[l.start:l.end], area.X, area.Y+i, area.Width, tview.AlignmentLeft, w.style)
+		tview.Print(screen, w.text[l.start:l.end], area.X, area.Y+i, area.Width, tview.HorizontalAlignmentLeft, w.style)
 	}
 	if w.focused {
 		// After spaces that hang past the edge, the cursor stays in the last column.

@@ -1,14 +1,14 @@
 package list
 
 import (
-	"github.com/ayn2op/tview/layout"
-	"github.com/ayn2op/tview/slider"
 	"strconv"
 	"testing"
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/button"
 	"github.com/ayn2op/tview/internal/screentest"
+	"github.com/ayn2op/tview/layout"
+	"github.com/ayn2op/tview/slider"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -22,7 +22,7 @@ func (row) Layout(limits layout.Limits) layout.Size {
 }
 
 func (r row) Draw(screen tview.Screen, area tview.Rectangle) {
-	tview.Print(screen, string(r), area.X, area.Y, area.Width, tview.AlignmentLeft, tcell.StyleDefault)
+	tview.Print(screen, string(r), area.X, area.Y, area.Width, tview.HorizontalAlignmentLeft, tcell.StyleDefault)
 }
 
 func (row) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }

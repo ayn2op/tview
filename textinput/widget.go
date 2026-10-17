@@ -135,7 +135,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		screen.Put(x, area.Y, " ", w.style)
 	}
 	offset := w.scroll(area.Width)
-	tview.Print(screen, skip(w.shown(w.text), offset), area.X, area.Y, area.Width, tview.AlignmentLeft, w.style)
+	tview.Print(screen, skip(w.shown(w.text), offset), area.X, area.Y, area.Width, tview.HorizontalAlignmentLeft, w.style)
 	if w.focused {
 		screen.ShowCursor(area.X+uucode.StringWidth(w.shown(w.text[:w.cursor]))-offset, area.Y)
 	}

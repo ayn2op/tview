@@ -11,7 +11,7 @@ type Widget struct {
 	horizontal    bool
 	width, height layout.Length
 	spacing       int
-	alignment     tview.Alignment
+	alignment     Alignment
 	children      []tview.Widget
 }
 
@@ -53,8 +53,8 @@ func (w Widget) Spacing(spacing int) Widget {
 }
 
 // Align sets where the children that do not fill the layout across its axis go across it: at its start unless set.
-func (w Widget) Align(alignment tview.Alignment) Widget {
-	w.alignment = alignment
+func (w Widget) Align(align Alignment) Widget {
+	w.alignment = align
 	return w
 }
 
@@ -180,12 +180,43 @@ func (w Widget) resolve(limits layout.Limits) (sizes []layout.Size, main, cross 
 	return sizes, main + spacing, cross
 }
 
-// offset returns how far into space something goes with alignment: none at the start, half of it in the center and all of it at the end.
-func offset(space int, alignment tview.Alignment) int {
-	switch alignment {
-	case tview.AlignmentCenter:
+// Alignment is where something goes along either axis.
+type Alignment int
+
+const (
+	Start Alignment = iota
+	Center
+	End
+)
+
+// FromHorizontal returns align as an alignment along either axis: left is the start and right the end.
+func FromHorizontal(align tview.HorizontalAlignment) Alignment {
+	switch align {
+	case tview.HorizontalAlignmentCenter:
+		return Center
+	case tview.HorizontalAlignmentRight:
+		return End
+	}
+	return Start
+}
+
+// FromVertical returns align as an alignment along either axis: the top is the start and the bottom the end.
+func FromVertical(align tview.VerticalAlignment) Alignment {
+	switch align {
+	case tview.VerticalAlignmentCenter:
+		return Center
+	case tview.VerticalAlignmentBottom:
+		return End
+	}
+	return Start
+}
+
+// offset returns how far into space something goes with align: none at the start, half of it in the center and all of it at the end.
+func offset(space int, align Alignment) int {
+	switch align {
+	case Center:
 		return space / 2
-	case tview.AlignmentRight:
+	case End:
 		return space
 	}
 	return 0

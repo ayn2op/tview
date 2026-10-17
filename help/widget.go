@@ -304,7 +304,7 @@ func (w Widget) drawSpans(screen tview.Screen, x, y, width int, spans []text.Spa
 		if s.Text == "" || remaining <= 0 {
 			continue
 		}
-		printedWidth := tview.Print(screen, s.Text, cursor, y, remaining, tview.AlignmentLeft, s.Style)
+		printedWidth := tview.Print(screen, s.Text, cursor, y, remaining, tview.HorizontalAlignmentLeft, s.Style)
 		cursor += printedWidth
 		remaining -= printedWidth
 	}

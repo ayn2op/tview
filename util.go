@@ -7,32 +7,35 @@ import (
 
 type Style = tcell.Style
 
-// Alignment is where something goes along an axis: at its start, center or end.
-type Alignment int
+// HorizontalAlignment is where something goes horizontally.
+type HorizontalAlignment int
 
 const (
-	AlignmentLeft Alignment = iota
-	AlignmentCenter
-	AlignmentRight
+	HorizontalAlignmentLeft HorizontalAlignment = iota
+	HorizontalAlignmentCenter
+	HorizontalAlignmentRight
 )
 
-// The vertical alignments, with AlignmentCenter between them.
+// VerticalAlignment is where something goes vertically.
+type VerticalAlignment int
+
 const (
-	AlignmentTop    = AlignmentLeft
-	AlignmentBottom = AlignmentRight
+	VerticalAlignmentTop VerticalAlignment = iota
+	VerticalAlignmentCenter
+	VerticalAlignmentBottom
 )
 
 // Print draws text on row y from x, at most width cells wide and aligned within them, and returns the width it drew. Text too wide for a right or center alignment loses its start, or both ends.
-func Print(screen Screen, text string, x, y, width int, alignment Alignment, style Style) int {
+func Print(screen Screen, text string, x, y, width int, align HorizontalAlignment, style Style) int {
 	if width <= 0 {
 		return 0
 	}
 	textWidth := uucode.StringWidth(text)
 	cut := 0
-	switch alignment {
-	case AlignmentRight:
+	switch align {
+	case HorizontalAlignmentRight:
 		cut = textWidth - width
-	case AlignmentCenter:
+	case HorizontalAlignmentCenter:
 		cut = (textWidth - width) / 2
 	}
 	clusters := uucode.NewGraphemeWidthIterator(text)
@@ -45,10 +48,10 @@ func Print(screen Screen, text string, x, y, width int, alignment Alignment, sty
 		textWidth -= cluster.Width
 	}
 	if textWidth < width {
-		switch alignment {
-		case AlignmentRight:
+		switch align {
+		case HorizontalAlignmentRight:
 			x += width - textWidth
-		case AlignmentCenter:
+		case HorizontalAlignmentCenter:
 			x += width/2 - textWidth/2
 		}
 	}

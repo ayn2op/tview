@@ -117,7 +117,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', style)
 	if area.Width > 0 && area.Height > 0 {
-		tview.Print(screen, w.label, area.X, area.Y+area.Height/2, area.Width, tview.AlignmentCenter, style)
+		tview.Print(screen, w.label, area.X, area.Y+area.Height/2, area.Width, tview.HorizontalAlignmentCenter, style)
 	}
 }
 

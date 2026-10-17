@@ -1,11 +1,11 @@
 package row
 
 import (
-	"github.com/ayn2op/tview/layout"
 	"testing"
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
+	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/text"
 )
 
@@ -59,13 +59,13 @@ func TestWrappingAlign(t *testing.T) {
 	}
 
 	t.Run("lines", func(t *testing.T) {
-		got := draw(New(text.New("ab"), text.New("cd"), text.New("e")).Spacing(1).Wrap().VerticalSpacing(0).AlignX(tview.AlignmentCenter), 5, 2)
+		got := draw(New(text.New("ab"), text.New("cd"), text.New("e")).Spacing(1).Wrap().VerticalSpacing(0).AlignX(tview.HorizontalAlignmentCenter), 5, 2)
 		if got[1] != "  e  " {
 			t.Fatalf("rows = %q, want the second line centered within the first", got)
 		}
 	})
 	t.Run("children", func(t *testing.T) {
-		got := draw(New(text.New("x\ny"), text.New("a")).Spacing(1).AlignY(tview.AlignmentBottom).Wrap(), 3, 2)
+		got := draw(New(text.New("x\ny"), text.New("a")).Spacing(1).AlignY(tview.VerticalAlignmentBottom).Wrap(), 3, 2)
 		if got[0] != "x  " || got[1] != "y a" {
 			t.Fatalf("rows = %q, want the shorter child at the bottom of its line", got)
 		}

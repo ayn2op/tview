@@ -11,7 +11,7 @@ import (
 type Widget struct {
 	spans         []Span
 	width, height layout.Length
-	alignX        tview.Alignment
+	alignX        tview.HorizontalAlignment
 	wrapping      Wrapping
 	style         tview.Style
 }
@@ -41,8 +41,8 @@ func (w Widget) Height(height layout.Length) Widget {
 }
 
 // AlignX sets the horizontal alignment of each line.
-func (w Widget) AlignX(alignment tview.Alignment) Widget {
-	w.alignX = alignment
+func (w Widget) AlignX(align tview.HorizontalAlignment) Widget {
+	w.alignX = align
 	return w
 }
 
@@ -85,9 +85,9 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		// A line wider than area is cut off on the side it is not aligned to, or on both if it is centered.
 		start := 0
 		switch w.alignX {
-		case tview.AlignmentCenter:
+		case tview.HorizontalAlignmentCenter:
 			start = (area.Width - Width(line)) / 2
-		case tview.AlignmentRight:
+		case tview.HorizontalAlignmentRight:
 			start = area.Width - Width(line)
 		}
 		w.drawLine(screen, line, area.X+start, area.Y+i, area)

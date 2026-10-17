@@ -2,11 +2,12 @@
 package image
 
 import (
-	"github.com/ayn2op/tview/layout"
 	"image"
 	stdcolor "image/color"
 
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/layout"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/color"
 )
@@ -88,39 +89,85 @@ func (w Widget) cell() (width, height int) {
 // Draw draws the image at the top-left corner of area.
 // Transparent pixels leave the underlying cells untouched.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
-	if w.kitty != 0 {
-		w.drawPlaceholders(screen, area)
-		return
+	cols, rows := w.fit(area.Width, area.Height)
+	for y := range rows {
+		for x := range cols {
+			if str, style, ok := w.at(x, y, cols); ok {
+				screen.Put(area.X+x, area.Y+y, str, style)
+			}
+		}
 	}
+}
+
+// Lines returns the image as text, a line of spans per row of its cells, to show it within other text.
+// Transparent cells are spaces.
+func (w Widget) Lines() [][]text.Span {
+	cols, rows := w.fit(w.cells())
+	lines := make([][]text.Span, rows)
+	for y := range rows {
+		for x := range cols {
+			str, style, ok := w.at(x, y, cols)
+			if !ok {
+				str, style = " ", tcell.StyleDefault
+			}
+			lines[y] = append(lines[y], text.Span{Text: str, Style: style})
+		}
+	}
+	return lines
+}
+
+// fit returns the columns and rows the image takes within width by height cells.
+func (w Widget) fit(width, height int) (cols, rows int) {
+	if w.kitty != 0 {
+		cols, rows = w.cells()
+		return min(cols, width, len(diacritics)), min(rows, height, len(diacritics))
+	}
+
 	b := w.src.Bounds()
 	if b.Empty() {
-		return
+		return 0, 0
 	}
-	// Each cell holds two pixels, one above the other, so height counts half cells.
+
 	cellWidth, cellHeight := w.cell()
-	width := min(area.Width, area.Height*cellHeight*b.Dx()/(cellWidth*b.Dy()))
-	height := width * cellWidth * b.Dy() * 2 / (b.Dx() * cellHeight)
-	pixel := func(x, y int) color.Color {
+	cols = min(width, height*cellHeight*b.Dx()/(cellWidth*b.Dy()))
+	return cols, (w.pixelHeight(cols) + 1) / 2
+}
+
+// pixelHeight returns the height of the image cols wide in pixels of half a cell, as each cell holds two pixels, one above the other.
+func (w Widget) pixelHeight(cols int) int {
+	b := w.src.Bounds()
+	cellWidth, cellHeight := w.cell()
+	return cols * cellWidth * b.Dy() * 2 / (b.Dx() * cellHeight)
+}
+
+// at returns the cell at x, y of the image drawn cols wide, or false if it is transparent.
+func (w Widget) at(x, y, cols int) (string, tview.Style, bool) {
+	if w.kitty != 0 {
+		fg, msb := w.id()
+		return string([]rune{placeholder, diacritics[y], diacritics[x], diacritics[msb]}), tcell.StyleDefault.Foreground(color.PaletteColor(fg)), true
+	}
+
+	b := w.src.Bounds()
+	height := w.pixelHeight(cols)
+	pixel := func(y int) color.Color {
 		if y >= height {
 			return color.Default
 		}
-		c := stdcolor.NRGBAModel.Convert(w.src.At(b.Min.X+x*b.Dx()/width, b.Min.Y+y*b.Dy()/height)).(stdcolor.NRGBA)
+		c := stdcolor.NRGBAModel.Convert(w.src.At(b.Min.X+x*b.Dx()/cols, b.Min.Y+y*b.Dy()/height)).(stdcolor.NRGBA)
 		if c.A < minAlpha {
 			return color.Default
 		}
 		return color.NewRGBColor(int32(c.R), int32(c.G), int32(c.B))
 	}
-	for y := 0; y < height; y += 2 {
-		for x := range width {
-			top, bottom := pixel(x, y), pixel(x, y+1)
-			switch {
-			case top != color.Default:
-				screen.Put(area.X+x, area.Y+y/2, upperHalfBlock, tcell.StyleDefault.Foreground(top).Background(bottom))
-			case bottom != color.Default:
-				screen.Put(area.X+x, area.Y+y/2, lowerHalfBlock, tcell.StyleDefault.Foreground(bottom))
-			}
-		}
+
+	top, bottom := pixel(2*y), pixel(2*y+1)
+	switch {
+	case top != color.Default:
+		return upperHalfBlock, tcell.StyleDefault.Foreground(top).Background(bottom), true
+	case bottom != color.Default:
+		return lowerHalfBlock, tcell.StyleDefault.Foreground(bottom), true
 	}
+	return "", tcell.StyleDefault, false
 }
 
 // Handle passes msg through unchanged.

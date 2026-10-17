@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/ayn2op/tview"
-	"github.com/gdamore/tcell/v3"
-	"github.com/gdamore/tcell/v3/color"
 )
 
 // Kitty draws the image with kitty's graphics protocol as image n, from 1 to 63488.
@@ -54,17 +52,6 @@ func (w Widget) transmission() (string, error) {
 	}
 	fmt.Fprintf(&out, "m=0;%s\x1b\\", data)
 	return out.String(), nil
-}
-
-func (w Widget) drawPlaceholders(screen tview.Screen, area tview.Rectangle) {
-	cols, rows := w.cells()
-	fg, msb := w.id()
-	style := tcell.StyleDefault.Foreground(color.PaletteColor(fg))
-	for y := range min(rows, area.Height, len(diacritics)) {
-		for x := range min(cols, area.Width, len(diacritics)) {
-			screen.Put(area.X+x, area.Y+y, string([]rune{placeholder, diacritics[y], diacritics[x], diacritics[msb]}), style)
-		}
-	}
 }
 
 // placeholder is followed by diacritics that encode the cell's row and column and the high byte of the image id.

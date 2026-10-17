@@ -9,7 +9,7 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/grapheme"
 	"github.com/gdamore/tcell/v3"
-	"github.com/rivo/uniseg"
+	"github.com/rockorager/go-uucode"
 )
 
 // Widget draws a text with a cursor in it and turns typing into the text and cursor it leaves.
@@ -99,23 +99,31 @@ func (w Widget) shown(text string) string {
 	if w.mask == "" {
 		return text
 	}
-	return strings.Repeat(w.mask, uniseg.GraphemeClusterCount(text))
+	count := 0
+	clusters := uucode.NewGraphemeIterator(text)
+	for _, ok := clusters.Next(); ok; _, ok = clusters.Next() {
+		count++
+	}
+	return strings.Repeat(w.mask, count)
 }
 
 // skip returns text without the clusters in its first n cells.
 func skip(text string, n int) string {
-	state := -1
-	for n > 0 && text != "" {
-		var w int
-		_, text, w, state = uniseg.FirstGraphemeClusterInString(text, state)
-		n -= w
+	start := 0
+	clusters := uucode.NewGraphemeWidthIterator(text)
+	for n > 0 {
+		cluster, ok := clusters.Next()
+		if !ok {
+			break
+		}
+		start, n = cluster.End, n-cluster.Width
 	}
-	return text
+	return text[start:]
 }
 
 // scroll returns how many cells are scrolled off the left edge to keep the cursor visible in width cells.
 func (w Widget) scroll(width int) int {
-	return max(uniseg.StringWidth(w.shown(w.text[:w.cursor]))-width+1, 0)
+	return max(uucode.StringWidth(w.shown(w.text[:w.cursor]))-width+1, 0)
 }
 
 // Draw fills the first row of area with the style and draws the value, showing the cursor while focused.
@@ -129,7 +137,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	offset := w.scroll(area.Width)
 	tview.Print(screen, skip(w.shown(w.text), offset), area.X, area.Y, area.Width, tview.AlignmentLeft, w.style)
 	if w.focused {
-		screen.ShowCursor(area.X+uniseg.StringWidth(w.shown(w.text[:w.cursor]))-offset, area.Y)
+		screen.ShowCursor(area.X+uucode.StringWidth(w.shown(w.text[:w.cursor]))-offset, area.Y)
 	}
 }
 

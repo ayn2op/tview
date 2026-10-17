@@ -5,7 +5,7 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
-	"github.com/rivo/uniseg"
+	"github.com/rockorager/go-uucode"
 )
 
 // Widget draws the tab labels on a row. Labels too wide for the row scroll to center the active one. The model owns the tabs and shows the content of the active one.
@@ -210,18 +210,18 @@ type labelLayout struct {
 
 // layout places the labels in area by the alignment, or when they do not fit, centers the active one without scrolling past the first or last label.
 func (w Widget) layout(area tview.Rectangle) labelLayout {
-	l := labelLayout{spacing: uniseg.StringWidth(w.separator), left: area.X, right: area.X + area.Width}
+	l := labelLayout{spacing: uucode.StringWidth(w.separator), left: area.X, right: area.X + area.Width}
 	stripWidth := -l.spacing // no separator after the last label
 	for _, label := range w.labels {
-		width := uniseg.StringWidth(w.paddingLeft + label + w.paddingRight)
+		width := uucode.StringWidth(w.paddingLeft + label + w.paddingRight)
 		l.xs, l.widths = append(l.xs, stripWidth+l.spacing), append(l.widths, width)
 		stripWidth += width + l.spacing
 	}
 	offset := l.left
 	switch {
 	case stripWidth > area.Width:
-		l.left += uniseg.StringWidth(w.arrowStart)
-		l.right -= uniseg.StringWidth(w.arrowEnd)
+		l.left += uucode.StringWidth(w.arrowStart)
+		l.right -= uucode.StringWidth(w.arrowEnd)
 		width := l.right - l.left
 		center := l.xs[w.active] + l.widths[w.active]/2
 		offset = l.left - min(max(center-width/2, 0), stripWidth-width)

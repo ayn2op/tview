@@ -4,7 +4,7 @@ go 1.27.0
 
 require (
 	github.com/gdamore/tcell/v3 v3.6.0
-	github.com/rivo/uniseg v0.4.7
+	github.com/rockorager/go-uucode v1.2.2
 	github.com/sahilm/fuzzy v0.1.3
 )
 

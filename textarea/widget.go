@@ -8,9 +8,9 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/grapheme"
-	"github.com/ayn2op/tview/richtext"
+	"github.com/ayn2op/tview/internal/wordwrap"
 	"github.com/gdamore/tcell/v3"
-	"github.com/rivo/uniseg"
+	"github.com/rockorager/go-uucode"
 )
 
 // Widget draws a text with a cursor in it and turns typing into the text and cursor it leaves.
@@ -108,7 +108,7 @@ func wrap(value string, width int) []line {
 	start := 0
 	for _, logical := range strings.Split(value, "\n") {
 		pos := start
-		for _, piece := range richtext.WordWrap(logical, width) {
+		for _, piece := range wordwrap.Split(logical, width, true) {
 			lines = append(lines, line{start: pos, end: pos + len(piece)})
 			pos += len(piece)
 		}
@@ -124,7 +124,7 @@ func locate(value string, lines []line, cursor int) (row, column int) {
 			row = i
 		}
 	}
-	return row, uniseg.StringWidth(value[lines[row].start:cursor])
+	return row, uucode.StringWidth(value[lines[row].start:cursor])
 }
 
 // at returns the offset in l closest to column.
@@ -132,7 +132,7 @@ func at(value string, l line, column int) int {
 	offset := l.start
 	for offset < l.end {
 		end := grapheme.Next(value, offset)
-		if column -= uniseg.StringWidth(value[offset:end]); column < 0 {
+		if column -= uucode.StringWidth(value[offset:end]); column < 0 {
 			break
 		}
 		offset = end
@@ -158,7 +158,8 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		tview.Print(screen, w.text[l.start:l.end], area.X, area.Y+i, area.Width, tview.AlignmentLeft, w.style)
 	}
 	if w.focused {
-		screen.ShowCursor(area.X+column, area.Y+cursorRow-first)
+		// After spaces that hang past the edge, the cursor stays in the last column.
+		screen.ShowCursor(area.X+min(column, area.Width-1), area.Y+cursorRow-first)
 	}
 }
 

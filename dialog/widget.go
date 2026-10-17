@@ -8,11 +8,10 @@ import (
 	"github.com/ayn2op/tview/center"
 	"github.com/ayn2op/tview/column"
 	"github.com/ayn2op/tview/layout"
-	"github.com/ayn2op/tview/richtext"
 	"github.com/ayn2op/tview/row"
-	"github.com/ayn2op/tview/textview"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
-	"github.com/rivo/uniseg"
+	"github.com/rockorager/go-uucode"
 )
 
 // Widget is a message with buttons. ActionNext and ActionPrevious move the focus between the buttons, ActionPress or a click presses one, and ActionCancel cancels.
@@ -109,8 +108,7 @@ func (w Widget) view() tview.Widget {
 			Label(label).
 			Style(w.buttonStyle).
 			FocusedStyle(w.activatedStyle).
-			Width(layout.Fixed(uniseg.StringWidth(label) + 4)).
-			Height(layout.Fixed(1)).
+			Width(layout.Fixed(uucode.StringWidth(label) + 4)).
 			Keybind(noKeys).
 			Focused(i == w.focus)
 		if w.onDone != nil {
@@ -120,8 +118,10 @@ func (w Widget) view() tview.Widget {
 	}
 
 	style := tcell.StyleDefault.Background(w.background).Foreground(w.textColor)
-	message := textview.New(richtext.New(richtext.NewLine(richtext.NewSegment(w.text, style)))).
-		Alignment(tview.AlignmentCenter).
+	message := text.New(w.text).
+		Height(layout.Fill).
+		AlignX(tview.AlignmentCenter).
+		Wrapping(text.WrappingWordOrGlyph).
 		Style(style)
 	// The message fills what the buttons leave, so they stay in view when it does not fit.
 	content := column.New(message, buttons).Spacing(1).Align(tview.AlignmentCenter).Height(layout.Shrink)

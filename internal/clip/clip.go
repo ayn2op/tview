@@ -4,7 +4,7 @@ package clip
 import (
 	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
-	"github.com/rivo/uniseg"
+	"github.com/rockorager/go-uucode"
 )
 
 // Screen drops drawing outside Area.
@@ -42,10 +42,9 @@ func (s *Screen) PutStrStyled(x int, y int, str string, style tview.Style) {
 		return
 	}
 
-	gr := uniseg.NewGraphemes(str)
-	for gr.Next() {
-		cluster := gr.Str()
-		width := max(uniseg.StringWidth(cluster), 1)
+	clusters := uucode.NewGraphemeWidthIterator(str)
+	for c, ok := clusters.Next(); ok; c, ok = clusters.Next() {
+		cluster, width := str[c.Start:c.End], max(c.Width, 1)
 		if x >= s.Area.X+s.Area.Width {
 			return
 		}

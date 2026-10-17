@@ -44,7 +44,7 @@ func TestWidgetHandle(t *testing.T) {
 		{"typing", "", []tview.Msg{key(tcell.KeyRune, "a"), key(tcell.KeyEnter, ""), key(tcell.KeyRune, "b")}, "a\nb", 3},
 		{"backspace joins lines", "a\nb", []tview.Msg{key(tcell.KeyLeft, ""), key(tcell.KeyBackspace, "")}, "ab", 1},
 		{"up keeps the column", "abc\nde", []tview.Msg{key(tcell.KeyUp, "")}, "abc\nde", 2},
-		{"down over a wrapped line", "ab cd ef", []tview.Msg{key(tcell.KeyHome, ""), key(tcell.KeyUp, ""), key(tcell.KeyUp, ""), key(tcell.KeyDown, "")}, "ab cd ef", 3},
+		{"down over a wrapped line", "ab cd ef", []tview.Msg{key(tcell.KeyHome, ""), key(tcell.KeyUp, ""), key(tcell.KeyUp, ""), key(tcell.KeyDown, "")}, "ab cd ef", 6},
 		{"paste", "", []tview.Msg{tview.PasteMsg("a\r\nb")}, "a\nb", 3},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -78,6 +78,6 @@ func TestWidgetDraw(t *testing.T) {
 		}
 	}
 
-	t.Run("wrapped", func(t *testing.T) { draw(t, "ab cd ef", "ab   ", "cd ef") })
+	t.Run("wrapped", func(t *testing.T) { draw(t, "ab cd ef", "ab cd", "ef   ") })
 	t.Run("scrolled to keep the cursor visible", func(t *testing.T) { draw(t, "a\nb\nc", "b    ", "c    ") })
 }

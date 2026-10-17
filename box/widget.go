@@ -5,7 +5,7 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
-	"github.com/rivo/uniseg"
+	"github.com/rockorager/go-uucode"
 )
 
 const ellipsis = "…"
@@ -205,7 +205,7 @@ func label(screen tview.Screen, text string, area tview.Rectangle, y int, alignm
 	if text == "" || area.Width < 4 {
 		return
 	}
-	if tview.Print(screen, text, area.X+1, y, area.Width-2, alignment, style) < uniseg.StringWidth(text) {
+	if tview.Print(screen, text, area.X+1, y, area.Width-2, alignment, style) < uucode.StringWidth(text) {
 		x := area.X + area.Width - 2
 		if alignment == tview.AlignmentRight {
 			x = area.X + 1

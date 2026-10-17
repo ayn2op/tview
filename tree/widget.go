@@ -8,7 +8,7 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/gdamore/tcell/v3"
-	"github.com/rivo/uniseg"
+	"github.com/rockorager/go-uucode"
 )
 
 const (
@@ -235,7 +235,7 @@ func (w Widget) resolve() view {
 // widest returns the width of the widest of rows.
 func (w Widget) widest(rows []row) (widest int) {
 	for _, r := range rows {
-		widest = max(widest, r.tx+uniseg.StringWidth(w.marker(r.node))+r.node.lineWidth)
+		widest = max(widest, r.tx+uucode.StringWidth(w.marker(r.node))+r.node.spansWidth)
 	}
 	return widest
 }
@@ -304,20 +304,20 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		}
 
 		markerStyle := tcell.StyleDefault
-		if len(node.line) > 0 {
-			markerStyle = node.line[0].Style
+		if len(node.spans) > 0 {
+			markerStyle = node.spans[0].Style
 		}
 		textX := current.tx
 		textX += tview.Print(screen, w.marker(node), x+textX, y, width-textX, tview.AlignmentLeft, markerStyle)
-		for _, segment := range node.line {
+		for _, span := range node.spans {
 			if textX >= width {
 				break
 			}
-			style := segment.Style
+			style := span.Style
 			if index == v.current {
 				style = tview.MergeStyle(style, node.selectedTextStyle)
 			}
-			textX += tview.Print(screen, segment.Text, x+textX, y, width-textX, tview.AlignmentLeft, style)
+			textX += tview.Print(screen, span.Text, x+textX, y, width-textX, tview.AlignmentLeft, style)
 		}
 	}
 }

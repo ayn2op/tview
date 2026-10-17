@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/richtext"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -17,9 +17,9 @@ type Node struct {
 	children []*Node
 
 	// The item's text.
-	line richtext.Line
-	// lineWidth caches the width of line.
-	lineWidth int
+	spans []text.Span
+	// spansWidth caches the width of spans.
+	spansWidth int
 
 	// The style of selected text.
 	selectedTextStyle tview.Style
@@ -39,10 +39,10 @@ type Node struct {
 
 // NewNode returns a new tree node.
 func NewNode(value string) *Node {
-	line := richtext.NewLine(richtext.NewSegment(value, tcell.StyleDefault))
+	spans := []text.Span{{Text: value, Style: tcell.StyleDefault}}
 	return &Node{
-		line:              line,
-		lineWidth:         line.Width(),
+		spans:             spans,
+		spansWidth:        text.Width(spans),
 		selectedTextStyle: tcell.StyleDefault.Reverse(true),
 		indent:            2,
 		expanded:          true,
@@ -91,14 +91,14 @@ func (n *Node) SetChildren(childNodes []*Node) *Node {
 	return n
 }
 
-// Line returns the node's styled text line.
-func (n *Node) Line() richtext.Line {
-	return n.line.Clone()
+// Spans returns the node's text.
+func (n *Node) Spans() []text.Span {
+	return slices.Clone(n.spans)
 }
 
-// SetLine sets the node's styled text line.
-func (n *Node) SetLine(line richtext.Line) *Node {
-	n.line, n.lineWidth = line.Clone(), line.Width()
+// SetSpans sets the node's text.
+func (n *Node) SetSpans(spans ...text.Span) *Node {
+	n.spans, n.spansWidth = slices.Clone(spans), text.Width(spans)
 
 	return n
 }

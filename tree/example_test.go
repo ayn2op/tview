@@ -33,7 +33,7 @@ func ExampleNew() {
 	screentest.Print(channels, 14, 5)
 
 	msg := channels.Handle(tcell.NewEventKey(tcell.KeyDown, "", tcell.ModNone), tview.Rectangle{Width: 14, Height: 5})
-	fmt.Println(msg.(currentMsg).node.Line()[0].Text)
+	fmt.Println(msg.(currentMsg).node.Spans()[0].Text)
 	// Output:
 	// ▾ Text
 	// ├──general

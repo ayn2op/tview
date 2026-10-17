@@ -5,6 +5,7 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
+	"github.com/rockorager/go-uucode"
 )
 
 // Widget is a labeled button. It is a value built in View; the model owns any state it reflects, such as focus.
@@ -22,11 +23,11 @@ type Widget struct {
 
 var _ tview.Widget = Widget{}
 
-// New returns an empty button that fills its parent.
+// New returns an empty button, as wide as its label and one row tall.
 func New() Widget {
 	return Widget{
-		width:         layout.Fill,
-		height:        layout.Fill,
+		width:         layout.Shrink,
+		height:        layout.Shrink,
 		keybind:       DefaultKeybind,
 		focusedStyle:  tcell.StyleDefault.Reverse(true),
 		disabledStyle: tcell.StyleDefault.Dim(true),
@@ -100,8 +101,9 @@ func (w Widget) Size() (width, height layout.Length) {
 
 // Layout returns the size of the button within limits.
 func (w Widget) Layout(limits layout.Limits) layout.Size {
-	width, height := w.Size()
-	return layout.Atomic(limits, width, height)
+	return layout.Sized(limits, w.width, w.height, func(layout.Limits) layout.Size {
+		return layout.Size{Width: uucode.StringWidth(w.label), Height: 1}
+	})
 }
 
 // Draw fills area with the style for the button's state and centers the label in it.

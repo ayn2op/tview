@@ -2,6 +2,7 @@ package help
 
 import (
 	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/ayn2op/tview/layout"
@@ -9,8 +10,8 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/keybind"
-	"github.com/ayn2op/tview/richtext"
-	"github.com/rivo/uniseg"
+	"github.com/ayn2op/tview/text"
+	"github.com/rockorager/go-uucode"
 )
 
 const (
@@ -141,7 +142,7 @@ func (w Widget) Layout(limits layout.Limits) layout.Size {
 		if !w.showAll || w.keyMap == nil {
 			return layout.Size{Height: 1}
 		}
-		return layout.Size{Height: len(w.fullHelpSegments(w.keyMap.FullHelp(), limits.Max.Width))}
+		return layout.Size{Height: len(w.fullHelpSpans(w.keyMap.FullHelp(), limits.Max.Width))}
 	})
 }
 
@@ -153,26 +154,26 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 
 	x, y, width, height := area.X, area.Y, area.Width, area.Height
 
-	var lines []richtext.Line
+	var lines [][]text.Span
 	if w.showAll {
-		lines = w.fullHelpSegments(w.keyMap.FullHelp(), width)
+		lines = w.fullHelpSpans(w.keyMap.FullHelp(), width)
 	} else {
-		lines = []richtext.Line{w.shortHelpSegments(w.keyMap.ShortHelp(), width)}
+		lines = [][]text.Span{w.shortHelpSpans(w.keyMap.ShortHelp(), width)}
 	}
 
 	for row := 0; row < len(lines) && row < height; row++ {
-		w.drawSegments(screen, x, y+row, width, lines[row])
+		w.drawSpans(screen, x, y+row, width, lines[row])
 	}
 }
 
 // Handle passes msg through unchanged.
 func (Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg }
 
-func (w Widget) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) richtext.Line {
-	items := make([]richtext.Line, 0, len(bindings))
+func (w Widget) shortHelpSpans(bindings []keybind.Keybind, maxWidth int) []text.Span {
+	items := make([][]text.Span, 0, len(bindings))
 	for _, kb := range bindings {
 		hp := kb.Help()
-		item := shortItemSegments(w.formatKey(hp.Key), hp.Desc, w.shortKeyStyle, w.shortDescStyle)
+		item := shortItemSpans(w.formatKey(hp.Key), hp.Desc, w.shortKeyStyle, w.shortDescStyle)
 		if len(item) == 0 {
 			continue
 		}
@@ -182,27 +183,27 @@ func (w Widget) shortHelpSegments(bindings []keybind.Keybind, maxWidth int) rich
 		return nil
 	}
 
-	sep := richtext.Segment{Text: cmp.Or(w.shortSeparator, " "), Style: w.shortSeparatorStyle}
+	sep := text.Span{Text: cmp.Or(w.shortSeparator, " "), Style: w.shortSeparatorStyle}
 
-	out := items[0].Clone()
+	out := slices.Clone(items[0])
 	for i := 1; i < len(items); i++ {
-		candidate := append(out.Clone(), sep)
+		candidate := append(slices.Clone(out), sep)
 		candidate = append(candidate, items[i]...)
-		if maxWidth > 0 && candidate.Width() > maxWidth {
+		if maxWidth > 0 && text.Width(candidate) > maxWidth {
 			return append(out, w.truncationTail(out, maxWidth)...)
 		}
 		out = candidate
 	}
 
-	if maxWidth > 0 && out.Width() > maxWidth {
+	if maxWidth > 0 && text.Width(out) > maxWidth {
 		return nil
 	}
 	return out
 }
 
-func (w Widget) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) []richtext.Line {
-	sep := richtext.Segment{Text: cmp.Or(w.fullSeparator, " "), Style: w.fullSeparatorStyle}
-	var columns [][]richtext.Line
+func (w Widget) fullHelpSpans(groups [][]keybind.Keybind, maxWidth int) [][]text.Span {
+	sep := text.Span{Text: cmp.Or(w.fullSeparator, " "), Style: w.fullSeparatorStyle}
+	var columns [][][]text.Span
 	var widths []int
 	width, truncated := 0, false
 	// Columns are included left to right until the next one would overflow maxWidth.
@@ -213,7 +214,7 @@ func (w Widget) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) []ric
 		}
 		next := columnWidth
 		if len(columns) > 0 {
-			next += uniseg.StringWidth(sep.Text)
+			next += uucode.StringWidth(sep.Text)
 		}
 		if maxWidth > 0 && width+next > maxWidth {
 			truncated = true
@@ -224,7 +225,7 @@ func (w Widget) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) []ric
 	}
 	if len(columns) == 0 {
 		if truncated {
-			return []richtext.Line{{{Text: w.ellipsis, Style: w.ellipsisStyle}}}
+			return [][]text.Span{{{Text: w.ellipsis, Style: w.ellipsisStyle}}}
 		}
 		return nil
 	}
@@ -233,20 +234,20 @@ func (w Widget) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) []ric
 	for _, column := range columns {
 		rows = max(rows, len(column))
 	}
-	var lines []richtext.Line
+	var lines [][]text.Span
 	for row := range rows {
-		var line richtext.Line
+		var line []text.Span
 		for i, column := range columns {
 			if i > 0 {
 				line = append(line, sep)
 			}
-			var cell richtext.Line
+			var cell []text.Span
 			if row < len(column) {
 				cell = column[row]
 			}
 			// Every column but the last is padded to its width so the separators line up.
-			if pad := widths[i] - cell.Width(); pad > 0 && (i < len(columns)-1 || row >= len(column)) {
-				cell = append(cell.Clone(), richtext.Segment{Text: strings.Repeat(" ", pad), Style: w.fullDescStyle})
+			if pad := widths[i] - text.Width(cell); pad > 0 && (i < len(columns)-1 || row >= len(column)) {
+				cell = append(slices.Clone(cell), text.Span{Text: strings.Repeat(" ", pad), Style: w.fullDescStyle})
 			}
 			line = append(line, cell...)
 		}
@@ -259,47 +260,47 @@ func (w Widget) fullHelpSegments(groups [][]keybind.Keybind, maxWidth int) []ric
 }
 
 // fullColumn returns the rows of group, each key padded to the widest one and followed by its description, and the width of the widest row.
-func (w Widget) fullColumn(group []keybind.Keybind) ([]richtext.Line, int) {
+func (w Widget) fullColumn(group []keybind.Keybind) ([][]text.Span, int) {
 	var helps []keybind.Help
 	keyWidth := 0
 	for _, kb := range group {
 		if h := kb.Help(); h.Key != "" || h.Desc != "" {
 			h.Key = w.formatKey(h.Key)
 			helps = append(helps, h)
-			keyWidth = max(keyWidth, uniseg.StringWidth(h.Key))
+			keyWidth = max(keyWidth, uucode.StringWidth(h.Key))
 		}
 	}
-	rows := make([]richtext.Line, len(helps))
+	rows := make([][]text.Span, len(helps))
 	width := 0
 	for i, h := range helps {
-		rows[i] = richtext.Line{{Text: h.Key + strings.Repeat(" ", keyWidth-uniseg.StringWidth(h.Key)), Style: w.fullKeyStyle}}
+		rows[i] = []text.Span{{Text: h.Key + strings.Repeat(" ", keyWidth-uucode.StringWidth(h.Key)), Style: w.fullKeyStyle}}
 		if h.Key != "" && h.Desc != "" {
-			rows[i] = append(rows[i], richtext.Segment{Text: " ", Style: w.fullDescStyle})
+			rows[i] = append(rows[i], text.Span{Text: " ", Style: w.fullDescStyle})
 		}
 		if h.Desc != "" {
-			rows[i] = append(rows[i], richtext.Segment{Text: h.Desc, Style: w.fullDescStyle})
+			rows[i] = append(rows[i], text.Span{Text: h.Desc, Style: w.fullDescStyle})
 		}
-		width = max(width, rows[i].Width())
+		width = max(width, text.Width(rows[i]))
 	}
 	return rows, width
 }
 
-func (w Widget) truncationTail(current richtext.Line, maxWidth int) richtext.Line {
+func (w Widget) truncationTail(current []text.Span, maxWidth int) []text.Span {
 	if maxWidth <= 0 || w.ellipsis == "" {
 		return nil
 	}
 	// We only add an ellipsis when it fully fits because clipping looks broken in narrow widths.
-	tail := richtext.Line{{Text: " " + w.ellipsis, Style: w.ellipsisStyle}}
-	if current.Width()+tail.Width() <= maxWidth {
+	tail := []text.Span{{Text: " " + w.ellipsis, Style: w.ellipsisStyle}}
+	if text.Width(current)+text.Width(tail) <= maxWidth {
 		return tail
 	}
 	return nil
 }
 
-func (w Widget) drawSegments(screen tview.Screen, x, y, width int, segments richtext.Line) {
+func (w Widget) drawSpans(screen tview.Screen, x, y, width int, spans []text.Span) {
 	cursor := x
 	remaining := width
-	for _, s := range segments {
+	for _, s := range spans {
 		if s.Text == "" || remaining <= 0 {
 			continue
 		}
@@ -309,16 +310,16 @@ func (w Widget) drawSegments(screen tview.Screen, x, y, width int, segments rich
 	}
 }
 
-func shortItemSegments(key, desc string, keyStyle, descStyle tview.Style) richtext.Line {
+func shortItemSpans(key, desc string, keyStyle, descStyle tview.Style) []text.Span {
 	switch {
 	case key == "" && desc == "":
 		return nil
 	case key == "":
-		return richtext.Line{{Text: desc, Style: descStyle}}
+		return []text.Span{{Text: desc, Style: descStyle}}
 	case desc == "":
-		return richtext.Line{{Text: key, Style: keyStyle}}
+		return []text.Span{{Text: key, Style: keyStyle}}
 	default:
-		return richtext.Line{{Text: key, Style: keyStyle}, {Text: " ", Style: descStyle}, {Text: desc, Style: descStyle}}
+		return []text.Span{{Text: key, Style: keyStyle}, {Text: " ", Style: descStyle}, {Text: desc, Style: descStyle}}
 	}
 }
 

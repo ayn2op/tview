@@ -113,7 +113,7 @@ func TestWidget(t *testing.T) {
 			m.send(key(tcell.KeyDown))
 		}
 		if got := m.selection; got != m.root.Children()[3] {
-			t.Fatalf("current = %v", got.Line())
+			t.Fatalf("current = %v", got.Spans())
 		}
 		check(t, m, blank, " long n ", " d      ", blank)
 	})
@@ -182,7 +182,7 @@ func TestWidget(t *testing.T) {
 			send(key(tcell.KeyUp))
 		}
 		if m.scrollState.x != 0 || m.selection != m.root.Children()[2] {
-			t.Fatalf("x = %d at %v, want 0 at long name", m.scrollState.x, m.selection.Line())
+			t.Fatalf("x = %d at %v, want 0 at long name", m.scrollState.x, m.selection.Spans())
 		}
 	})
 	t.Run("does not scroll without OnChange", func(t *testing.T) {

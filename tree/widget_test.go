@@ -38,7 +38,7 @@ func TestWidgetDraw(t *testing.T) {
 
 func TestWidgetLayout(t *testing.T) {
 	nodes := testTree()
-	nodes["a1"].SetLine(NewNode("long name").Line())
+	nodes["a1"].SetSpans(NewNode("long name").Spans()...)
 	limits := layout.Limits{Max: layout.Size{Width: 6, Height: 2}, Infinite: layout.Axes{Width: true, Height: true}}
 	if got := interactive(nodes["root"], nil).Layout(limits); got != (layout.Size{Width: 12, Height: 3}) {
 		t.Fatalf("size = %+v, want 12 by 3", got)
@@ -71,7 +71,7 @@ func TestWidgetHandle(t *testing.T) {
 		current := nodes["a"]
 		send(nodes, &current, key(tcell.KeyDown, ""))
 		if current != nodes["a1"] {
-			t.Fatalf("current = %v", current.Line())
+			t.Fatalf("current = %v", current.Spans())
 		}
 	})
 	t.Run("move to parent", func(t *testing.T) {
@@ -79,7 +79,7 @@ func TestWidgetHandle(t *testing.T) {
 		current := nodes["a1"]
 		send(nodes, &current, key(tcell.KeyRune, "K"))
 		if current != nodes["a"] {
-			t.Fatalf("current = %v", current.Line())
+			t.Fatalf("current = %v", current.Spans())
 		}
 	})
 	t.Run("select", func(t *testing.T) {
@@ -112,7 +112,7 @@ func TestWidgetHandle(t *testing.T) {
 		current = nodes["a"]
 		send(nodes, &current, key(tcell.KeyDown, ""))
 		if current != nodes["b"] {
-			t.Fatalf("current = %v", current.Line())
+			t.Fatalf("current = %v", current.Spans())
 		}
 	})
 }

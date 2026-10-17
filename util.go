@@ -2,7 +2,7 @@ package tview
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/rivo/uniseg"
+	"github.com/rockorager/go-uucode"
 )
 
 type Style = tcell.Style
@@ -20,7 +20,7 @@ func Print(screen Screen, text string, x, y, width int, alignment Alignment, sty
 	if width <= 0 {
 		return 0
 	}
-	textWidth := uniseg.StringWidth(text)
+	textWidth := uucode.StringWidth(text)
 	cut := 0
 	switch alignment {
 	case AlignmentRight:
@@ -28,12 +28,14 @@ func Print(screen Screen, text string, x, y, width int, alignment Alignment, sty
 	case AlignmentCenter:
 		cut = (textWidth - width) / 2
 	}
-	state := -1
-	for cut > 0 && text != "" {
-		var w int
-		_, text, w, state = uniseg.FirstGraphemeClusterInString(text, state)
-		cut -= w
-		textWidth -= w
+	clusters := uucode.NewGraphemeWidthIterator(text)
+	for cut > 0 {
+		cluster, ok := clusters.Next()
+		if !ok {
+			break
+		}
+		cut -= cluster.Width
+		textWidth -= cluster.Width
 	}
 	if textWidth < width {
 		switch alignment {
@@ -45,10 +47,8 @@ func Print(screen Screen, text string, x, y, width int, alignment Alignment, sty
 	}
 
 	drawn := 0
-	for text != "" {
-		var cluster string
-		var w int
-		cluster, text, w, state = uniseg.FirstGraphemeClusterInString(text, state)
+	for c, ok := clusters.Next(); ok; c, ok = clusters.Next() {
+		cluster, w := text[c.Start:c.End], c.Width
 		if drawn+w > width {
 			break
 		}

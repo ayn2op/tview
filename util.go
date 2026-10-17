@@ -7,12 +7,19 @@ import (
 
 type Style = tcell.Style
 
+// Alignment is where something goes along an axis: at its start, center or end.
 type Alignment int
 
 const (
 	AlignmentLeft Alignment = iota
 	AlignmentCenter
 	AlignmentRight
+)
+
+// The vertical alignments, with AlignmentCenter between them.
+const (
+	AlignmentTop    = AlignmentLeft
+	AlignmentBottom = AlignmentRight
 )
 
 // Print draws text on row y from x, at most width cells wide and aligned within them, and returns the width it drew. Text too wide for a right or center alignment loses its start, or both ends.

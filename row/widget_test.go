@@ -24,3 +24,50 @@ func TestWidgetLayout(t *testing.T) {
 		t.Fatalf("size = %+v", got)
 	}
 }
+
+func TestWidgetWrap(t *testing.T) {
+	screen := screentest.New(t, 5, 3)
+	New(text.New("ab"), text.New("cd"), text.New("e")).Spacing(1).Wrap().VerticalSpacing(0).Draw(screen, tview.Rectangle{Width: 5, Height: 3})
+	for y, want := range []string{"ab cd", "e    ", "     "} {
+		if got := screentest.Row(screen, y, 5); got != want {
+			t.Fatalf("row %d = %q, want %q", y, got, want)
+		}
+	}
+
+	limits := layout.Limits{Max: layout.Size{Width: 4, Height: 10}}
+	got := New(text.New("ab"), text.New("cd")).Spacing(1).Height(layout.Shrink).Wrap().Layout(limits)
+	if got != (layout.Size{Width: 4, Height: 3}) {
+		t.Fatalf("size = %+v, want two lines one apart", got)
+	}
+
+	// A list measures its items with an infinite height and no height to hint at.
+	limits = layout.Limits{Max: layout.Size{Width: 4}, Infinite: layout.Axes{Height: true}}
+	if got := New(text.New("ab"), text.New("cd")).Spacing(1).Height(layout.Shrink).Wrap().Layout(limits); got.Height != 3 {
+		t.Fatalf("size = %+v, want three rows within an infinite height", got)
+	}
+}
+
+func TestWrappingAlign(t *testing.T) {
+	draw := func(widget tview.Widget, width, height int) []string {
+		screen := screentest.New(t, width, height)
+		widget.Draw(screen, tview.Rectangle{Width: width, Height: height})
+		rows := make([]string, height)
+		for y := range rows {
+			rows[y] = screentest.Row(screen, y, width)
+		}
+		return rows
+	}
+
+	t.Run("lines", func(t *testing.T) {
+		got := draw(New(text.New("ab"), text.New("cd"), text.New("e")).Spacing(1).Wrap().VerticalSpacing(0).AlignX(tview.AlignmentCenter), 5, 2)
+		if got[1] != "  e  " {
+			t.Fatalf("rows = %q, want the second line centered within the first", got)
+		}
+	})
+	t.Run("children", func(t *testing.T) {
+		got := draw(New(text.New("x\ny"), text.New("a")).Spacing(1).AlignY(tview.AlignmentBottom).Wrap(), 3, 2)
+		if got[0] != "x  " || got[1] != "y a" {
+			t.Fatalf("rows = %q, want the shorter child at the bottom of its line", got)
+		}
+	})
+}

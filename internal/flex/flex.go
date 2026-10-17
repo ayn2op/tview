@@ -180,6 +180,17 @@ func (w Widget) resolve(limits layout.Limits) (sizes []layout.Size, main, cross 
 	return sizes, main + spacing, cross
 }
 
+// offset returns how far into space something goes with alignment: none at the start, half of it in the center and all of it at the end.
+func offset(space int, alignment tview.Alignment) int {
+	switch alignment {
+	case tview.AlignmentCenter:
+		return space / 2
+	case tview.AlignmentRight:
+		return space
+	}
+	return 0
+}
+
 // axes returns the length of child along the layout's axis and across it.
 func (w Widget) axes(child tview.Widget) (along, across layout.Length) {
 	width, height := child.Size()
@@ -210,15 +221,7 @@ func (w Widget) areas(area tview.Rectangle) []tview.Rectangle {
 	pos := 0
 	for i, size := range sizes {
 		main, cross := pack(w.horizontal, size.Width, size.Height)
-		offset := 0
-		switch w.alignment {
-		case tview.AlignmentCenter:
-			offset = (across - cross) / 2
-		case tview.AlignmentRight:
-			offset = across - cross
-		}
-
-		x, y := pack(w.horizontal, pos, offset)
+		x, y := pack(w.horizontal, pos, offset(across-cross, w.alignment))
 		areas[i] = tview.Rectangle{X: area.X + x, Y: area.Y + y, Width: size.Width, Height: size.Height}
 		pos += main + w.spacing
 	}

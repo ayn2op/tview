@@ -6,6 +6,7 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
 	"github.com/ayn2op/tview/layout"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -22,7 +23,7 @@ func (e areaWidget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 func TestWidgetDraw(t *testing.T) {
 	screen := screentest.New(t, 8, 3)
 	var inner tview.Rectangle
-	New(areaWidget{&inner}).Borders(tview.BordersAll).Title("ab").Draw(screen, tview.Rectangle{Width: 8, Height: 3})
+	New(areaWidget{&inner}).Borders(tview.BordersAll).Title(text.New("ab")).Draw(screen, tview.Rectangle{Width: 8, Height: 3})
 	t.Run("title in the border", func(t *testing.T) {
 		if got := screentest.Row(screen, 0, 8); got != "┌──ab──┐" {
 			t.Fatalf("top = %q", got)
@@ -52,7 +53,7 @@ func TestWidgetDrawLine(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			screen := screentest.New(t, 12, 1)
-			New(areaWidget{new(tview.Rectangle)}).Borders(tt.borders).Title(" today ").Draw(screen, tview.Rectangle{Width: 12, Height: 1})
+			New(areaWidget{new(tview.Rectangle)}).Borders(tt.borders).Title(text.New(" today ")).Draw(screen, tview.Rectangle{Width: 12, Height: 1})
 			if got := screentest.Row(screen, 0, 12); got != tt.want {
 				t.Fatalf("line = %q, want %q", got, tt.want)
 			}
@@ -62,7 +63,7 @@ func TestWidgetDrawLine(t *testing.T) {
 
 func TestWidgetDrawCutTitle(t *testing.T) {
 	screen := screentest.New(t, 8, 3)
-	New(areaWidget{new(tview.Rectangle)}).Borders(tview.BordersAll).Title("abcdefgh").Draw(screen, tview.Rectangle{Width: 8, Height: 3})
+	New(areaWidget{new(tview.Rectangle)}).Borders(tview.BordersAll).Title(text.New("abcdefgh")).Draw(screen, tview.Rectangle{Width: 8, Height: 3})
 	if got := screentest.Row(screen, 0, 8); got != "┌abcdef┐" {
 		t.Fatalf("top = %q", got)
 	}
@@ -70,7 +71,7 @@ func TestWidgetDrawCutTitle(t *testing.T) {
 
 func TestWidgetHandle(t *testing.T) {
 	var inner, title tview.Rectangle
-	b := New(areaWidget{&inner}).Padding(1, 0, 2, 0).TitleWidget(areaWidget{&title}).TitleAlignment(tview.HorizontalAlignmentLeft)
+	b := New(areaWidget{&inner}).Padding(1, 0, 2, 0).Title(areaWidget{&title}).TitleAlignment(tview.HorizontalAlignmentLeft)
 	area := tview.Rectangle{Width: 8, Height: 3}
 
 	t.Run("child inside the padding", func(t *testing.T) {

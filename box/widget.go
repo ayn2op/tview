@@ -6,7 +6,6 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
-	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -81,13 +80,8 @@ func (w Widget) Padding(top, bottom, left, right int) Widget {
 	return w
 }
 
-// Title sets the text in the top border, in the style of the border unless styled otherwise. An empty title leaves the border plain.
-func (w Widget) Title(title string) Widget {
-	return w.TitleWidget(plain(title))
-}
-
-// TitleWidget sets the widget drawn in the top border in place of a title, one row tall and as wide as its content, such as styled text or tabs.
-func (w Widget) TitleWidget(title tview.Widget) Widget {
+// Title sets the widget drawn in the top border, one row tall and as wide as its content, such as text or tabs, or nil for none.
+func (w Widget) Title(title tview.Widget) Widget {
 	w.title = title
 	return w
 }
@@ -98,23 +92,10 @@ func (w Widget) TitleAlignment(align tview.HorizontalAlignment) Widget {
 	return w
 }
 
-// Footer sets the text in the bottom border, in the style of the border unless styled otherwise. An empty footer leaves the border plain.
-func (w Widget) Footer(footer string) Widget {
-	return w.FooterWidget(plain(footer))
-}
-
-// FooterWidget sets the widget drawn in the bottom border in place of a footer, one row tall and as wide as its content.
-func (w Widget) FooterWidget(footer tview.Widget) Widget {
+// Footer sets the widget drawn in the bottom border, one row tall and as wide as its content, or nil for none.
+func (w Widget) Footer(footer tview.Widget) Widget {
 	w.footer = footer
 	return w
-}
-
-// plain returns s as text on one line, or nil if it is empty.
-func plain(s string) tview.Widget {
-	if s == "" {
-		return nil
-	}
-	return text.New(s).Wrapping(text.WrappingNone)
 }
 
 // FooterAlignment sets the alignment of the footer.

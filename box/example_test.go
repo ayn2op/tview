@@ -10,8 +10,8 @@ import (
 func ExampleNew() {
 	b := box.New(text.New("hello")).
 		Borders(tview.BordersAll).
-		Title("Inbox").
-		Footer("1 new").
+		Title(text.New("Inbox")).
+		Footer(text.New("1 new")).
 		FooterAlignment(tview.HorizontalAlignmentRight)
 	screentest.Print(b, 12, 3)
 	// Output:

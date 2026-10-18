@@ -155,7 +155,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	fill := func(x0, y0, x1, y1 int, str string, style tview.Style) {
 		for y := y0; y <= y1; y++ {
 			for x := x0; x <= x1; x++ {
-				if !slices.ContainsFunc(labels, func(l label) bool { return l.area.Contains(x, y) }) {
+				if !isUnderLabel(labels, x, y) {
 					screen.Put(x, y, str, style)
 				}
 			}
@@ -206,6 +206,11 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 type label struct {
 	widget tview.Widget
 	area   tview.Rectangle
+}
+
+// isUnderLabel reports whether the cell at x, y is under one of labels.
+func isUnderLabel(labels []label, x, y int) bool {
+	return slices.ContainsFunc(labels, func(l label) bool { return l.area.Contains(x, y) })
 }
 
 // labels returns where the title and footer are drawn on the top and bottom rows of area, inside the corners, as wide as their content and placed by their alignments.

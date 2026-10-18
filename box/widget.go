@@ -2,6 +2,8 @@
 package box
 
 import (
+	"slices"
+
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/text"
@@ -167,27 +169,32 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	left, top := area.X, area.Y
 	right, bottom := area.X+area.Width-1, area.Y+area.Height-1
 
+	// A cell keeps what it holds from the last frame unless it changes, which spares the terminal screen measuring it again, so cells are not filled only to be drawn over.
+	labels := w.labels(area)
 	fill := func(x0, y0, x1, y1 int, str string, style tview.Style) {
 		for y := y0; y <= y1; y++ {
 			for x := x0; x <= x1; x++ {
-				screen.Put(x, y, str, style)
+				if !slices.ContainsFunc(labels, func(l label) bool { return l.area.Contains(x, y) }) {
+					screen.Put(x, y, str, style)
+				}
 			}
 		}
 	}
-	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', tcell.StyleDefault.Background(w.background))
+
+	inset := func(side tview.Borders) int {
+		if w.borders.Has(side) {
+			return 1
+		}
+		return 0
+	}
+	x0, x1 := left+inset(tview.BordersLeft), right-inset(tview.BordersRight)
+	y0, y1 := top+inset(tview.BordersTop), bottom-inset(tview.BordersBottom)
+	screen.FillArea(x0, y0, x1-x0+1, y1-y0+1, ' ', tcell.StyleDefault.Background(w.background))
 
 	// A box one row tall or one column wide still draws its borders, so a top border alone makes a line, its title on it.
 	if w.borders != tview.BordersNone {
 		set := w.borderSet
 		// A side reaches into a corner unless the side it meets there is drawn too, which makes the corner.
-		inset := func(side tview.Borders) int {
-			if w.borders.Has(side) {
-				return 1
-			}
-			return 0
-		}
-		x0, x1 := left+inset(tview.BordersLeft), right-inset(tview.BordersRight)
-		y0, y1 := top+inset(tview.BordersTop), bottom-inset(tview.BordersBottom)
 		for _, part := range []struct {
 			sides          tview.Borders
 			x0, y0, x1, y1 int
@@ -208,7 +215,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		}
 	}
 
-	for _, l := range w.labels(area) {
+	for _, l := range labels {
 		l.widget.Draw(screen, l.area)
 	}
 	w.child.Draw(screen, w.InnerArea(area))

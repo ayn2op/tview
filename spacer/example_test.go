@@ -14,8 +14,8 @@ func ExampleNew() {
 	buttons := row.New(
 		text.New("Draft"),
 		spacer.New().Width(layout.Fill),
-		button.New().Label("Cancel").Width(layout.Fixed(8)),
-		button.New().Label("OK").Width(layout.Fixed(4)),
+		button.New(text.New("Cancel")).Width(layout.Fixed(8)),
+		button.New(text.New("OK")).Width(layout.Fixed(4)),
 	).Spacing(1)
 	screentest.Print(buttons, 24, 1)
 	// Output:

@@ -16,7 +16,7 @@ type deleteMsg struct{}
 
 // A click on a panel stacked over a button would reach the button below it, unless the panel is opaque.
 func ExampleNew() {
-	del := button.New().Label("Delete").OnClick(deleteMsg{})
+	del := button.New(text.New("Delete")).OnClick(deleteMsg{})
 	panel := box.New(text.New("notes")).Borders(tview.BordersAll)
 	area := tview.Rectangle{Width: 10, Height: 3}
 	click := tview.MouseMsg{EventMouse: tcell.NewEventMouse(4, 1, tcell.ButtonPrimary, tcell.ModNone), Action: tview.MouseLeftDown}

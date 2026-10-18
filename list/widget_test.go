@@ -9,6 +9,7 @@ import (
 	"github.com/ayn2op/tview/internal/screentest"
 	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/slider"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -190,7 +191,7 @@ func TestItemHeight(t *testing.T) {
 func TestWidgetHandleItem(t *testing.T) {
 	area := tview.Rectangle{Width: 3, Height: 2}
 	w := New(-1, 2, func(i int) tview.Widget {
-		return button.New().Height(layout.Fixed(1)).OnClick(i)
+		return button.New(text.New("")).Height(layout.Fixed(1)).OnClick(i)
 	}).OnChange(func(cursor int) tview.Msg { return moved(cursor) })
 
 	// The item clicked takes the click, which then does not select it.

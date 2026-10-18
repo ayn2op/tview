@@ -5,12 +5,11 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
-	"github.com/rockorager/go-uucode"
 )
 
-// Widget is a labeled button. It is a value built in View; the model owns any state it reflects, such as focus.
+// Widget is a button around its content, such as text. It is a value built in View; the model owns any state it reflects, such as focus.
 type Widget struct {
-	label         string
+	content       tview.Widget
 	width, height layout.Length
 	style         tview.Style
 	focusedStyle  tview.Style
@@ -23,21 +22,16 @@ type Widget struct {
 
 var _ tview.Widget = Widget{}
 
-// New returns an empty button, as wide as its label and one row tall.
-func New() Widget {
+// New returns a button around content, as large as it.
+func New(content tview.Widget) Widget {
 	return Widget{
+		content:       content,
 		width:         layout.Shrink,
 		height:        layout.Shrink,
 		keybind:       DefaultKeybind,
 		focusedStyle:  tcell.StyleDefault.Reverse(true),
 		disabledStyle: tcell.StyleDefault.Dim(true),
 	}
-}
-
-// Label sets the text centered on the button.
-func (w Widget) Label(label string) Widget {
-	w.label = label
-	return w
 }
 
 // Width sets the width of the button.
@@ -101,12 +95,10 @@ func (w Widget) Size() (width, height layout.Length) {
 
 // Layout returns the size of the button within limits.
 func (w Widget) Layout(limits layout.Limits) layout.Size {
-	return layout.Sized(limits, w.width, w.height, func(layout.Limits) layout.Size {
-		return layout.Size{Width: uucode.StringWidth(w.label), Height: 1}
-	})
+	return layout.Sized(limits, w.width, w.height, w.content.Layout)
 }
 
-// Draw fills area with the style for the button's state and centers the label in it.
+// Draw fills area with the style for the button's state and centers the content in it, which takes from that style what it leaves unset.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	style := w.style
 	switch {
@@ -116,13 +108,23 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		style = w.focusedStyle
 	}
 	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', style)
-	if area.Width > 0 && area.Height > 0 {
-		tview.Print(screen, w.label, area.X, area.Y+area.Height/2, area.Width, tview.HorizontalAlignmentCenter, style)
-	}
+	w.content.Draw(screen, w.contentArea(area))
 }
 
-// Handle returns the OnClick message for a left press within area, or for ActionPress while focused. Other messages pass through unchanged.
+// contentArea returns where the content goes in area: in its middle, at the size of its layout.
+func (w Widget) contentArea(area tview.Rectangle) tview.Rectangle {
+	size := w.content.Layout(layout.Limits{Max: layout.Size{Width: area.Width, Height: area.Height}})
+	area.X += (area.Width - size.Width) / 2
+	area.Y += (area.Height - size.Height) / 2
+	area.Width, area.Height = size.Width, size.Height
+	return area
+}
+
+// Handle passes msg to the content first, and returns what the content makes of it if it is another message. Otherwise it returns the OnClick message for a left press within area, or for ActionPress while focused, and passes other messages through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
+	if out := w.content.Handle(msg, w.contentArea(area)); out != msg {
+		return out
+	}
 	if w.disabled || w.onClick == nil {
 		return msg
 	}

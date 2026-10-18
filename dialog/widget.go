@@ -104,8 +104,7 @@ const contentWidth = 80
 func (w Widget) view() tview.Widget {
 	buttons := row.New().Width(layout.Shrink).Height(layout.Shrink).Spacing(2)
 	for i, label := range w.buttons {
-		b := button.New().
-			Label(label).
+		b := button.New(text.New(label)).
 			Style(w.buttonStyle).
 			FocusedStyle(w.activatedStyle).
 			Width(layout.Fixed(uucode.StringWidth(label) + 4)).

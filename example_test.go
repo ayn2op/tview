@@ -38,8 +38,7 @@ func (m model) View() tview.Widget {
 	return column.New(
 		text.New("Count: "+strconv.Itoa(m.count)),
 		row.New(
-			button.New().
-				Label("Increment").
+			button.New(text.New("Increment")).
 				OnClick(incrementMsg{}).
 				Focused(true),
 		),

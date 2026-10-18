@@ -12,7 +12,7 @@ import (
 func ExampleNew() {
 	bar := row.New(
 		text.New("3 unread"),
-		button.New().Label("Mark read").Width(layout.Fixed(11)),
+		button.New(text.New("Mark read")).Width(layout.Fixed(11)),
 	).Spacing(1)
 	screentest.Print(bar, 24, 1)
 	// Output:

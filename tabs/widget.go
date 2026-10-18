@@ -12,6 +12,7 @@ import (
 type Widget struct {
 	labels                         []string
 	active                         int
+	width                          layout.Length
 	style, activeStyle, arrowStyle tview.Style
 	alignment                      tview.HorizontalAlignment
 	separator                      string
@@ -24,10 +25,11 @@ type Widget struct {
 
 var _ tview.Widget = Widget{}
 
-// New returns centered tabs with labels separated by a space, the active one reversed, and no arrows.
+// New returns tabs as wide as their labels, separated by a space, centered in a wider row, the active one reversed, and no arrows.
 func New(labels ...string) Widget {
 	return Widget{
 		labels:          labels,
+		width:           layout.Shrink,
 		activeStyle:     tcell.StyleDefault.Reverse(true),
 		arrowStyle:      tcell.StyleDefault.Dim(true),
 		alignment:       tview.HorizontalAlignmentCenter,
@@ -40,6 +42,12 @@ func New(labels ...string) Widget {
 // Active sets the index of the active tab.
 func (w Widget) Active(index int) Widget {
 	w.active = index
+	return w
+}
+
+// Width sets the width of the row, as wide as the labels unless set. Fill takes the whole row.
+func (w Widget) Width(width layout.Length) Widget {
+	w.width = width
 	return w
 }
 
@@ -109,14 +117,20 @@ func (w Widget) OnSelect(onSelect func(index int) tview.Msg) Widget {
 	return w
 }
 
-// Size returns Fill and a height of one row.
-func (Widget) Size() (width, height layout.Length) {
-	return layout.Fill, layout.Fixed(1)
+// Size returns the width and a height of one row.
+func (w Widget) Size() (width, height layout.Length) {
+	return w.width, layout.Fixed(1)
 }
 
 // Layout returns the size of the labels within limits.
-func (Widget) Layout(limits layout.Limits) layout.Size {
-	return layout.Atomic(limits, layout.Fill, layout.Fixed(1))
+func (w Widget) Layout(limits layout.Limits) layout.Size {
+	return layout.Sized(limits, w.width, layout.Fixed(1), func(layout.Limits) layout.Size {
+		width := -uucode.StringWidth(w.separator)
+		for _, label := range w.labels {
+			width += uucode.StringWidth(w.paddingLeft+label+w.paddingRight) + uucode.StringWidth(w.separator)
+		}
+		return layout.Size{Width: max(width, 0), Height: 1}
+	})
 }
 
 // Draw draws the labels on the first row of area, highlighting the active one.

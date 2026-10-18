@@ -5,6 +5,7 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
+	"github.com/ayn2op/tview/layout"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -89,4 +90,22 @@ func TestWidgetDraw(t *testing.T) {
 			t.Fatalf("row = %q, want %q", got, want)
 		}
 	})
+}
+
+func TestWidgetLayout(t *testing.T) {
+	limits := layout.Limits{Max: layout.Size{Width: 20, Height: 1}}
+	for name, tt := range map[string]struct {
+		width layout.Length
+		want  int
+	}{
+		"fill takes the row":            {layout.Fill, 20},
+		"shrink is as wide as the tabs": {layout.Shrink, len("[a] - [bc]")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			tabs := New("a", "bc").Separator(" - ").Padding("[", "]").Width(tt.width)
+			if got := tabs.Layout(limits).Width; got != tt.want {
+				t.Fatalf("width = %d, want %d", got, tt.want)
+			}
+		})
+	}
 }

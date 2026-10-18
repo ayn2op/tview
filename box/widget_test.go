@@ -69,6 +69,17 @@ func TestWidgetDrawCutTitle(t *testing.T) {
 	}
 }
 
+func TestWidgetDrawTitleOverStyledCells(t *testing.T) {
+	screen := screentest.New(t, 8, 3)
+	screen.FillArea(0, 0, 8, 3, 'x', tcell.StyleDefault.Background(tcell.ColorRed))
+	New(areaWidget{new(tview.Rectangle)}).Borders(tview.BordersAll).Title(text.New("ab")).Draw(screen, tview.Rectangle{Width: 8, Height: 3})
+	for x := 3; x <= 4; x++ {
+		if _, style, _ := screen.Get(x, 0); style.GetBackground() != tcell.ColorDefault {
+			t.Fatalf("title cell %d background = %v, want the box's", x, style.GetBackground())
+		}
+	}
+}
+
 func TestWidgetHandle(t *testing.T) {
 	var inner, title tview.Rectangle
 	b := New(areaWidget{&inner}).Padding(1, 0, 2, 0).Title(areaWidget{&title}).TitleAlignment(tview.HorizontalAlignmentLeft)

@@ -170,7 +170,8 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 	x0, x1 := left+inset(tview.BordersLeft), right-inset(tview.BordersRight)
 	y0, y1 := top+inset(tview.BordersTop), bottom-inset(tview.BordersBottom)
-	screen.FillArea(x0, y0, x1-x0+1, y1-y0+1, ' ', tcell.StyleDefault.Background(w.background))
+	background := tcell.StyleDefault.Background(w.background)
+	screen.FillArea(x0, y0, x1-x0+1, y1-y0+1, ' ', background)
 
 	// A box one row tall or one column wide still draws its borders, so a top border alone makes a line, its title on it.
 	if w.borders != tview.BordersNone {
@@ -197,6 +198,12 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 
 	for _, l := range labels {
+		// A label merges with the cells beneath it, so they take the box's background, keeping what they hold so it is not measured again.
+		for x := l.area.X; x < l.area.X+l.area.Width; x++ {
+			str, _, _ := screen.Get(x, l.area.Y)
+			screen.Put(x, l.area.Y, str, background)
+		}
+
 		l.widget.Draw(screen, l.area)
 	}
 	w.child.Draw(screen, w.InnerArea(area))

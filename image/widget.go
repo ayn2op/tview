@@ -87,12 +87,16 @@ func (w Widget) cell() (width, height int) {
 }
 
 // Draw draws the image at the top-left corner of area.
-// Transparent pixels leave the underlying cells untouched.
+// Transparent pixels leave the underlying cells untouched, and a transparent half of a cell keeps its background.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	cols, rows := w.fit(area.Width, area.Height)
 	for y := range rows {
 		for x := range cols {
 			if str, style, ok := w.at(x, y, cols); ok {
+				if style.GetBackground() == color.Default {
+					_, under, _ := screen.Get(area.X+x, area.Y+y)
+					style = style.Background(under.GetBackground())
+				}
 				screen.Put(area.X+x, area.Y+y, str, style)
 			}
 		}

@@ -67,6 +67,17 @@ func TestWidgetDraw(t *testing.T) {
 	}
 }
 
+func TestWidgetDrawOverBackground(t *testing.T) {
+	screen := screentest.New(t, 1, 1)
+	white := color.NewRGBColor(255, 255, 255)
+	screen.Put(0, 0, " ", tcell.StyleDefault.Background(white))
+	New(column(red)).Draw(screen, tview.Rectangle{Width: 1, Height: 1})
+	want := tcell.StyleDefault.Foreground(color.FromImageColor(red)).Background(white)
+	if str, style, _ := screen.Get(0, 0); str != "▀" || style != want {
+		t.Fatalf("cell = %q %v, want the transparent bottom half to keep the white beneath", str, style)
+	}
+}
+
 func TestWidgetLines(t *testing.T) {
 	t.Run("half blocks", func(t *testing.T) {
 		// A pixel above a transparent one, then a transparent cell.

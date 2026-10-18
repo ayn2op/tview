@@ -42,6 +42,24 @@ func TestWidgetDraw(t *testing.T) {
 	})
 }
 
+func TestWidgetDrawLine(t *testing.T) {
+	for name, tt := range map[string]struct {
+		borders tview.Borders
+		want    string
+	}{
+		"a top border alone is a line, without corners": {tview.BordersTop, "─── today ──"},
+		"a corner only where two borders meet":          {tview.BordersTop | tview.BordersLeft, "┌── today ──"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			screen := screentest.New(t, 12, 1)
+			New(areaWidget{new(tview.Rectangle)}).Borders(tt.borders).Title(" today ").Draw(screen, tview.Rectangle{Width: 12, Height: 1})
+			if got := screentest.Row(screen, 0, 12); got != tt.want {
+				t.Fatalf("line = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestWidgetDrawCutTitle(t *testing.T) {
 	screen := screentest.New(t, 8, 3)
 	New(areaWidget{new(tview.Rectangle)}).Borders(tview.BordersAll).Title("abcdefgh").Draw(screen, tview.Rectangle{Width: 8, Height: 3})

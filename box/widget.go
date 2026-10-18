@@ -176,23 +176,33 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 	}
 	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', tcell.StyleDefault.Background(w.background))
 
-	if w.borders != tview.BordersNone && area.Width >= 2 && area.Height >= 2 {
+	// A box one row tall or one column wide still draws its borders, so a top border alone makes a line, its title on it.
+	if w.borders != tview.BordersNone {
 		set := w.borderSet
+		// A side reaches into a corner unless the side it meets there is drawn too, which makes the corner.
+		inset := func(side tview.Borders) int {
+			if w.borders.Has(side) {
+				return 1
+			}
+			return 0
+		}
+		x0, x1 := left+inset(tview.BordersLeft), right-inset(tview.BordersRight)
+		y0, y1 := top+inset(tview.BordersTop), bottom-inset(tview.BordersBottom)
 		for _, part := range []struct {
 			sides          tview.Borders
 			x0, y0, x1, y1 int
 			glyph          string
 		}{
-			{tview.BordersTop, left + 1, top, right - 1, top, set.Top},
-			{tview.BordersBottom, left + 1, bottom, right - 1, bottom, set.Bottom},
-			{tview.BordersLeft, left, top + 1, left, bottom - 1, set.Left},
-			{tview.BordersRight, right, top + 1, right, bottom - 1, set.Right},
+			{tview.BordersTop, x0, top, x1, top, set.Top},
+			{tview.BordersBottom, x0, bottom, x1, bottom, set.Bottom},
+			{tview.BordersLeft, left, y0, left, y1, set.Left},
+			{tview.BordersRight, right, y0, right, y1, set.Right},
 			{tview.BordersTop | tview.BordersLeft, left, top, left, top, set.TopLeft},
 			{tview.BordersTop | tview.BordersRight, right, top, right, top, set.TopRight},
 			{tview.BordersBottom | tview.BordersLeft, left, bottom, left, bottom, set.BottomLeft},
 			{tview.BordersBottom | tview.BordersRight, right, bottom, right, bottom, set.BottomRight},
 		} {
-			if w.borders.Has(part.sides) {
+			if w.borders&part.sides == part.sides {
 				fill(part.x0, part.y0, part.x1, part.y1, part.glyph, w.borderStyle)
 			}
 		}

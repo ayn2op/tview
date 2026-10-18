@@ -125,7 +125,6 @@ func (w Widget) layout() tview.Widget {
 	// A line below the query separates it from the list.
 	var line tview.BorderSet
 	line.Bottom = separator
-	line.BottomLeft, line.BottomRight = line.Bottom, line.Bottom
 	header := box.New(row.New(text.New(prompt), query)).Borders(tview.BordersBottom).BorderSet(line).BorderStyle(tcell.StyleDefault.Dim(true))
 	return column.New(column.New(header).Height(layout.Fixed(inputHeight)), w.listView())
 }

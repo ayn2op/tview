@@ -41,15 +41,19 @@ func Width(spans []Span) int {
 // Lines splits spans at line breaks and wraps each line to width.
 func Lines(spans []Span, width int, wrapping Wrapping) [][]Span {
 	lines := splitLines(spans)
-	if wrapping == WrappingNone || width <= 0 {
+	// A line that fits is kept whole, which spares wrapping most text: labels, titles and names.
+	if wrapping == WrappingNone || width <= 0 || len(lines) == 1 && Width(lines[0]) <= width {
 		return lines
 	}
 
 	wrapped := make([][]Span, 0, len(lines))
 	for _, line := range lines {
-		if wrapping == WrappingGlyph {
+		switch {
+		case Width(line) <= width:
+			wrapped = append(wrapped, line)
+		case wrapping == WrappingGlyph:
 			wrapped = append(wrapped, wrapGlyphs(line, width)...)
-		} else {
+		default:
 			wrapped = append(wrapped, wrapWords(line, width, wrapping == WrappingWordOrGlyph)...)
 		}
 	}
@@ -58,7 +62,7 @@ func Lines(spans []Span, width int, wrapping Wrapping) [][]Span {
 
 // splitLines splits spans at line breaks, with a tab drawn and measured as a space.
 func splitLines(spans []Span) [][]Span {
-	if !slices.ContainsFunc(spans, func(span Span) bool { return strings.ContainsAny(span.Text, "\n\t") }) {
+	if isPlain(spans) {
 		return [][]Span{spans}
 	}
 
@@ -80,6 +84,11 @@ func splitLines(spans []Span) [][]Span {
 		}
 	}
 	return lines
+}
+
+// isPlain reports whether spans hold no line breaks or tabs, which splitLines would change.
+func isPlain(spans []Span) bool {
+	return !slices.ContainsFunc(spans, func(span Span) bool { return strings.ContainsAny(span.Text, "\n\t") })
 }
 
 // wrapGlyphs breaks line at any character so that each part fits width.

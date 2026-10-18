@@ -14,6 +14,7 @@ type Widget struct {
 	alignX        tview.HorizontalAlignment
 	wrapping      Wrapping
 	style         tview.Style
+	paragraph     *Paragraph
 }
 
 var _ tview.Widget = Widget{}
@@ -52,6 +53,12 @@ func (w Widget) Wrapping(wrapping Wrapping) Widget {
 	return w
 }
 
+// Paragraph sets where the text keeps its lines, so they are laid out again only when the spans, the wrapping or the width change. The model keeps the paragraph, one for each text.
+func (w Widget) Paragraph(paragraph *Paragraph) Widget {
+	w.paragraph = paragraph
+	return w
+}
+
 // Style sets the style beneath the styles of the spans. Unset colors and attributes are those of the cells the text is drawn on.
 func (w Widget) Style(style tview.Style) Widget {
 	w.style = style
@@ -66,7 +73,7 @@ func (w Widget) Size() (width, height layout.Length) {
 // Layout returns the size of the text within limits, where its content is as wide as the longest line and as tall as the lines it wraps to.
 func (w Widget) Layout(limits layout.Limits) layout.Size {
 	return layout.Sized(limits, w.width, w.height, func(limits layout.Limits) layout.Size {
-		lines := Lines(w.spans, limits.Bounds().Width, w.wrapping)
+		lines := w.lines(limits.Bounds().Width)
 		return layout.Size{Width: longest(lines), Height: len(lines)}
 	})
 }
@@ -77,7 +84,7 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		return
 	}
 
-	lines := Lines(w.spans, area.Width, w.wrapping)
+	lines := w.lines(area.Width)
 	// Lines off the screen, as in a viewport, are skipped.
 	_, bottom := screen.Size()
 	for i := max(-area.Y, 0); i < min(area.Height, bottom-area.Y, len(lines)); i++ {
@@ -92,6 +99,14 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		}
 		w.drawLine(screen, line, area.X+start, area.Y+i, area)
 	}
+}
+
+// lines returns the lines of the text within width, from its paragraph if it has one.
+func (w Widget) lines(width int) [][]Span {
+	if w.paragraph != nil {
+		return w.paragraph.update(w.spans, width, w.wrapping)
+	}
+	return Lines(w.spans, width, w.wrapping)
 }
 
 // drawLine draws line starting at x, keeping only the cells within area.

@@ -4,11 +4,9 @@ package box
 import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
-	"github.com/rockorager/go-uucode"
 )
-
-const ellipsis = "…"
 
 // Widget draws a background, border, title, and footer, with its child inside them.
 type Widget struct {
@@ -21,8 +19,7 @@ type Widget struct {
 	borderStyle                     tview.Style
 	paddingTop, paddingBottom       int
 	paddingLeft, paddingRight       int
-	title, footer                   string
-	titleStyle, footerStyle         tview.Style
+	title, footer                   tview.Widget
 	titleAlignment, footerAlignment tview.HorizontalAlignment
 }
 
@@ -82,15 +79,14 @@ func (w Widget) Padding(top, bottom, left, right int) Widget {
 	return w
 }
 
-// Title sets the text in the top border.
+// Title sets the text in the top border, in the style of the border unless styled otherwise. An empty title leaves the border plain.
 func (w Widget) Title(title string) Widget {
-	w.title = title
-	return w
+	return w.TitleWidget(plain(title))
 }
 
-// TitleStyle sets the style of the title.
-func (w Widget) TitleStyle(style tview.Style) Widget {
-	w.titleStyle = style
+// TitleWidget sets the widget drawn in the top border in place of a title, one row tall and as wide as its content, such as styled text or tabs.
+func (w Widget) TitleWidget(title tview.Widget) Widget {
+	w.title = title
 	return w
 }
 
@@ -100,16 +96,23 @@ func (w Widget) TitleAlignment(align tview.HorizontalAlignment) Widget {
 	return w
 }
 
-// Footer sets the text in the bottom border.
+// Footer sets the text in the bottom border, in the style of the border unless styled otherwise. An empty footer leaves the border plain.
 func (w Widget) Footer(footer string) Widget {
+	return w.FooterWidget(plain(footer))
+}
+
+// FooterWidget sets the widget drawn in the bottom border in place of a footer, one row tall and as wide as its content.
+func (w Widget) FooterWidget(footer tview.Widget) Widget {
 	w.footer = footer
 	return w
 }
 
-// FooterStyle sets the style of the footer.
-func (w Widget) FooterStyle(style tview.Style) Widget {
-	w.footerStyle = style
-	return w
+// plain returns s as text on one line, or nil if it is empty.
+func plain(s string) tview.Widget {
+	if s == "" {
+		return nil
+	}
+	return text.New(s).Wrapping(text.WrappingNone)
 }
 
 // FooterAlignment sets the alignment of the footer.
@@ -135,11 +138,11 @@ func (w Widget) Layout(limits layout.Limits) layout.Size {
 
 // InnerArea returns the part of area inside the border and padding, where the child is drawn.
 func (w Widget) InnerArea(area tview.Rectangle) tview.Rectangle {
-	if w.title != "" || w.borders.Has(tview.BordersTop) {
+	if w.title != nil || w.borders.Has(tview.BordersTop) {
 		area.Y++
 		area.Height--
 	}
-	if w.footer != "" || w.borders.Has(tview.BordersBottom) {
+	if w.footer != nil || w.borders.Has(tview.BordersBottom) {
 		area.Height--
 	}
 	if w.borders.Has(tview.BordersLeft) {
@@ -195,26 +198,62 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 		}
 	}
 
-	label(screen, w.title, area, top, w.titleAlignment, w.titleStyle)
-	label(screen, w.footer, area, bottom, w.footerAlignment, w.footerStyle)
+	for _, l := range w.labels(area) {
+		l.widget.Draw(screen, l.area)
+	}
 	w.child.Draw(screen, w.InnerArea(area))
 }
 
-// label draws text on row y inside the corners of area, ending it with an ellipsis if it is cut off.
-func label(screen tview.Screen, text string, area tview.Rectangle, y int, align tview.HorizontalAlignment, style tview.Style) {
-	if text == "" || area.Width < 4 {
-		return
-	}
-	if tview.Print(screen, text, area.X+1, y, area.Width-2, align, style) < uucode.StringWidth(text) {
-		x := area.X + area.Width - 2
-		if align == tview.HorizontalAlignmentRight {
-			x = area.X + 1
-		}
-		screen.Put(x, y, ellipsis, style)
-	}
+// label is a title or footer and where it is drawn in the border.
+type label struct {
+	widget tview.Widget
+	area   tview.Rectangle
 }
 
-// Handle passes msg to the child with the area inside the frame.
+// labels returns where the title and footer are drawn on the top and bottom rows of area, inside the corners, as wide as their content and placed by their alignments.
+func (w Widget) labels(area tview.Rectangle) []label {
+	if area.Width < 4 {
+		return nil
+	}
+
+	var labels []label
+	for _, l := range []struct {
+		widget tview.Widget
+		y      int
+		align  tview.HorizontalAlignment
+	}{
+		{w.title, area.Y, w.titleAlignment},
+		{w.footer, area.Y + area.Height - 1, w.footerAlignment},
+	} {
+		if l.widget == nil {
+			continue
+		}
+
+		room := area.Width - 2
+		width := l.widget.Layout(layout.Limits{Max: layout.Size{Width: room, Height: 1}}).Width
+		x := area.X + 1
+		switch l.align {
+		case tview.HorizontalAlignmentCenter:
+			x += room/2 - width/2
+		case tview.HorizontalAlignmentRight:
+			x += room - width
+		}
+
+		labels = append(labels, label{widget: l.widget, area: tview.Rectangle{X: x, Y: l.y, Width: width, Height: 1}})
+	}
+
+	return labels
+}
+
+// Handle passes a mouse message on the title or footer to it, and other messages to the child with the area inside the frame.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
+	if mouse, ok := msg.(tview.MouseMsg); ok {
+		for _, l := range w.labels(area) {
+			if l.area.Contains(mouse.Position()) {
+				return l.widget.Handle(msg, l.area)
+			}
+		}
+	}
+
 	return w.child.Handle(msg, w.InnerArea(area))
 }

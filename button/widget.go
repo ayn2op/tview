@@ -122,21 +122,21 @@ func (w Widget) contentArea(area tview.Rectangle) tview.Rectangle {
 
 // Handle passes msg to the content first, and returns what the content makes of it if it is another message. Otherwise it returns the OnClick message for a left press within area, or for ActionPress while focused, and passes other messages through unchanged.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
-	if out := w.content.Handle(msg, w.contentArea(area)); out != msg {
+	out := w.content.Handle(msg, w.contentArea(area))
+	if w.disabled || w.onClick == nil {
 		return out
 	}
-	if w.disabled || w.onClick == nil {
-		return msg
-	}
+
+	// Only input is compared with out, as other messages may be of an uncomparable type.
 	switch m := msg.(type) {
 	case tview.KeyMsg:
-		if w.focused && w.keybind(m) == ActionPress {
+		if out == msg && w.focused && w.keybind(m) == ActionPress {
 			return w.onClick
 		}
 	case tview.MouseMsg:
-		if m.Action == tview.MouseLeftDown && area.Contains(m.Position()) {
+		if out == msg && m.Action == tview.MouseLeftDown && area.Contains(m.Position()) {
 			return w.onClick
 		}
 	}
-	return msg
+	return out
 }

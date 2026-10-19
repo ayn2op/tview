@@ -44,6 +44,12 @@ func TestWidgetHandle(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("uncomparable message", func(t *testing.T) {
+		if got := button.Handle([]int{1}, area).([]int); len(got) != 1 {
+			t.Fatalf("got %v, want [1]", got)
+		}
+	})
 }
 
 func TestWidgetDraw(t *testing.T) {

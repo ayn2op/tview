@@ -1,7 +1,11 @@
 package image
 
 import (
+	"bytes"
+	"compress/zlib"
+	"encoding/base64"
 	"image"
+	"io"
 	"math/rand/v2"
 	"slices"
 	"strconv"
@@ -54,7 +58,7 @@ func TestWidgetKitty(t *testing.T) {
 		}
 	})
 	t.Run("transmits in chunks", func(t *testing.T) {
-		// Noise does not compress, so its PNG needs several chunks.
+		// Noise does not compress, so it needs several chunks.
 		img := image.NewGray(image.Rect(0, 0, 100, 100))
 		rng := rand.New(rand.NewPCG(1, 2))
 		for i := range img.Pix {
@@ -64,8 +68,16 @@ func TestWidgetKitty(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.HasPrefix(got, "\x1b_Ga=T,U=1,f=100,q=2,i=8,c=100,r=50,m=1;") || !strings.Contains(got, "\x1b_Gm=0;") || strings.Count(got, "m=1;") < 2 {
+		if !strings.HasPrefix(got, "\x1b_Ga=T,U=1,f=32,o=z,s=100,v=100,q=2,i=8,c=100,r=50,m=1;") || !strings.Contains(got, "\x1b_Gm=0;") || strings.Count(got, "m=1;") < 2 {
 			t.Fatalf("transmission = %.80q...", got)
+		}
+
+		var want []byte
+		for _, gray := range img.Pix {
+			want = append(want, gray, gray, gray, 0xff)
+		}
+		if pixels := sentPixels(t, got); !bytes.Equal(pixels, want) {
+			t.Fatal("the transmission does not hold the image's RGBA pixels")
 		}
 	})
 }
@@ -88,4 +100,29 @@ func BenchmarkWidgetTransmission(b *testing.B) {
 			}
 		})
 	}
+}
+
+// sentPixels returns the pixels a transmission carries: its chunks' data joined, decoded from base64 and inflated.
+func sentPixels(t *testing.T, transmission string) []byte {
+	t.Helper()
+	var data strings.Builder
+	for chunk := range strings.SplitSeq(transmission, "\x1b\\") {
+		if _, payload, ok := strings.Cut(chunk, ";"); ok {
+			data.WriteString(payload)
+		}
+	}
+
+	compressed, err := base64.StdEncoding.DecodeString(data.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := zlib.NewReader(bytes.NewReader(compressed))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pixels, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pixels
 }

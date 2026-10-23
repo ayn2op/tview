@@ -2,9 +2,12 @@ package image
 
 import (
 	"bytes"
+	"compress/zlib"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"image/png"
+	"image"
+	"image/draw"
 	"strings"
 	"sync"
 
@@ -55,40 +58,57 @@ func (w Widget) Delete() tview.Cmd {
 	return tview.WriteRaw(fmt.Sprintf("\x1b_Ga=d,d=I,q=2,i=%d\x1b\\", w.imageID()))
 }
 
-// encoder reuses its compressor across images, which is most of what encoding a PNG allocates.
-var encoder = png.Encoder{BufferPool: &bufferPool{}}
+// compressors are reused across images, as each holds about a megabyte of state.
+var compressors = sync.Pool{New: func() any {
+	compressor, _ := zlib.NewWriterLevel(nil, zlib.BestSpeed)
+	return compressor
+}}
 
-type bufferPool struct {
-	pool sync.Pool
-}
-
-func (p *bufferPool) Get() *png.EncoderBuffer {
-	buffer, _ := p.pool.Get().(*png.EncoderBuffer)
-	return buffer
-}
-
-func (p *bufferPool) Put(buffer *png.EncoderBuffer) {
-	p.pool.Put(buffer)
-}
-
+// transmission returns the image as raw pixels compressed with zlib, which encodes several times faster than PNG.
 func (w Widget) transmission() (string, error) {
+	bounds := w.src.Bounds()
+	if bounds.Empty() {
+		return "", errEmpty
+	}
+
 	var buf bytes.Buffer
-	if err := encoder.Encode(&buf, w.src); err != nil {
+	compressor := compressors.Get().(*zlib.Writer)
+	defer compressors.Put(compressor)
+	compressor.Reset(&buf)
+	if _, err := compressor.Write(pixels(w.src)); err != nil {
 		return "", err
 	}
+	if err := compressor.Close(); err != nil {
+		return "", err
+	}
+
 	cols, rows := w.cells()
 	data := base64.StdEncoding.AppendEncode(nil, buf.Bytes())
 
 	var out strings.Builder
 	// Room for the data and the few bytes of keys and escape codes around each of its chunks.
 	out.Grow(len(data) + len(data)/64)
-	fmt.Fprintf(&out, "\x1b_Ga=T,U=1,f=100,q=2,i=%d,c=%d,r=%d,", w.imageID(), cols, rows)
+	fmt.Fprintf(&out, "\x1b_Ga=T,U=1,f=32,o=z,s=%d,v=%d,q=2,i=%d,c=%d,r=%d,", bounds.Dx(), bounds.Dy(), w.imageID(), cols, rows)
 	for len(data) > 4096 {
 		fmt.Fprintf(&out, "m=1;%s\x1b\\\x1b_G", data[:4096])
 		data = data[4096:]
 	}
 	fmt.Fprintf(&out, "m=0;%s\x1b\\", data)
 	return out.String(), nil
+}
+
+var errEmpty = errors.New("image is empty")
+
+// pixels returns src as rows of non-premultiplied RGBA, the pixel format the transmission declares.
+func pixels(src image.Image) []byte {
+	bounds := src.Bounds()
+	if img, ok := src.(*image.NRGBA); ok && img.Stride == 4*bounds.Dx() {
+		return img.Pix[:img.Stride*bounds.Dy()]
+	}
+
+	img := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+	draw.Draw(img, img.Bounds(), src, bounds.Min, draw.Src)
+	return img.Pix
 }
 
 // placeholder is followed by diacritics that encode the cell's row and column and the high byte of the image id.

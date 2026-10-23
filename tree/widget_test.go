@@ -7,6 +7,7 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
 	"github.com/ayn2op/tview/layout"
+	"github.com/ayn2op/tview/viewport"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -196,4 +197,24 @@ func TestNodePathTo(t *testing.T) {
 			t.Fatalf("got %v", got)
 		}
 	})
+}
+
+// BenchmarkWidgetDraw draws a tree of 50 expanded nodes with 30 children each in a viewport, which asks for its target and width too.
+func BenchmarkWidgetDraw(b *testing.B) {
+	root := NewNode("")
+	for range 50 {
+		parent := NewNode("parent")
+		for range 30 {
+			parent.AddChild(NewNode("child"))
+		}
+		root.AddChild(parent)
+	}
+
+	tree := New(root, root.children[10].children[5]).TopLevel(1).Graphics(true)
+	widget := viewport.New(tree, viewport.ScrollState{}).Target(tree.Target).ContentWidth(tree.RowsWidth)
+	screen := screentest.New(b, 40, 50)
+	b.ReportAllocs()
+	for b.Loop() {
+		widget.Draw(screen, tview.Rectangle{Width: 40, Height: 50})
+	}
 }

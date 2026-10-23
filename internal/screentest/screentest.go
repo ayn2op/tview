@@ -12,7 +12,7 @@ import (
 )
 
 // New returns an initialized mock screen of the given size that is finalized when the test ends.
-func New(t *testing.T, width, height int) tview.Screen {
+func New(t testing.TB, width, height int) tview.Screen {
 	t.Helper()
 	screen, err := tcell.NewTerminfoScreenFromTty(vt.NewMockTerm(vt.MockOptSize{X: vt.Col(width), Y: vt.Row(height)}))
 	if err != nil {

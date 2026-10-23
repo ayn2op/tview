@@ -184,7 +184,12 @@ func height(rows []row) int {
 }
 
 // rows returns the shown nodes, with the children of expanded nodes below them.
-func (w Widget) rows() (rows []row) {
+func (w Widget) rows() []row {
+	if w.root == nil {
+		return nil
+	}
+
+	rows := make([]row, 0, w.shown(w.root, 0))
 	var walk func(node *Node, parent, level, parentX int)
 	walk = func(node *Node, parent, level, parentX int) {
 		gx, tx := parentX, parentX+node.indent
@@ -208,10 +213,21 @@ func (w Widget) rows() (rows []row) {
 			}
 		}
 	}
-	if w.root != nil {
-		walk(w.root, -1, 0, 0)
-	}
+	walk(w.root, -1, 0, 0)
 	return rows
+}
+
+// shown returns how many rows node at level and the children of it that are expanded take.
+func (w Widget) shown(node *Node, level int) (count int) {
+	if level >= w.topLevel {
+		count++
+	}
+	if node.expanded {
+		for _, child := range node.children {
+			count += w.shown(child, level+1)
+		}
+	}
+	return count
 }
 
 // view is the rows of the tree and the one of the current node, or -1.

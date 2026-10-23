@@ -3,6 +3,7 @@ package image
 import (
 	"image"
 	"math/rand/v2"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -39,17 +40,21 @@ func TestWidgetKitty(t *testing.T) {
 }
 
 func BenchmarkWidgetTransmission(b *testing.B) {
-	// A small image, two rows tall.
-	img := image.NewNRGBA(image.Rect(0, 0, 40, 40))
-	rng := rand.New(rand.NewPCG(1, 2))
-	for i := range img.Pix {
-		img.Pix[i] = uint8(rng.Uint32())
-	}
-	widget := New(img).Kitty(1)
-	b.ReportAllocs()
-	for b.Loop() {
-		if _, err := widget.transmission(); err != nil {
-			b.Fatal(err)
-		}
+	// Noise does not compress, so its PNG is as large as the image allows.
+	for _, side := range []int{40, 400} {
+		b.Run(strconv.Itoa(side)+"px", func(b *testing.B) {
+			img := image.NewNRGBA(image.Rect(0, 0, side, side))
+			rng := rand.New(rand.NewPCG(1, 2))
+			for i := range img.Pix {
+				img.Pix[i] = uint8(rng.Uint32())
+			}
+			widget := New(img).Kitty(1)
+			b.ReportAllocs()
+			for b.Loop() {
+				if _, err := widget.transmission(); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
 	}
 }

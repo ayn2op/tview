@@ -59,9 +59,11 @@ func (w Widget) transmission() (string, error) {
 	}
 	fg, msb := w.id()
 	cols, rows := w.cells()
-	data := base64.StdEncoding.EncodeToString(buf.Bytes())
+	data := base64.StdEncoding.AppendEncode(nil, buf.Bytes())
 
 	var out strings.Builder
+	// Room for the data and the few bytes of keys and escape codes around each of its chunks.
+	out.Grow(len(data) + len(data)/64)
 	fmt.Fprintf(&out, "\x1b_Ga=T,U=1,f=100,q=2,i=%d,c=%d,r=%d,", msb<<24|fg, cols, rows)
 	for len(data) > 4096 {
 		fmt.Fprintf(&out, "m=1;%s\x1b\\\x1b_G", data[:4096])

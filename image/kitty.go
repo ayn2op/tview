@@ -25,6 +25,12 @@ func (w Widget) id() (fg, msb int) {
 	return (w.kitty-1)%248 + 8, (w.kitty - 1) / 248
 }
 
+// imageID returns the id the image is sent to the terminal with, which its placeholders encode.
+func (w Widget) imageID() int {
+	fg, msb := w.id()
+	return msb<<24 | fg
+}
+
 // Transmit returns a command that sends the image to the terminal for Draw to show.
 func (w Widget) Transmit() tview.Cmd {
 	return func() tview.Msg {
@@ -34,6 +40,14 @@ func (w Widget) Transmit() tview.Cmd {
 		}
 		return tview.WriteRaw(data)()
 	}
+}
+
+// Delete returns a command that deletes the image from the terminal and frees its data, or nil if it is not drawn with kitty's graphics protocol.
+func (w Widget) Delete() tview.Cmd {
+	if w.kitty == 0 {
+		return nil
+	}
+	return tview.WriteRaw(fmt.Sprintf("\x1b_Ga=d,d=I,q=2,i=%d\x1b\\", w.imageID()))
 }
 
 // encoder reuses its compressor across images, which is most of what encoding a PNG allocates.
@@ -57,14 +71,13 @@ func (w Widget) transmission() (string, error) {
 	if err := encoder.Encode(&buf, w.src); err != nil {
 		return "", err
 	}
-	fg, msb := w.id()
 	cols, rows := w.cells()
 	data := base64.StdEncoding.AppendEncode(nil, buf.Bytes())
 
 	var out strings.Builder
 	// Room for the data and the few bytes of keys and escape codes around each of its chunks.
 	out.Grow(len(data) + len(data)/64)
-	fmt.Fprintf(&out, "\x1b_Ga=T,U=1,f=100,q=2,i=%d,c=%d,r=%d,", msb<<24|fg, cols, rows)
+	fmt.Fprintf(&out, "\x1b_Ga=T,U=1,f=100,q=2,i=%d,c=%d,r=%d,", w.imageID(), cols, rows)
 	for len(data) > 4096 {
 		fmt.Fprintf(&out, "m=1;%s\x1b\\\x1b_G", data[:4096])
 		data = data[4096:]

@@ -22,6 +22,17 @@ func TestWidgetKitty(t *testing.T) {
 			t.Fatalf("cell = %q %v, want %q in palette color 16", str, style.GetForeground(), want)
 		}
 	})
+	t.Run("deletes the image", func(t *testing.T) {
+		msg := New(column(red)).Kitty(257).Delete()()
+		if want := tview.WriteRaw("\x1b_Ga=d,d=I,q=2,i=16777232\x1b\\")(); msg != want {
+			t.Fatalf("Delete = %v, want %v", msg, want)
+		}
+	})
+	t.Run("deletes nothing without kitty", func(t *testing.T) {
+		if New(column(red)).Delete() != nil {
+			t.Fatal("Delete is not nil")
+		}
+	})
 	t.Run("transmits in chunks", func(t *testing.T) {
 		// Noise does not compress, so its PNG needs several chunks.
 		img := image.NewGray(image.Rect(0, 0, 100, 100))

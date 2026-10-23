@@ -4,6 +4,7 @@ import (
 	"github.com/ayn2op/tview/layout"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
@@ -149,4 +150,69 @@ func (lengthModel) Size() (width, height layout.Length) { return layout.Fill, la
 
 func (lengthModel) Layout(limits layout.Limits) layout.Size {
 	return layout.Atomic(limits, layout.Fill, layout.Fill)
+}
+
+// burstModel receives a burst of messages from commands and quits after the last, counting the frames drawn.
+type burstModel struct {
+	received, frames *int
+}
+
+const burstSize = 100
+
+func (burstModel) Init() Cmd {
+	cmds := make([]Cmd, burstSize)
+	for i := range cmds {
+		cmds[i] = func() Msg { return i }
+	}
+	return Batch(cmds...)
+}
+
+func (m burstModel) Update(msg Msg) (burstModel, Cmd) {
+	if _, ok := msg.(int); ok {
+		if *m.received++; *m.received == burstSize {
+			return m, Quit()
+		}
+	}
+	return m, nil
+}
+
+func (m burstModel) View() Widget { return m }
+
+// Draw takes as long as a frame of a busy screen.
+func (m burstModel) Draw(Screen, Rectangle) {
+	*m.frames++
+	time.Sleep(time.Millisecond)
+}
+func (burstModel) Handle(msg Msg, _ Rectangle) Msg     { return msg }
+func (burstModel) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
+func (burstModel) Layout(limits layout.Limits) layout.Size {
+	return layout.Atomic(limits, layout.Fill, layout.Fill)
+}
+
+// BenchmarkApplicationRunBurst handles a burst of messages from commands, as a screen loading many images at once does.
+func BenchmarkApplicationRunBurst(b *testing.B) {
+	var frames int
+	for b.Loop() {
+		screen, err := tcell.NewTerminfoScreenFromTty(vt.NewMockTerm(vt.MockOptSize{X: 4, Y: 2}))
+		if err != nil {
+			b.Fatal(err)
+		}
+		if err := screen.Init(); err != nil {
+			b.Fatal(err)
+		}
+		var received int
+		if err := NewApplication(burstModel{received: &received, frames: &frames}, WithScreen(screen)).Run(); err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.ReportMetric(float64(frames)/float64(b.N), "frames/op")
+}
+
+func TestWithQueueSize(t *testing.T) {
+	if got := cap(NewApplication(lengthModel{}).msgs); got != 256 {
+		t.Fatalf("default buffer = %d, want 256", got)
+	}
+	if got := cap(NewApplication(lengthModel{}, WithQueueSize(8)).msgs); got != 8 {
+		t.Fatalf("buffer = %d, want 8", got)
+	}
 }

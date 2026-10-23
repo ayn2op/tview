@@ -41,6 +41,7 @@ const (
 type applicationOptions struct {
 	screen             Screen
 	disableCatchPanics bool
+	queueSize          int
 }
 
 type ApplicationOption func(*applicationOptions)
@@ -54,6 +55,14 @@ func WithScreen(screen Screen) ApplicationOption {
 func WithoutCatchPanics() ApplicationOption {
 	return func(c *applicationOptions) {
 		c.disableCatchPanics = true
+	}
+}
+
+// WithQueueSize sets how many messages can be queued before their senders block, 256 by default.
+// A burst of messages that fits is handled before drawing, so it is drawn once rather than a frame each.
+func WithQueueSize(size int) ApplicationOption {
+	return func(c *applicationOptions) {
+		c.queueSize = size
 	}
 }
 
@@ -76,12 +85,12 @@ type Application[M Model[M]] struct {
 
 // NewApplication creates an application that runs model.
 func NewApplication[M Model[M]](model M, options ...ApplicationOption) *Application[M] {
-	var opts applicationOptions
+	opts := applicationOptions{queueSize: 256}
 	for _, option := range options {
 		option(&opts)
 	}
 	return &Application[M]{
-		msgs:  make(chan Msg),
+		msgs:  make(chan Msg, opts.queueSize),
 		cmds:  make(chan Cmd),
 		done:  make(chan struct{}),
 		model: model,
@@ -198,8 +207,8 @@ func (a *Application[M]) Run() error {
 			a.handle(msg)
 		}
 
-		// Queued events are handled before drawing, so a burst of them, such as scrolling with a touchpad, is drawn once rather than a frame each, which would fall behind them.
-		if len(a.screen.EventQ()) > 0 {
+		// Queued events and messages are handled before drawing, so a burst of them, such as scrolling with a touchpad or images loading, is drawn once rather than a frame each, which would fall behind them.
+		if len(a.screen.EventQ()) > 0 || len(a.msgs) > 0 {
 			continue
 		}
 		a.draw()

@@ -185,17 +185,19 @@ func (w Widget) shortHelpSpans(bindings []keybind.Keybind, maxWidth int) []text.
 
 	sep := text.Span{Text: cmp.Or(w.shortSeparator, " "), Style: w.shortSeparatorStyle}
 
+	sepWidth := text.Width([]text.Span{sep})
 	out := slices.Clone(items[0])
-	for i := 1; i < len(items); i++ {
-		candidate := append(slices.Clone(out), sep)
-		candidate = append(candidate, items[i]...)
-		if maxWidth > 0 && text.Width(candidate) > maxWidth {
+	width := text.Width(out)
+	for _, item := range items[1:] {
+		itemWidth := sepWidth + text.Width(item)
+		if maxWidth > 0 && width+itemWidth > maxWidth {
 			return append(out, w.truncationTail(out, maxWidth)...)
 		}
-		out = candidate
+		out = append(append(out, sep), item...)
+		width += itemWidth
 	}
 
-	if maxWidth > 0 && text.Width(out) > maxWidth {
+	if maxWidth > 0 && width > maxWidth {
 		return nil
 	}
 	return out

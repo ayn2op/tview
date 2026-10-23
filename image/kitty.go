@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/png"
 	"strings"
+	"sync"
 
 	"github.com/ayn2op/tview"
 )
@@ -35,9 +36,25 @@ func (w Widget) Transmit() tview.Cmd {
 	}
 }
 
+// encoder reuses its compressor across images, which is most of what encoding a PNG allocates.
+var encoder = png.Encoder{BufferPool: &bufferPool{}}
+
+type bufferPool struct {
+	pool sync.Pool
+}
+
+func (p *bufferPool) Get() *png.EncoderBuffer {
+	buffer, _ := p.pool.Get().(*png.EncoderBuffer)
+	return buffer
+}
+
+func (p *bufferPool) Put(buffer *png.EncoderBuffer) {
+	p.pool.Put(buffer)
+}
+
 func (w Widget) transmission() (string, error) {
 	var buf bytes.Buffer
-	if err := png.Encode(&buf, w.src); err != nil {
+	if err := encoder.Encode(&buf, w.src); err != nil {
 		return "", err
 	}
 	fg, msb := w.id()

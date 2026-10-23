@@ -3,6 +3,7 @@ package image
 import (
 	"image"
 	"math/rand/v2"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -20,6 +21,25 @@ func TestWidgetKitty(t *testing.T) {
 		str, style, _ := screen.Get(0, 0)
 		if want := string([]rune{placeholder, diacritics[0], diacritics[0], diacritics[1]}); str != want || style.GetForeground() != color.PaletteColor(16) {
 			t.Fatalf("cell = %q %v, want %q in palette color 16", str, style.GetForeground(), want)
+		}
+	})
+	t.Run("transmits without keeping the pixels", func(t *testing.T) {
+		widget := New(column(red, red)).Width(1).Kitty(1)
+		want, err := widget.transmission()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sent, cmd := widget.Transmit()
+		if _, ok := sent.src.(image.Rectangle); !ok {
+			t.Fatalf("Transmit kept %T", sent.src)
+		}
+		if msg := cmd(); msg != tview.WriteRaw(want)() {
+			t.Fatal("Transmit did not send the image's pixels")
+		}
+		sentWidth, sentHeight := sent.Size()
+		width, height := widget.Size()
+		if sentWidth != width || sentHeight != height || !slices.Equal(sent.Lines()[0], widget.Lines()[0]) {
+			t.Fatal("the sent widget is drawn differently")
 		}
 	})
 	t.Run("deletes the image", func(t *testing.T) {

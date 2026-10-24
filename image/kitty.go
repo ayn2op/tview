@@ -15,7 +15,7 @@ import (
 )
 
 // Kitty draws the image with kitty's graphics protocol as image n, from 1 to 63488.
-// The image must be sent to the terminal with Transmit, and the widget it returns drawn.
+// The image must be sent to the terminal with Transmit.
 func (w Widget) Kitty(n int) Widget {
 	w.kitty = n
 	return w
@@ -34,20 +34,15 @@ func (w Widget) imageID() int {
 	return msb<<24 | fg
 }
 
-// Transmit returns the widget without the image's pixels, which the terminal holds once sent, and a command that sends them for Draw to show.
-func (w Widget) Transmit() (Widget, tview.Cmd) {
-	cmd := func() tview.Msg {
+// Transmit returns a command that sends the image to the terminal for Draw to show.
+func (w Widget) Transmit() tview.Cmd {
+	return func() tview.Msg {
 		data, err := w.transmission()
 		if err != nil {
 			return nil
 		}
 		return tview.WriteRaw(data)()
 	}
-
-	// A Rectangle is an image of its bounds alone, which is all Draw needs to place the placeholders.
-	sent := w
-	sent.src = w.src.Bounds()
-	return sent, cmd
 }
 
 // Delete returns a command that deletes the image from the terminal and frees its data, or nil if it is not drawn with kitty's graphics protocol.

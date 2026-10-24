@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/base64"
+	"errors"
 	"image"
 	"io"
 	"math/rand/v2"
@@ -38,7 +39,6 @@ func TestWidgetKitty(t *testing.T) {
 		}
 	})
 	t.Run("transmits in chunks", func(t *testing.T) {
-		// Noise does not compress, so it needs several chunks.
 		img := image.NewGray(image.Rect(0, 0, 100, 100))
 		rng := rand.New(rand.NewPCG(1, 2))
 		for i := range img.Pix {
@@ -48,7 +48,7 @@ func TestWidgetKitty(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.HasPrefix(got, "\x1b_Ga=T,U=1,f=32,o=z,s=100,v=100,q=2,i=8,c=100,r=50,m=1;") || !strings.Contains(got, "\x1b_Gm=0;") || strings.Count(got, "m=1;") < 2 {
+		if !strings.HasPrefix(got, "\x1b_Ga=T,U=1,f=32,s=100,v=100,q=2,i=8,c=100,r=50,m=1;") || !strings.Contains(got, "\x1b_Gm=0;") || strings.Count(got, "m=1;") < 2 {
 			t.Fatalf("transmission = %.80q...", got)
 		}
 
@@ -60,10 +60,38 @@ func TestWidgetKitty(t *testing.T) {
 			t.Fatal("the transmission does not hold the image's RGBA pixels")
 		}
 	})
+	t.Run("transmits with the compressor", func(t *testing.T) {
+		singleColor := image.NewNRGBA(image.Rect(0, 0, 100, 100))
+		got, err := New(singleColor).Kitty(1).Compressor(newBestCompressor).transmission()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(got, "o=z,") || !bytes.Equal(sentPixels(t, got), pixels(singleColor)) {
+			t.Fatal("the transmission does not hold the image's compressed RGBA pixels")
+		}
+	})
+	t.Run("transmits uncompressed what does not shrink", func(t *testing.T) {
+		twoPixels := column(red, red)
+		got, err := New(twoPixels).Kitty(1).Compressor(newBestCompressor).transmission()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(got, "o=z,") || !bytes.Equal(sentPixels(t, got), pixels(twoPixels)) {
+			t.Fatal("the transmission does not hold the image's uncompressed RGBA pixels")
+		}
+	})
+	t.Run("returns the compressor's error", func(t *testing.T) {
+		want := errors.New("compressor failed")
+		_, err := New(column(red)).Kitty(1).Compressor(func(io.Writer) (io.WriteCloser, error) {
+			return nil, want
+		}).transmission()
+		if !errors.Is(err, want) {
+			t.Fatalf("err = %v, want %v", err, want)
+		}
+	})
 }
 
 func BenchmarkWidgetTransmission(b *testing.B) {
-	// Noise does not compress, so its PNG is as large as the image allows.
 	for _, side := range []int{40, 400} {
 		b.Run(strconv.Itoa(side)+"px", func(b *testing.B) {
 			img := image.NewNRGBA(image.Rect(0, 0, side, side))
@@ -82,7 +110,11 @@ func BenchmarkWidgetTransmission(b *testing.B) {
 	}
 }
 
-// sentPixels returns the pixels a transmission carries: its chunks' data joined, decoded from base64 and inflated.
+func newBestCompressor(w io.Writer) (io.WriteCloser, error) {
+	return zlib.NewWriterLevel(w, zlib.BestCompression)
+}
+
+// sentPixels returns the pixels a transmission carries: its chunks' data joined, decoded from base64 and inflated if compressed.
 func sentPixels(t *testing.T, transmission string) []byte {
 	t.Helper()
 	var data strings.Builder
@@ -92,11 +124,15 @@ func sentPixels(t *testing.T, transmission string) []byte {
 		}
 	}
 
-	compressed, err := base64.StdEncoding.DecodeString(data.String())
+	sent, err := base64.StdEncoding.DecodeString(data.String())
 	if err != nil {
 		t.Fatal(err)
 	}
-	reader, err := zlib.NewReader(bytes.NewReader(compressed))
+	if !strings.Contains(transmission, "o=z,") {
+		return sent
+	}
+
+	reader, err := zlib.NewReader(bytes.NewReader(sent))
 	if err != nil {
 		t.Fatal(err)
 	}

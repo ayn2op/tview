@@ -2,14 +2,13 @@ package image
 
 import (
 	"bytes"
-	"compress/zlib"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"image"
 	"image/draw"
+	"io"
 	"strings"
-	"sync"
 
 	"github.com/ayn2op/tview"
 )
@@ -18,6 +17,16 @@ import (
 // The image must be sent to the terminal with Transmit.
 func (w Widget) Kitty(n int) Widget {
 	w.kitty = n
+	return w
+}
+
+// Compressor returns a writer to w in kitty's compression format, which is not used after Close.
+// See https://sw.kovidgoyal.net/kitty/graphics-protocol/#compression.
+type Compressor func(w io.Writer) (io.WriteCloser, error)
+
+// Compressor sets how a kitty image is compressed; it is sent uncompressed without one or if compressing does not shrink it.
+func (w Widget) Compressor(compressor Compressor) Widget {
+	w.compressor = compressor
 	return w
 }
 
@@ -53,37 +62,31 @@ func (w Widget) Delete() tview.Cmd {
 	return tview.WriteRaw(fmt.Sprintf("\x1b_Ga=d,d=I,q=2,i=%d\x1b\\", w.imageID()))
 }
 
-// compressors are reused across images, as each holds about a megabyte of state.
-var compressors = sync.Pool{New: func() any {
-	compressor, _ := zlib.NewWriterLevel(nil, zlib.BestSpeed)
-	return compressor
-}}
-
-// transmission returns the image as raw pixels compressed with zlib, which encodes several times faster than PNG.
+// transmission uses raw pixels, which encode several times faster than PNG.
 func (w Widget) transmission() (string, error) {
 	bounds := w.src.Bounds()
 	if bounds.Empty() {
 		return "", errEmpty
 	}
 
-	var buf bytes.Buffer
-	compressor := compressors.Get().(*zlib.Writer)
-	defer compressors.Put(compressor)
-	compressor.Reset(&buf)
-	if _, err := compressor.Write(pixels(w.src)); err != nil {
-		return "", err
-	}
-	if err := compressor.Close(); err != nil {
-		return "", err
+	payload, compression := pixels(w.src), ""
+	if w.compressor != nil {
+		compressed, err := w.compress(payload)
+		if err != nil {
+			return "", err
+		}
+		if len(compressed) < len(payload) {
+			payload, compression = compressed, "o=z,"
+		}
 	}
 
 	cols, rows := w.cells()
-	data := base64.StdEncoding.AppendEncode(nil, buf.Bytes())
+	data := base64.StdEncoding.AppendEncode(nil, payload)
 
 	var out strings.Builder
 	// Room for the data and the few bytes of keys and escape codes around each of its chunks.
 	out.Grow(len(data) + len(data)/64)
-	fmt.Fprintf(&out, "\x1b_Ga=T,U=1,f=32,o=z,s=%d,v=%d,q=2,i=%d,c=%d,r=%d,", bounds.Dx(), bounds.Dy(), w.imageID(), cols, rows)
+	fmt.Fprintf(&out, "\x1b_Ga=T,U=1,f=32,%ss=%d,v=%d,q=2,i=%d,c=%d,r=%d,", compression, bounds.Dx(), bounds.Dy(), w.imageID(), cols, rows)
 	for len(data) > 4096 {
 		fmt.Fprintf(&out, "m=1;%s\x1b\\\x1b_G", data[:4096])
 		data = data[4096:]
@@ -93,6 +96,21 @@ func (w Widget) transmission() (string, error) {
 }
 
 var errEmpty = errors.New("image is empty")
+
+func (w Widget) compress(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	writer, err := w.compressor(&buf)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := writer.Write(data); err != nil {
+		return nil, err
+	}
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
 
 // pixels returns src as rows of non-premultiplied RGBA, the pixel format the transmission declares.
 func pixels(src image.Image) []byte {

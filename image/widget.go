@@ -32,6 +32,7 @@ type Widget struct {
 	width                 int
 	cellWidth, cellHeight int
 	kitty                 int
+	compressor            Compressor
 }
 
 var _ tview.Widget = Widget{}

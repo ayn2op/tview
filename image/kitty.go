@@ -18,6 +18,9 @@ const (
 	rawChunkSize = chunkSize / 4 * 3
 )
 
+// headerSize is room for the keys and numbers of a transmission's first escape code.
+const headerSize = 80
+
 // Kitty draws the image with kitty's graphics protocol as image n, from 1 to 63488.
 // The image must be sent to the terminal with Transmit.
 func (w Widget) Kitty(n int) Widget {
@@ -88,8 +91,8 @@ func (w Widget) transmission() ([]byte, error) {
 	cols, rows := w.cells()
 	encodedLen := base64.StdEncoding.EncodedLen(len(payload))
 
-	// Room for the data and the few bytes of keys and escape codes around each of its chunks.
-	out := make([]byte, 0, encodedLen+encodedLen/64)
+	// Room for the data and the few bytes of escape codes around each of its chunks.
+	out := make([]byte, 0, headerSize+encodedLen+encodedLen/64)
 	out = fmt.Appendf(out, "\x1b_Ga=T,U=1,f=32,%ss=%d,v=%d,q=2,i=%d,c=%d,r=%d,", compression, bounds.Dx(), bounds.Dy(), w.imageID(), cols, rows)
 	for len(payload) > rawChunkSize {
 		out = append(out, "m=1;"...)

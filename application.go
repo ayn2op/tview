@@ -132,6 +132,8 @@ func (a *Application[M]) Run() error {
 	var (
 		pasteBuffer strings.Builder
 		pasting     bool // Set to true while we receive paste key events.
+		// Only an updated model changes the view, so a frame is drawn after an update and skipped otherwise.
+		redraw bool
 	)
 	for msg := range a.msgs {
 		if msg == nil {
@@ -153,6 +155,8 @@ func (a *Application[M]) Run() error {
 			if next != nil {
 				a.queueCmd(func() Msg { return next })
 			}
+			// The screen is drawn again, as whatever ran meanwhile drew over it.
+			redraw = true
 		case setTitleMsg:
 			a.screen.SetTitle(string(msg))
 		case notifyMsg:
@@ -160,7 +164,7 @@ func (a *Application[M]) Run() error {
 
 		case requestTerminalInfoMsg:
 			name, version := a.screen.Terminal()
-			a.handle(TerminalInfoMsg{Name: name, Version: version})
+			redraw = a.handle(TerminalInfoMsg{Name: name, Version: version}) || redraw
 
 		case getClipboardMsg:
 			a.screen.GetClipboard()
@@ -173,7 +177,7 @@ func (a *Application[M]) Run() error {
 				appendPasteKey(&pasteBuffer, msg)
 				break
 			}
-			a.handle(msg)
+			redraw = a.handle(msg) || redraw
 		case *tcell.EventPaste:
 			if msg.Start() {
 				pasting = true
@@ -181,7 +185,7 @@ func (a *Application[M]) Run() error {
 			} else if msg.End() {
 				pasting = false
 				if pasteBuffer.Len() > 0 {
-					a.handle(PasteMsg(pasteBuffer.String()))
+					redraw = a.handle(PasteMsg(pasteBuffer.String())) || redraw
 				}
 			}
 		case *tcell.EventResize:
@@ -195,22 +199,21 @@ func (a *Application[M]) Run() error {
 			}
 			lastRedraw = time.Now()
 			a.updateModel(msg)
+			redraw = true
 		case *tcell.EventMouse:
-			isMouseDownAction := a.fireMouseActions(msg)
+			redraw = a.fireMouseActions(msg) || redraw
 			a.lastMouseButtons = msg.Buttons()
-			if isMouseDownAction {
-				a.mouseDownX, a.mouseDownY = msg.Position()
-			}
 		default:
 			// Messages from commands reach the widget too.
-			a.handle(msg)
+			redraw = a.handle(msg) || redraw
 		}
 
 		// Queued events and messages are handled before drawing, so a burst of them, such as scrolling with a touchpad or images loading, is drawn once rather than a frame each, which would fall behind them.
-		if len(a.screen.EventQ()) > 0 || len(a.msgs) > 0 {
+		if !redraw || len(a.screen.EventQ()) > 0 || len(a.msgs) > 0 {
 			continue
 		}
 		a.draw()
+		redraw = false
 	}
 	return nil
 }
@@ -280,17 +283,17 @@ func (a *Application[M]) execBatchMsg(msg batchMsg) {
 	wg.Wait()
 }
 
-// fireMouseActions derives mouse actions from the provided mouse event and passes them through the root's widget.
-func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (isMouseDownAction bool) {
+// fireMouseActions derives mouse actions from the provided mouse event and passes them through the root's widget, and reports whether any updated the model.
+func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (updated bool) {
+	x, y := event.Position()
 	fire := func(action MouseAction) {
 		switch action {
 		case MouseLeftDown, MouseMiddleDown, MouseRightDown:
-			isMouseDownAction = true
+			a.mouseDownX, a.mouseDownY = x, y
 		}
-		a.handle(MouseMsg{EventMouse: event, Action: action})
+		updated = a.handle(MouseMsg{EventMouse: event, Action: action}) || updated
 	}
 
-	x, y := event.Position()
 	buttons := event.Buttons()
 	clickMoved := x != a.mouseDownX || y != a.mouseDownY
 	buttonChanges := buttons ^ a.lastMouseButtons
@@ -334,7 +337,7 @@ func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (isMouseDownA
 		}
 	}
 
-	return isMouseDownAction
+	return updated
 }
 
 // stop finalizes the active screen and leaves terminal UI mode.
@@ -369,15 +372,18 @@ func (a *Application[M]) draw() {
 	screen.Show()
 }
 
-// handle passes a message through the model's widget before updating the model with it.
-func (a *Application[M]) handle(msg Msg) {
+// handle passes a message through the model's widget before updating the model with what it makes of it, and reports whether it did.
+// Mouse input that no widget took is dropped, as no model reads it.
+func (a *Application[M]) handle(msg Msg) bool {
 	if view := a.model.View(); view != nil {
 		width, height := a.screen.Size()
 		msg = view.Handle(msg, Rectangle{Width: width, Height: height})
 	}
-	if msg != nil {
-		a.updateModel(msg)
+	if _, isMouse := msg.(MouseMsg); isMouse || msg == nil {
+		return false
 	}
+	a.updateModel(msg)
+	return true
 }
 
 // updateModel replaces the model with the one its Update returns for msg and queues the returned command.

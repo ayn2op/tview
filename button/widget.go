@@ -4,16 +4,13 @@ package button
 import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
-	"github.com/gdamore/tcell/v3"
 )
 
-// Widget is a button around its content, such as text. It is a value built in View; the model owns any state it reflects, such as focus.
+// Widget is a button around its content, such as text. It is a value built in View; the model owns any state it reflects, such as focus, and picks its style from it.
 type Widget struct {
 	content       tview.Widget
 	width, height layout.Length
 	style         tview.Style
-	focusedStyle  tview.Style
-	disabledStyle tview.Style
 	keybind       func(tview.KeyMsg) Action
 	onClick       tview.Msg
 	disabled      bool
@@ -25,12 +22,10 @@ var _ tview.Widget = Widget{}
 // New returns a button around content, as large as it.
 func New(content tview.Widget) Widget {
 	return Widget{
-		content:       content,
-		width:         layout.Shrink,
-		height:        layout.Shrink,
-		keybind:       DefaultKeybind,
-		focusedStyle:  tcell.StyleDefault.Reverse(true),
-		disabledStyle: tcell.StyleDefault.Dim(true),
+		content: content,
+		width:   layout.Shrink,
+		height:  layout.Shrink,
+		keybind: DefaultKeybind,
 	}
 }
 
@@ -52,18 +47,6 @@ func (w Widget) Style(style tview.Style) Widget {
 	return w
 }
 
-// FocusedStyle sets the style of the button when it is focused.
-func (w Widget) FocusedStyle(style tview.Style) Widget {
-	w.focusedStyle = style
-	return w
-}
-
-// DisabledStyle sets the style of the button when it is disabled.
-func (w Widget) DisabledStyle(style tview.Style) Widget {
-	w.disabledStyle = style
-	return w
-}
-
 // Keybind sets the function that turns keys into Actions, or ActionNone for keys it does not bind, DefaultKeybind unless set.
 func (w Widget) Keybind(f func(tview.KeyMsg) Action) Widget {
 	w.keybind = f
@@ -82,7 +65,7 @@ func (w Widget) Disabled(disabled bool) Widget {
 	return w
 }
 
-// Focused sets whether the button has the focus, so ActionPress presses it and it is drawn with the focused style.
+// Focused sets whether the button has the focus, so ActionPress presses it.
 func (w Widget) Focused(focused bool) Widget {
 	w.focused = focused
 	return w
@@ -98,16 +81,9 @@ func (w Widget) Layout(limits layout.Limits) layout.Size {
 	return layout.Sized(limits, w.width, w.height, w.content.Layout)
 }
 
-// Draw fills area with the style for the button's state and centers the content in it, which takes from that style what it leaves unset.
+// Draw fills area with the button's style and centers the content in it, which takes from that style what it leaves unset.
 func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
-	style := w.style
-	switch {
-	case w.disabled:
-		style = w.disabledStyle
-	case w.focused:
-		style = w.focusedStyle
-	}
-	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', style)
+	screen.FillArea(area.X, area.Y, area.Width, area.Height, ' ', w.style)
 	w.content.Draw(screen, w.contentArea(area))
 }
 

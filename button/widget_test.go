@@ -65,8 +65,8 @@ func TestWidgetDraw(t *testing.T) {
 		want   tview.Style
 	}{
 		{"normal", New(text.New("OK")), tcell.StyleDefault},
-		{"focused", New(text.New("OK")).Focused(true), tcell.StyleDefault.Reverse(true)},
-		{"disabled", New(text.New("OK")).Focused(true).Disabled(true), tcell.StyleDefault.Dim(true)},
+		{"styled", New(text.New("OK")).Style(tcell.StyleDefault.Bold(true)), tcell.StyleDefault.Bold(true)},
+		{"focused and disabled keep the style", New(text.New("OK")).Style(tcell.StyleDefault.Bold(true)).Focused(true).Disabled(true), tcell.StyleDefault.Bold(true)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			screen := screentest.New(t, 4, 1)

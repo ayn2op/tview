@@ -145,8 +145,7 @@ func (a *Application[M]) Run() error {
 
 		case rawMsg:
 			if tty, ok := a.screen.Tty(); ok {
-				data := fmt.Append(nil, msg.data)
-				_, _ = tty.Write(data)
+				_, _ = tty.Write(msg)
 			}
 		case suspendMsg:
 			var next Msg

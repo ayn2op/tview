@@ -8,7 +8,6 @@ import (
 	"image"
 	"image/draw"
 	"io"
-	"strings"
 
 	"github.com/ayn2op/tview"
 )
@@ -65,21 +64,21 @@ func (w Widget) Delete() tview.Cmd {
 	if w.kitty == 0 {
 		return nil
 	}
-	return tview.WriteRaw(fmt.Sprintf("\x1b_Ga=d,d=I,q=2,i=%d\x1b\\", w.imageID()))
+	return tview.WriteRaw(fmt.Appendf(nil, "\x1b_Ga=d,d=I,q=2,i=%d\x1b\\", w.imageID()))
 }
 
 // transmission uses raw pixels, which encode several times faster than PNG.
-func (w Widget) transmission() (string, error) {
+func (w Widget) transmission() ([]byte, error) {
 	bounds := w.src.Bounds()
 	if bounds.Empty() {
-		return "", errEmpty
+		return nil, errEmpty
 	}
 
 	payload, compression := pixels(w.src), ""
 	if w.compressor != nil {
 		compressed, err := w.compress(payload)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if len(compressed) < len(payload) {
 			payload, compression = compressed, "o=z,"
@@ -89,25 +88,19 @@ func (w Widget) transmission() (string, error) {
 	cols, rows := w.cells()
 	encodedLen := base64.StdEncoding.EncodedLen(len(payload))
 
-	var out strings.Builder
 	// Room for the data and the few bytes of keys and escape codes around each of its chunks.
-	out.Grow(encodedLen + encodedLen/64)
-	fmt.Fprintf(&out, "\x1b_Ga=T,U=1,f=32,%ss=%d,v=%d,q=2,i=%d,c=%d,r=%d,", compression, bounds.Dx(), bounds.Dy(), w.imageID(), cols, rows)
-	// Each chunk is encoded on its own, so the whole payload is never encoded in a buffer of its own.
-	var chunk [chunkSize]byte
+	out := make([]byte, 0, encodedLen+encodedLen/64)
+	out = fmt.Appendf(out, "\x1b_Ga=T,U=1,f=32,%ss=%d,v=%d,q=2,i=%d,c=%d,r=%d,", compression, bounds.Dx(), bounds.Dy(), w.imageID(), cols, rows)
 	for len(payload) > rawChunkSize {
-		base64.StdEncoding.Encode(chunk[:], payload[:rawChunkSize])
-		out.WriteString("m=1;")
-		out.Write(chunk[:])
-		out.WriteString("\x1b\\\x1b_G")
+		out = append(out, "m=1;"...)
+		out = base64.StdEncoding.AppendEncode(out, payload[:rawChunkSize])
+		out = append(out, "\x1b\\\x1b_G"...)
 		payload = payload[rawChunkSize:]
 	}
 
-	base64.StdEncoding.Encode(chunk[:], payload)
-	out.WriteString("m=0;")
-	out.Write(chunk[:base64.StdEncoding.EncodedLen(len(payload))])
-	out.WriteString("\x1b\\")
-	return out.String(), nil
+	out = append(out, "m=0;"...)
+	out = base64.StdEncoding.AppendEncode(out, payload)
+	return append(out, "\x1b\\"...), nil
 }
 
 var errEmpty = errors.New("image is empty")

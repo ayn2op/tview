@@ -11,11 +11,11 @@ type Msg any
 // Cmd is work done outside Update, such as I/O, whose result comes back as a message.
 type Cmd func() Msg
 
-type rawMsg struct{ data any }
+type rawMsg []byte
 
-// WriteRaw is a command that writes the data to the underlying TTY without any formatting.
-func WriteRaw(r any) Cmd {
-	return func() Msg { return rawMsg{data: r} }
+// WriteRaw is a command that writes data to the underlying TTY as is.
+func WriteRaw(data []byte) Cmd {
+	return func() Msg { return rawMsg(data) }
 }
 
 type batchMsg []Cmd

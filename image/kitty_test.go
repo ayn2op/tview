@@ -8,8 +8,8 @@ import (
 	"image"
 	"io"
 	"math/rand/v2"
+	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -29,7 +29,7 @@ func TestWidgetKitty(t *testing.T) {
 	})
 	t.Run("deletes the image", func(t *testing.T) {
 		msg := New(column(red)).Kitty(257).Delete()()
-		if want := tview.WriteRaw("\x1b_Ga=d,d=I,q=2,i=16777232\x1b\\")(); msg != want {
+		if want := tview.WriteRaw([]byte("\x1b_Ga=d,d=I,q=2,i=16777232\x1b\\"))(); !reflect.DeepEqual(msg, want) {
 			t.Fatalf("Delete = %v, want %v", msg, want)
 		}
 	})
@@ -48,7 +48,7 @@ func TestWidgetKitty(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.HasPrefix(got, "\x1b_Ga=T,U=1,f=32,s=100,v=100,q=2,i=8,c=100,r=50,m=1;") || !strings.Contains(got, "\x1b_Gm=0;") || strings.Count(got, "m=1;") < 2 {
+		if !bytes.HasPrefix(got, []byte("\x1b_Ga=T,U=1,f=32,s=100,v=100,q=2,i=8,c=100,r=50,m=1;")) || !bytes.Contains(got, []byte("\x1b_Gm=0;")) || bytes.Count(got, []byte("m=1;")) < 2 {
 			t.Fatalf("transmission = %.80q...", got)
 		}
 
@@ -66,7 +66,7 @@ func TestWidgetKitty(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(got, "o=z,") || !bytes.Equal(sentPixels(t, got), pixels(singleColor)) {
+		if !bytes.Contains(got, []byte("o=z,")) || !bytes.Equal(sentPixels(t, got), pixels(singleColor)) {
 			t.Fatal("the transmission does not hold the image's compressed RGBA pixels")
 		}
 	})
@@ -76,7 +76,7 @@ func TestWidgetKitty(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(got, "o=z,") || !bytes.Equal(sentPixels(t, got), pixels(twoPixels)) {
+		if bytes.Contains(got, []byte("o=z,")) || !bytes.Equal(sentPixels(t, got), pixels(twoPixels)) {
 			t.Fatal("the transmission does not hold the image's uncompressed RGBA pixels")
 		}
 	})
@@ -115,20 +115,20 @@ func newBestCompressor(w io.Writer) (io.WriteCloser, error) {
 }
 
 // sentPixels returns the pixels a transmission carries: its chunks' data joined, decoded from base64 and inflated if compressed.
-func sentPixels(t *testing.T, transmission string) []byte {
+func sentPixels(t *testing.T, transmission []byte) []byte {
 	t.Helper()
-	var data strings.Builder
-	for chunk := range strings.SplitSeq(transmission, "\x1b\\") {
-		if _, payload, ok := strings.Cut(chunk, ";"); ok {
-			data.WriteString(payload)
+	var data []byte
+	for chunk := range bytes.SplitSeq(transmission, []byte("\x1b\\")) {
+		if _, payload, ok := bytes.Cut(chunk, []byte(";")); ok {
+			data = append(data, payload...)
 		}
 	}
 
-	sent, err := base64.StdEncoding.DecodeString(data.String())
+	sent, err := base64.StdEncoding.AppendDecode(nil, data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(transmission, "o=z,") {
+	if !bytes.Contains(transmission, []byte("o=z,")) {
 		return sent
 	}
 

@@ -216,6 +216,30 @@ func edit(action Action, value string, cursor int, lines []line) (string, int) {
 		return value, lines[row].start
 	case ActionEnd:
 		return value, lines[row].end
+	case ActionWordLeft:
+		return value, runStart(value, cursor, isWord)
+	case ActionWordRight:
+		return value, runEnd(value, cursor, isWord)
+	case ActionDeleteWordBackward:
+		start := runStart(value, cursor, isWord)
+		return value[:start] + value[cursor:], start
+	case ActionDeleteWordForward:
+		return value[:cursor] + value[runEnd(value, cursor, isWord):], cursor
+	case ActionDeleteToSpaceBackward:
+		start := runStart(value, cursor, isNotSpace)
+		return value[:start] + value[cursor:], start
+	case ActionDeleteToLineStart:
+		start := lineStart(value, cursor)
+		if start == cursor && cursor > 0 {
+			start--
+		}
+		return value[:start] + value[cursor:], start
+	case ActionDeleteToLineEnd:
+		end := lineEnd(value, cursor)
+		if end == cursor && end < len(value) {
+			end++
+		}
+		return value[:cursor] + value[end:], cursor
 	}
 	return value, cursor
 }

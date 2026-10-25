@@ -10,6 +10,8 @@ import (
 
 func key(k tcell.Key, str string) tview.KeyMsg { return tcell.NewEventKey(k, str, tcell.ModNone) }
 
+func mod(k tcell.Key, m tcell.ModMask) tview.KeyMsg { return tcell.NewEventKey(k, "", m) }
+
 // input is the text and cursor that typing in a text area left.
 type input struct {
 	text   string
@@ -46,6 +48,8 @@ func TestWidgetHandle(t *testing.T) {
 		{"up keeps the column", "abc\nde", []tview.Msg{key(tcell.KeyUp, "")}, "abc\nde", 2},
 		{"down over a wrapped line", "ab cd ef", []tview.Msg{key(tcell.KeyHome, ""), key(tcell.KeyUp, ""), key(tcell.KeyUp, ""), key(tcell.KeyDown, "")}, "ab cd ef", 6},
 		{"paste", "", []tview.Msg{tview.PasteMsg("a\r\nb")}, "a\nb", 3},
+		{"word keys", "ab cd", []tview.Msg{mod(tcell.KeyLeft, tcell.ModCtrl), mod(tcell.KeyBackspace2, tcell.ModAlt)}, "cd", 0},
+		{"delete word forward", "ab cd", []tview.Msg{key(tcell.KeyHome, ""), mod(tcell.KeyDelete, tcell.ModCtrl)}, " cd", 0},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got := apply(t, tt.value, area, tt.msgs...)
@@ -65,6 +69,35 @@ func TestWidgetHandle(t *testing.T) {
 			t.Fatal("unfocused text area took a key")
 		}
 	})
+}
+
+func TestEdit(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		action     Action
+		value      string
+		cursor     int
+		want       string
+		wantCursor int
+	}{
+		{"word left skips what is before the word", ActionWordLeft, "ab, cd", 4, "ab, cd", 0},
+		{"word right stops after the word", ActionWordRight, "ab, cd", 2, "ab, cd", 6},
+		{"word left keeps graphemes whole", ActionWordLeft, "e\u0301e\u0301 x", 6, "e\u0301e\u0301 x", 0},
+		{"delete word backward stops at punctuation", ActionDeleteWordBackward, "a/bc", 4, "a/", 2},
+		{"delete word forward", ActionDeleteWordForward, "ab cd", 0, " cd", 0},
+		{"delete to space backward takes punctuation", ActionDeleteToSpaceBackward, "a b/c  ", 7, "a ", 2},
+		{"delete to line start", ActionDeleteToLineStart, "ab\ncd", 4, "ab\nd", 3},
+		{"delete to line start at it joins lines", ActionDeleteToLineStart, "ab\ncd", 3, "abcd", 2},
+		{"delete to line end", ActionDeleteToLineEnd, "ab\ncd", 0, "\ncd", 0},
+		{"delete to line end at it joins lines", ActionDeleteToLineEnd, "ab\ncd", 2, "abcd", 2},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, cursor := edit(tt.action, tt.value, tt.cursor, wrap(tt.value, 10))
+			if got != tt.want || cursor != tt.wantCursor {
+				t.Fatalf("got %q at %d, want %q at %d", got, cursor, tt.want, tt.wantCursor)
+			}
+		})
+	}
 }
 
 func TestWidgetDraw(t *testing.T) {

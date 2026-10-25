@@ -3,7 +3,7 @@ module github.com/ayn2op/tview
 go 1.27.0
 
 require (
-	github.com/gdamore/tcell/v3 v3.6.1-0.20261024233502-62aecba7acc7
+	github.com/gdamore/tcell/v3 v3.6.1-0.20261025165013-3f9243d555d9
 	github.com/rockorager/go-uucode v1.2.2
 	github.com/sahilm/fuzzy v0.1.3
 )

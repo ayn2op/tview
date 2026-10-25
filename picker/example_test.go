@@ -6,12 +6,16 @@ import (
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/internal/screentest"
 	"github.com/ayn2op/tview/picker"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 )
 
 // A quick switcher that fuzzy filters channels as the query is typed. The model owns the search state and replaces it with the one the picker produces.
 func ExampleNew() {
-	channels := picker.Items{{Text: "general"}, {Text: "gaming"}, {Text: "random"}}
+	var channels picker.Items
+	for _, name := range []string{"general", "gaming", "random"} {
+		channels = append(channels, picker.Item{Content: text.New(name), FilterText: name})
+	}
 	searchState := picker.NewSearchState()
 	view := func() picker.Widget {
 		return picker.New(channels, &searchState).
@@ -28,7 +32,7 @@ func ExampleNew() {
 	screentest.Print(view(), area.Width, area.Height)
 
 	selected := view().Handle(tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModNone), area)
-	fmt.Println(selected.(picker.Item).Text)
+	fmt.Println(selected.(picker.Item).FilterText)
 	// Output:
 	// > gm
 	// ────────────────

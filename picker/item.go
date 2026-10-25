@@ -1,7 +1,10 @@
 package picker
 
+import "github.com/ayn2op/tview"
+
+// Item is an entry of a picker, shown as its Content, such as text, and matched against the query by its FilterText.
 type Item struct {
-	Text       string
+	Content    tview.Widget
 	FilterText string
 	Reference  any
 }
@@ -9,10 +12,7 @@ type Item struct {
 type Items []Item
 
 func (is Items) String(index int) string {
-	if is[index].FilterText != "" {
-		return is[index].FilterText
-	}
-	return is[index].Text
+	return is[index].FilterText
 }
 
 func (is Items) Len() int {

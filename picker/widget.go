@@ -131,7 +131,7 @@ func (w Widget) layout() tview.Widget {
 
 func (w Widget) listView() viewport.Widget {
 	s, items := w.searchState, w.items
-	l := list.New(s.cursor, s.count(items), func(i int) tview.Widget { return text.New(items[s.index(i)].Text) }).
+	l := list.New(s.cursor, s.count(items), func(i int) tview.Widget { return items[s.index(i)].Content }).
 		SelectedStyle(tcell.StyleDefault.Reverse(true)).
 		Keybind(w.listKeybind).
 		Focused(true).

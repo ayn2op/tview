@@ -4,14 +4,21 @@ import (
 	"testing"
 
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
 )
 
 type cancelMsg struct{}
 
+// itemText returns the filter text of msg if it is an item, or "".
+func itemText(msg tview.Msg) string {
+	item, _ := msg.(Item)
+	return item.FilterText
+}
+
 func TestWidgetHandle(t *testing.T) {
 	area := tview.Rectangle{Width: 20, Height: 5}
-	items := Items{{Text: "apple"}, {Text: "banana"}}
+	items := Items{{Content: text.New("apple"), FilterText: "apple"}, {Content: text.New("banana"), FilterText: "banana"}}
 	// send handles msg the way a model does: it takes the search state the picker produced and returns any other message.
 	send := func(s *SearchState, msg tview.Msg) tview.Msg {
 		msg = New(items, s).
@@ -31,7 +38,7 @@ func TestWidgetHandle(t *testing.T) {
 	t.Run("typing filters items", func(t *testing.T) {
 		s := NewSearchState()
 		send(&s, typed("b"))
-		if got := send(&s, enter); got != items[1] {
+		if got := send(&s, enter); itemText(got) != items[1].FilterText {
 			t.Fatalf("selected %v, want banana", got)
 		}
 	})
@@ -59,7 +66,7 @@ func TestWidgetHandle(t *testing.T) {
 	})
 	t.Run("select returns the item under the cursor", func(t *testing.T) {
 		s := NewSearchState()
-		if got := send(&s, enter); got != items[0] {
+		if got := send(&s, enter); itemText(got) != items[0].FilterText {
 			t.Fatalf("got %v", got)
 		}
 	})
@@ -73,7 +80,7 @@ func TestWidgetHandle(t *testing.T) {
 		s := NewSearchState()
 		send(&s, typed("z"))
 		s.Reset()
-		if got := send(&s, enter); got != items[0] {
+		if got := send(&s, enter); itemText(got) != items[0].FilterText {
 			t.Fatalf("got %v", got)
 		}
 	})

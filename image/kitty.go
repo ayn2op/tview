@@ -13,6 +13,12 @@ import (
 	"github.com/ayn2op/tview"
 )
 
+// chunkSize is the most encoded data kitty takes in one escape code, which encodes rawChunkSize bytes.
+const (
+	chunkSize    = 4096
+	rawChunkSize = chunkSize / 4 * 3
+)
+
 // Kitty draws the image with kitty's graphics protocol as image n, from 1 to 63488.
 // The image must be sent to the terminal with Transmit.
 func (w Widget) Kitty(n int) Widget {
@@ -81,17 +87,26 @@ func (w Widget) transmission() (string, error) {
 	}
 
 	cols, rows := w.cells()
-	data := base64.StdEncoding.AppendEncode(nil, payload)
+	encodedLen := base64.StdEncoding.EncodedLen(len(payload))
 
 	var out strings.Builder
 	// Room for the data and the few bytes of keys and escape codes around each of its chunks.
-	out.Grow(len(data) + len(data)/64)
+	out.Grow(encodedLen + encodedLen/64)
 	fmt.Fprintf(&out, "\x1b_Ga=T,U=1,f=32,%ss=%d,v=%d,q=2,i=%d,c=%d,r=%d,", compression, bounds.Dx(), bounds.Dy(), w.imageID(), cols, rows)
-	for len(data) > 4096 {
-		fmt.Fprintf(&out, "m=1;%s\x1b\\\x1b_G", data[:4096])
-		data = data[4096:]
+	// Each chunk is encoded on its own, so the whole payload is never encoded in a buffer of its own.
+	var chunk [chunkSize]byte
+	for len(payload) > rawChunkSize {
+		base64.StdEncoding.Encode(chunk[:], payload[:rawChunkSize])
+		out.WriteString("m=1;")
+		out.Write(chunk[:])
+		out.WriteString("\x1b\\\x1b_G")
+		payload = payload[rawChunkSize:]
 	}
-	fmt.Fprintf(&out, "m=0;%s\x1b\\", data)
+
+	base64.StdEncoding.Encode(chunk[:], payload)
+	out.WriteString("m=0;")
+	out.Write(chunk[:base64.StdEncoding.EncodedLen(len(payload))])
+	out.WriteString("\x1b\\")
 	return out.String(), nil
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/ayn2op/tview/layout"
 	"github.com/ayn2op/tview/text"
 	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/color"
 )
 
 // areaWidget records the area it is drawn and handles messages in.
@@ -70,7 +71,7 @@ func TestWidgetDraw(t *testing.T) {
 	})
 	t.Run("title over styled cells", func(t *testing.T) {
 		screen := screentest.New(t, 8, 3)
-		screen.FillArea(0, 0, 8, 3, 'x', tcell.StyleDefault.Background(tcell.ColorRed))
+		screen.FillArea(0, 0, 8, 3, 'x', tcell.StyleDefault.Background(color.Red))
 		New(areaWidget{new(tview.Rectangle)}).Borders(tview.BordersAll).Title(text.New("ab")).Draw(screen, tview.Rectangle{Width: 8, Height: 3})
 		for x := 3; x <= 4; x++ {
 			if _, style, _ := screen.Get(x, 0); style.GetBackground() != tcell.ColorDefault {

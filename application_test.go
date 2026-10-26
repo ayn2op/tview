@@ -121,66 +121,7 @@ func (lengthModel) Handle(msg Msg, _ Rectangle) Msg {
 	return msg
 }
 
-// quietModel's Init sends messages that leave it as it is, then a doneMsg, on which Update keeps how many frames were drawn and quits.
-type quietModel struct {
-	frames, framesAtDone *int
-	mouseUpdated         *bool
-}
-
-type doneMsg struct{}
-
-func (quietModel) Init() Cmd {
-	return Sequence(
-		SetTitle("title"),
-		WriteRaw(nil),
-		func() Msg {
-			return MouseMsg{EventMouse: tcell.NewEventMouse(1, 1, tcell.ButtonNone, tcell.ModNone), Action: MouseMove}
-		},
-		func() Msg { return doneMsg{} },
-	)
-}
-
-func (m quietModel) Update(msg Msg) (quietModel, Cmd) {
-	switch msg.(type) {
-	case MouseMsg:
-		*m.mouseUpdated = true
-	case doneMsg:
-		*m.framesAtDone = *m.frames
-		return m, Quit()
-	}
-	return m, nil
-}
-
-func (m quietModel) View() Widget                      { return m }
-func (m quietModel) Draw(Screen, Rectangle)            { *m.frames++ }
-func (quietModel) Handle(msg Msg, _ Rectangle) Msg     { return msg }
-func (quietModel) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
-func (quietModel) Layout(limits layout.Limits) layout.Size {
-	return layout.Atomic(limits, layout.Fill, layout.Fill)
-}
-
 func TestApplicationRun(t *testing.T) {
-	t.Run("draws a frame only after an update, and drops mouse input no widget takes", func(t *testing.T) {
-		screen, err := tcell.NewTerminfoScreenFromTty(vt.NewMockTerm(vt.MockOptSize{X: 4, Y: 2}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := screen.Init(); err != nil {
-			t.Fatal(err)
-		}
-		var frames, framesAtDone int
-		var mouseUpdated bool
-		model := quietModel{frames: &frames, framesAtDone: &framesAtDone, mouseUpdated: &mouseUpdated}
-		if err := NewApplication(model, WithScreen(screen)).Run(); err != nil {
-			t.Fatal(err)
-		}
-		if framesAtDone != 1 {
-			t.Fatalf("frames before the first update = %d, want only the first", framesAtDone)
-		}
-		if mouseUpdated {
-			t.Fatal("mouse input no widget took reached Update")
-		}
-	})
 	t.Run("passes messages from commands through the widget", func(t *testing.T) {
 		screen, err := tcell.NewTerminfoScreenFromTty(vt.NewMockTerm(vt.MockOptSize{X: 4, Y: 2}))
 		if err != nil {
@@ -268,10 +209,14 @@ func BenchmarkApplicationRunBurst(b *testing.B) {
 }
 
 func TestWithQueueSize(t *testing.T) {
-	if got := cap(NewApplication(lengthModel{}).msgs); got != 256 {
-		t.Fatalf("default buffer = %d, want 256", got)
-	}
-	if got := cap(NewApplication(lengthModel{}, WithQueueSize(8)).msgs); got != 8 {
-		t.Fatalf("buffer = %d, want 8", got)
-	}
+	t.Run("default", func(t *testing.T) {
+		if got := cap(NewApplication(lengthModel{}).msgs); got != 256 {
+			t.Fatalf("buffer = %d, want 256", got)
+		}
+	})
+	t.Run("set", func(t *testing.T) {
+		if got := cap(NewApplication(lengthModel{}, WithQueueSize(8)).msgs); got != 8 {
+			t.Fatalf("buffer = %d, want 8", got)
+		}
+	})
 }

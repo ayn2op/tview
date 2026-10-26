@@ -75,7 +75,7 @@ func (m *treeModel) draw(t *testing.T) []string {
 	return rows
 }
 
-func TestWidget(t *testing.T) {
+func TestWidgetHandle(t *testing.T) {
 	blank := "        "
 	check := func(t *testing.T, m *treeModel, want ...string) {
 		t.Helper()
@@ -89,20 +89,28 @@ func TestWidget(t *testing.T) {
 	})
 	t.Run("keys the child leaves scroll", func(t *testing.T) {
 		m := newTreeModel()
-		m.send(key(tcell.KeyPgDn))
-		check(t, m, blank, " long n ", " d      ", blank)
-		m.send(key(tcell.KeyRight))
-		m.send(key(tcell.KeyRight))
-		check(t, m, blank, " ng nam ", "        ", blank)
-		// The child is 9 cells wide, so the view stops 3 cells in.
-		m.send(mouse(2, 1, tview.MouseScrollRight))
-		check(t, m, blank, " g name ", "        ", blank)
+		t.Run("page down", func(t *testing.T) {
+			m.send(key(tcell.KeyPgDn))
+			check(t, m, blank, " long n ", " d      ", blank)
+		})
+		t.Run("right", func(t *testing.T) {
+			m.send(key(tcell.KeyRight))
+			m.send(key(tcell.KeyRight))
+			check(t, m, blank, " ng nam ", "        ", blank)
+		})
+		t.Run("the wheel stops at the child's edge", func(t *testing.T) {
+			// The child is 9 cells wide, so the view stops 3 cells in.
+			m.send(mouse(2, 1, tview.MouseScrollRight))
+			check(t, m, blank, " g name ", "        ", blank)
+		})
 	})
-	t.Run("the wheel scrolls within the area only", func(t *testing.T) {
+	t.Run("the wheel scrolls within the area", func(t *testing.T) {
 		m := newTreeModel()
 		m.send(mouse(2, 1, tview.MouseScrollDown))
 		check(t, m, blank, " b      ", " long n ", blank)
-		if out := m.send(mouse(0, 0, tview.MouseScrollDown)); out == nil {
+	})
+	t.Run("the wheel outside the area passes through", func(t *testing.T) {
+		if out := newTreeModel().send(mouse(0, 0, tview.MouseScrollDown)); out == nil {
 			t.Fatal("the wheel outside the area was used")
 		}
 	})
@@ -127,14 +135,17 @@ func TestWidget(t *testing.T) {
 	t.Run("scrolls sideways only as far as the rows in view", func(t *testing.T) {
 		m := newTreeModel()
 		tr := tree.New(m.root, m.selection).TopLevel(1).Markers(tree.Markers{})
-		view := m.view().ContentWidth(tr.RowsWidth)
-		if out := view.Handle(key(tcell.KeyRight), treeArea).(ScrollState); out.x != 0 || out.y != 0 {
-			t.Fatalf("got %+v, want no scrolling past a and b", out)
-		}
-		m.send(key(tcell.KeyPgDn))
-		if out := m.view().ContentWidth(tr.RowsWidth).Handle(key(tcell.KeyRight), treeArea).(ScrollState); out.x != 1 || out.y != 2 {
-			t.Fatalf("got %+v, want a cell right at long name", out)
-		}
+		t.Run("not past narrow rows", func(t *testing.T) {
+			if out := m.view().ContentWidth(tr.RowsWidth).Handle(key(tcell.KeyRight), treeArea).(ScrollState); out.x != 0 || out.y != 0 {
+				t.Fatalf("got %+v, want no scrolling past a and b", out)
+			}
+		})
+		t.Run("along a wide row", func(t *testing.T) {
+			m.send(key(tcell.KeyPgDn))
+			if out := m.view().ContentWidth(tr.RowsWidth).Handle(key(tcell.KeyRight), treeArea).(ScrollState); out.x != 1 || out.y != 2 {
+				t.Fatalf("got %+v, want a cell right at long name", out)
+			}
+		})
 	})
 	t.Run("scrolling away from wide rows resets the sideways position", func(t *testing.T) {
 		m := newTreeModel()
@@ -218,7 +229,7 @@ func apply(t *testing.T, scrollState ScrollState, count int, area tview.Rectangl
 	return scrollState
 }
 
-func TestScrollBar(t *testing.T) {
+func TestWidgetScrollBar(t *testing.T) {
 	area := tview.Rectangle{Width: 4, Height: 4}
 	t.Run("track click pages", func(t *testing.T) {
 		if got := apply(t, ScrollState{}, 10, area, mouse(3, 3, tview.MouseLeftDown)); got.y != 4 {
@@ -259,7 +270,7 @@ func TestScrollBar(t *testing.T) {
 	})
 }
 
-func TestScrollTo(t *testing.T) {
+func TestWidgetTrackEnd(t *testing.T) {
 	area := tview.Rectangle{Width: 3, Height: 2}
 	rows := func(t *testing.T, selection int, scrollState ScrollState, count int) string {
 		t.Helper()
@@ -300,7 +311,7 @@ func TestScrollTo(t *testing.T) {
 	})
 }
 
-func TestAnchor(t *testing.T) {
+func TestWidgetAnchorBottom(t *testing.T) {
 	area := tview.Rectangle{Width: 3, Height: 2}
 	rows := func(t *testing.T, scrollState ScrollState, count int) string {
 		t.Helper()
@@ -344,28 +355,40 @@ func TestAnchor(t *testing.T) {
 	})
 }
 
-func TestViewport(t *testing.T) {
+func TestScrollStateViewport(t *testing.T) {
 	area := tview.Rectangle{Width: 3, Height: 2}
 	scrollState := apply(t, ScrollState{}, 5, area, mouse(0, 0, tview.MouseScrollDown))
 	v := scrollState.Viewport()
-	if got := v.AbsoluteOffset(); got != (AbsoluteOffset{Y: 1}) {
-		t.Fatalf("absolute offset = %+v, want y 1", got)
-	}
-	if got := v.AbsoluteOffsetReversed(); got != (AbsoluteOffset{Y: 2}) {
-		t.Fatalf("reversed offset = %+v, want y 2", got)
-	}
-	if got := v.RelativeOffset(); got != (RelativeOffset{Y: 1.0 / 3}) {
-		t.Fatalf("relative offset = %+v, want y 1/3", got)
-	}
-	if got := v.End(); got != (AbsoluteOffset{Y: 3}) {
-		t.Fatalf("end = %+v, want y 3", got)
-	}
-	if v.Bounds().Height != 2 || v.Content().Height != 5 {
-		t.Fatalf("bounds %v content %v", v.Bounds(), v.Content())
-	}
-	if got := scrollState.Origin().AbsoluteOffset(); got != (AbsoluteOffset{}) {
-		t.Fatalf("origin offset = %+v, want 0", got)
-	}
+	t.Run("absolute offset", func(t *testing.T) {
+		if got := v.AbsoluteOffset(); got != (AbsoluteOffset{Y: 1}) {
+			t.Fatalf("got %+v, want y 1", got)
+		}
+	})
+	t.Run("reversed offset", func(t *testing.T) {
+		if got := v.AbsoluteOffsetReversed(); got != (AbsoluteOffset{Y: 2}) {
+			t.Fatalf("got %+v, want y 2", got)
+		}
+	})
+	t.Run("relative offset", func(t *testing.T) {
+		if got := v.RelativeOffset(); got != (RelativeOffset{Y: 1.0 / 3}) {
+			t.Fatalf("got %+v, want y 1/3", got)
+		}
+	})
+	t.Run("end", func(t *testing.T) {
+		if got := v.End(); got != (AbsoluteOffset{Y: 3}) {
+			t.Fatalf("got %+v, want y 3", got)
+		}
+	})
+	t.Run("bounds and content", func(t *testing.T) {
+		if v.Bounds().Height != 2 || v.Content().Height != 5 {
+			t.Fatalf("bounds %v content %v", v.Bounds(), v.Content())
+		}
+	})
+	t.Run("origin", func(t *testing.T) {
+		if got := scrollState.Origin().AbsoluteOffset(); got != (AbsoluteOffset{}) {
+			t.Fatalf("got %+v, want 0", got)
+		}
+	})
 	t.Run("scrolling past an edge produces nothing", func(t *testing.T) {
 		top := apply(t, ScrollState{}, 5, area, mouse(0, 0, tview.MouseScrollUp))
 		if out := numbers(-1, top, 5).Handle(mouse(0, 0, tview.MouseScrollUp), area); out != nil {
@@ -374,7 +397,7 @@ func TestViewport(t *testing.T) {
 	})
 }
 
-func TestAnchorRight(t *testing.T) {
+func TestWidgetAnchorRight(t *testing.T) {
 	area := tview.Rectangle{Width: 4, Height: 1}
 	// line returns a viewport of s that scrolls sideways from the right.
 	line := func(s string, scrollState ScrollState) Widget {
@@ -389,18 +412,26 @@ func TestAnchorRight(t *testing.T) {
 		w.Draw(screen, area)
 		return screentest.Row(screen, 0, 4)
 	}
-	if got := row(t, line("0123456789", ScrollState{})); got != "6789" {
-		t.Fatalf("zero state shows %q, want the right end", got)
-	}
+	t.Run("the zero state is at the right end", func(t *testing.T) {
+		if got := row(t, line("0123456789", ScrollState{})); got != "6789" {
+			t.Fatalf("shows %q, want the right end", got)
+		}
+	})
 	left := line("0123456789", ScrollState{}).Handle(mouse(0, 0, tview.MouseScrollLeft), area).(ScrollState)
-	if got := left.Viewport().AbsoluteOffset(); got != (AbsoluteOffset{X: 2}) {
-		t.Fatalf("absolute offset = %+v, want x 2 from the right", got)
-	}
-	if got := left.Viewport().AbsoluteOffsetReversed(); got != (AbsoluteOffset{X: 4}) {
-		t.Fatalf("reversed offset = %+v, want x 4 from the left", got)
-	}
-	// Two cells added on the left keep what is shown in place.
-	if got := row(t, line("ab0123456789", left)); got != "4567" {
-		t.Fatalf("after growing on the left shows %q, want 4567", got)
-	}
+	t.Run("absolute offset", func(t *testing.T) {
+		if got := left.Viewport().AbsoluteOffset(); got != (AbsoluteOffset{X: 2}) {
+			t.Fatalf("got %+v, want x 2 from the right", got)
+		}
+	})
+	t.Run("reversed offset", func(t *testing.T) {
+		if got := left.Viewport().AbsoluteOffsetReversed(); got != (AbsoluteOffset{X: 4}) {
+			t.Fatalf("got %+v, want x 4 from the left", got)
+		}
+	})
+	t.Run("growing on the left", func(t *testing.T) {
+		// Two cells added on the left keep what is shown in place.
+		if got := row(t, line("ab0123456789", left)); got != "4567" {
+			t.Fatalf("shows %q, want 4567", got)
+		}
+	})
 }

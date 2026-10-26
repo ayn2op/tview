@@ -1,6 +1,7 @@
 package box
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/ayn2op/tview"
@@ -31,9 +32,11 @@ func TestWidgetDraw(t *testing.T) {
 	})
 	t.Run("sides and bottom", func(t *testing.T) {
 		for y, want := range map[int]string{1: "│      │", 2: "└──────┘"} {
-			if got := screentest.Row(screen, y, 8); got != want {
-				t.Fatalf("row %d = %q, want %q", y, got, want)
-			}
+			t.Run(fmt.Sprintf("row %d", y), func(t *testing.T) {
+				if got := screentest.Row(screen, y, 8); got != want {
+					t.Fatalf("got %q, want %q", got, want)
+				}
+			})
 		}
 	})
 	t.Run("child inside the border", func(t *testing.T) {
@@ -41,43 +44,40 @@ func TestWidgetDraw(t *testing.T) {
 			t.Fatalf("inner = %+v, want %+v", inner, want)
 		}
 	})
-}
-
-func TestWidgetDrawLine(t *testing.T) {
-	for name, tt := range map[string]struct {
-		borders tview.Borders
-		want    string
-	}{
-		"a top border alone is a line, without corners": {tview.BordersTop, "─── today ──"},
-		"a corner only where two borders meet":          {tview.BordersTop | tview.BordersLeft, "┌── today ──"},
-	} {
-		t.Run(name, func(t *testing.T) {
-			screen := screentest.New(t, 12, 1)
-			New(areaWidget{new(tview.Rectangle)}).Borders(tt.borders).Title(text.New(" today ")).Draw(screen, tview.Rectangle{Width: 12, Height: 1})
-			if got := screentest.Row(screen, 0, 12); got != tt.want {
-				t.Fatalf("line = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestWidgetDrawCutTitle(t *testing.T) {
-	screen := screentest.New(t, 8, 3)
-	New(areaWidget{new(tview.Rectangle)}).Borders(tview.BordersAll).Title(text.New("abcdefgh")).Draw(screen, tview.Rectangle{Width: 8, Height: 3})
-	if got := screentest.Row(screen, 0, 8); got != "┌abcdef┐" {
-		t.Fatalf("top = %q", got)
-	}
-}
-
-func TestWidgetDrawTitleOverStyledCells(t *testing.T) {
-	screen := screentest.New(t, 8, 3)
-	screen.FillArea(0, 0, 8, 3, 'x', tcell.StyleDefault.Background(tcell.ColorRed))
-	New(areaWidget{new(tview.Rectangle)}).Borders(tview.BordersAll).Title(text.New("ab")).Draw(screen, tview.Rectangle{Width: 8, Height: 3})
-	for x := 3; x <= 4; x++ {
-		if _, style, _ := screen.Get(x, 0); style.GetBackground() != tcell.ColorDefault {
-			t.Fatalf("title cell %d background = %v, want the box's", x, style.GetBackground())
+	t.Run("line", func(t *testing.T) {
+		for name, tt := range map[string]struct {
+			borders tview.Borders
+			want    string
+		}{
+			"a top border alone is a line, without corners": {tview.BordersTop, "─── today ──"},
+			"a corner only where two borders meet":          {tview.BordersTop | tview.BordersLeft, "┌── today ──"},
+		} {
+			t.Run(name, func(t *testing.T) {
+				screen := screentest.New(t, 12, 1)
+				New(areaWidget{new(tview.Rectangle)}).Borders(tt.borders).Title(text.New(" today ")).Draw(screen, tview.Rectangle{Width: 12, Height: 1})
+				if got := screentest.Row(screen, 0, 12); got != tt.want {
+					t.Fatalf("line = %q, want %q", got, tt.want)
+				}
+			})
 		}
-	}
+	})
+	t.Run("cut title", func(t *testing.T) {
+		screen := screentest.New(t, 8, 3)
+		New(areaWidget{new(tview.Rectangle)}).Borders(tview.BordersAll).Title(text.New("abcdefgh")).Draw(screen, tview.Rectangle{Width: 8, Height: 3})
+		if got := screentest.Row(screen, 0, 8); got != "┌abcdef┐" {
+			t.Fatalf("top = %q", got)
+		}
+	})
+	t.Run("title over styled cells", func(t *testing.T) {
+		screen := screentest.New(t, 8, 3)
+		screen.FillArea(0, 0, 8, 3, 'x', tcell.StyleDefault.Background(tcell.ColorRed))
+		New(areaWidget{new(tview.Rectangle)}).Borders(tview.BordersAll).Title(text.New("ab")).Draw(screen, tview.Rectangle{Width: 8, Height: 3})
+		for x := 3; x <= 4; x++ {
+			if _, style, _ := screen.Get(x, 0); style.GetBackground() != tcell.ColorDefault {
+				t.Fatalf("title cell %d background = %v, want the box's", x, style.GetBackground())
+			}
+		}
+	})
 }
 
 func TestWidgetHandle(t *testing.T) {

@@ -1,6 +1,7 @@
 package image
 
 import (
+	"fmt"
 	"image"
 	stdcolor "image/color"
 	"testing"
@@ -61,21 +62,22 @@ func TestWidgetDraw(t *testing.T) {
 		{"▀", tcell.StyleDefault.Foreground(color.FromImageColor(red)).Background(color.FromImageColor(blue))},
 		{"▄", tcell.StyleDefault.Foreground(color.NewRGBColor(0, 255, 0))},
 	} {
-		if str, style, _ := screen.Get(0, y); str != want.str || style != want.style {
-			t.Fatalf("row %d = %q %v, want %q %v", y, str, style, want.str, want.style)
+		t.Run(fmt.Sprintf("row %d", y), func(t *testing.T) {
+			if str, style, _ := screen.Get(0, y); str != want.str || style != want.style {
+				t.Fatalf("got %q %v, want %q %v", str, style, want.str, want.style)
+			}
+		})
+	}
+	t.Run("over background", func(t *testing.T) {
+		screen := screentest.New(t, 1, 1)
+		white := color.NewRGBColor(255, 255, 255)
+		screen.Put(0, 0, " ", tcell.StyleDefault.Background(white))
+		New(column(red)).Draw(screen, tview.Rectangle{Width: 1, Height: 1})
+		want := tcell.StyleDefault.Foreground(color.FromImageColor(red)).Background(white)
+		if str, style, _ := screen.Get(0, 0); str != "▀" || style != want {
+			t.Fatalf("cell = %q %v, want the transparent bottom half to keep the white beneath", str, style)
 		}
-	}
-}
-
-func TestWidgetDrawOverBackground(t *testing.T) {
-	screen := screentest.New(t, 1, 1)
-	white := color.NewRGBColor(255, 255, 255)
-	screen.Put(0, 0, " ", tcell.StyleDefault.Background(white))
-	New(column(red)).Draw(screen, tview.Rectangle{Width: 1, Height: 1})
-	want := tcell.StyleDefault.Foreground(color.FromImageColor(red)).Background(white)
-	if str, style, _ := screen.Get(0, 0); str != "▀" || style != want {
-		t.Fatalf("cell = %q %v, want the transparent bottom half to keep the white beneath", str, style)
-	}
+	})
 }
 
 func TestWidgetLines(t *testing.T) {

@@ -1,6 +1,7 @@
 package slider
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,12 +12,13 @@ import (
 
 func TestWidgetDraw(t *testing.T) {
 	for value, want := range map[int]string{0: "●───", 50: "━●──", 100: "━━━●", 200: "━━━●"} {
-		screen := screentest.New(t, 4, 1)
-		New(0, 100, value, nil).Draw(screen, tview.Rectangle{Width: 4, Height: 1})
-
-		if got := screentest.Row(screen, 0, 4); got != want {
-			t.Errorf("value %d: row = %q, want %q", value, got, want)
-		}
+		t.Run(fmt.Sprint(value), func(t *testing.T) {
+			screen := screentest.New(t, 4, 1)
+			New(0, 100, value, nil).Draw(screen, tview.Rectangle{Width: 4, Height: 1})
+			if got := screentest.Row(screen, 0, 4); got != want {
+				t.Errorf("row = %q, want %q", got, want)
+			}
+		})
 	}
 }
 
@@ -36,10 +38,12 @@ func TestWidgetHandle(t *testing.T) {
 	away := mouse(40, 3, tcell.ButtonPrimary, tcell.ModNone, tview.MouseMove)
 	wheel := mouse(6, 0, tcell.WheelDown, tcell.ModNone, tview.MouseScrollDown)
 
-	seek := New(0, time.Minute, 0, func(value time.Duration) tview.Msg { return value }).Step(time.Second)
-	if got := seek.Handle(click, area); got != 24*time.Second {
-		t.Errorf("duration: got %v, want 24s", got)
-	}
+	t.Run("duration", func(t *testing.T) {
+		seek := New(0, time.Minute, 0, func(value time.Duration) tview.Msg { return value }).Step(time.Second)
+		if got := seek.Handle(click, area); got != 24*time.Second {
+			t.Errorf("got %v, want 24s", got)
+		}
+	})
 
 	for name, tt := range map[string]struct {
 		w    Widget[int]
@@ -62,8 +66,10 @@ func TestWidgetHandle(t *testing.T) {
 		"ctrl wheel":             {w, mouse(6, 0, tcell.WheelDown, tcell.ModCtrl, tview.MouseScrollDown), 3},
 		"wheel":                  {w, wheel, wheel},
 	} {
-		if got := tt.w.Handle(tt.msg, area); got != tt.want {
-			t.Errorf("%s: got %v, want %v", name, got, tt.want)
-		}
+		t.Run(name, func(t *testing.T) {
+			if got := tt.w.Handle(tt.msg, area); got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

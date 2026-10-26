@@ -56,8 +56,10 @@ func TestWidgetDraw(t *testing.T) {
 		drawn.WriteString(screentest.Row(screen, y, area.Width) + "\n")
 	}
 	for _, want := range []string{"Delete?", "Yes", "No"} {
-		if !strings.Contains(drawn.String(), want) {
-			t.Fatalf("%q not drawn:\n%s", want, drawn.String())
-		}
+		t.Run(want, func(t *testing.T) {
+			if !strings.Contains(drawn.String(), want) {
+				t.Fatalf("not drawn:\n%s", drawn.String())
+			}
+		})
 	}
 }

@@ -17,12 +17,16 @@ func TestWidgetFormatKey(t *testing.T) {
 	}
 
 	w := New(nil).CompactModifiers(true)
-	if got := w.formatKey("ctrl+alt+shift+meta+x"); got != want {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-	if got := w.CompactModifiers(false).formatKey("ctrl+x"); got != "ctrl+x" {
-		t.Fatalf("got %q, want %q", got, "ctrl+x")
-	}
+	t.Run("compact", func(t *testing.T) {
+		if got := w.formatKey("ctrl+alt+shift+meta+x"); got != want {
+			t.Fatalf("got %q, want %q", got, want)
+		}
+	})
+	t.Run("spelled out", func(t *testing.T) {
+		if got := w.CompactModifiers(false).formatKey("ctrl+x"); got != "ctrl+x" {
+			t.Fatalf("got %q, want %q", got, "ctrl+x")
+		}
+	})
 }
 
 // keyMap has quit and help keybinds, in one column for the full help.

@@ -117,23 +117,30 @@ func TestWidgetLayout(t *testing.T) {
 		sized{width: layout.Fixed(2), height: layout.Fixed(1)},
 		sized{width: layout.Fixed(3), height: layout.Fixed(2)},
 	).Width(layout.Shrink).Height(layout.Shrink).Spacing(1)
-	if got := fixed.Layout(layout.Limits{Max: layout.Size{Width: 10, Height: 10}}); got != (layout.Size{Width: 6, Height: 2}) {
-		t.Fatalf("fixed = %+v", got)
-	}
+	t.Run("fixed", func(t *testing.T) {
+		if got := fixed.Layout(layout.Limits{Max: layout.Size{Width: 10, Height: 10}}); got != (layout.Size{Width: 6, Height: 2}) {
+			t.Fatalf("got %+v", got)
+		}
+	})
 
 	limits := layout.Limits{Max: layout.Size{Width: 7}, Infinite: layout.Axes{Height: true}}
 	row := New(true, sized{width: layout.Fixed(2), height: layout.Fixed(2)}, wrapped{}).Spacing(1).Height(layout.Shrink)
-	if got := row.Layout(limits); got != (layout.Size{Width: 7, Height: 3}) {
-		t.Fatalf("row = %+v", got)
-	}
+	t.Run("row", func(t *testing.T) {
+		if got := row.Layout(limits); got != (layout.Size{Width: 7, Height: 3}) {
+			t.Fatalf("got %+v", got)
+		}
+	})
 
 	column := New(false, tall(layout.Fixed(1)), row).Height(layout.Shrink)
-	if got := column.Layout(limits); got != (layout.Size{Width: 7, Height: 4}) {
-		t.Fatalf("column = %+v", got)
-	}
-
-	want := []tview.Rectangle{{Width: 7, Height: 1}, {Y: 1, Width: 7, Height: 3}}
-	if got := column.areas(tview.Rectangle{Width: 7, Height: 4}); !slices.Equal(got, want) {
-		t.Fatalf("areas = %+v", got)
-	}
+	t.Run("column", func(t *testing.T) {
+		if got := column.Layout(limits); got != (layout.Size{Width: 7, Height: 4}) {
+			t.Fatalf("got %+v", got)
+		}
+	})
+	t.Run("areas", func(t *testing.T) {
+		want := []tview.Rectangle{{Width: 7, Height: 1}, {Y: 1, Width: 7, Height: 3}}
+		if got := column.areas(tview.Rectangle{Width: 7, Height: 4}); !slices.Equal(got, want) {
+			t.Fatalf("got %+v", got)
+		}
+	})
 }

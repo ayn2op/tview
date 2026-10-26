@@ -37,7 +37,7 @@ func (sliceEmitter) Handle(msg Msg, area Rectangle) Msg {
 	return msg
 }
 
-func TestMapHandle(t *testing.T) {
+func TestMappedHandle(t *testing.T) {
 	m := Map(emitter{}, func(c childMsg) Msg { return parentMsg{c} })
 	area := Rectangle{Width: 1, Height: 1}
 	t.Run("maps produced messages", func(t *testing.T) {
@@ -52,12 +52,14 @@ func TestMapHandle(t *testing.T) {
 			t.Fatalf("got %v", got)
 		}
 	})
+	sliced := Map(sliceEmitter{}, func(s sliceMsg) Msg { return parentMsg{childMsg{len(s)}} })
 	t.Run("maps uncomparable messages", func(t *testing.T) {
-		m := Map(sliceEmitter{}, func(s sliceMsg) Msg { return parentMsg{childMsg{len(s)}} })
-		if got := m.Handle(PasteMsg("x"), area); got != (parentMsg{childMsg{2}}) {
+		if got := sliced.Handle(PasteMsg("x"), area); got != (parentMsg{childMsg{2}}) {
 			t.Fatalf("got %v", got)
 		}
-		if got, ok := m.Handle(sliceMsg{1}, area).(sliceMsg); !ok || len(got) != 1 {
+	})
+	t.Run("leaves passed through uncomparable messages of type T", func(t *testing.T) {
+		if got, ok := sliced.Handle(sliceMsg{1}, area).(sliceMsg); !ok || len(got) != 1 {
 			t.Fatalf("got %v", got)
 		}
 	})

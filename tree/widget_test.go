@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
@@ -31,9 +32,11 @@ func TestWidgetDraw(t *testing.T) {
 	var current *Node
 	interactive(testTree()["root"], current).Draw(screen, tview.Rectangle{Width: 6, Height: 3})
 	for y, want := range []string{"a     ", "└──a1 ", "b     "} {
-		if got := screentest.Row(screen, y, 6); got != want {
-			t.Fatalf("row %d = %q, want %q", y, got, want)
-		}
+		t.Run(fmt.Sprintf("row %d", y), func(t *testing.T) {
+			if got := screentest.Row(screen, y, 6); got != want {
+				t.Fatalf("got %q, want %q", got, want)
+			}
+		})
 	}
 }
 
@@ -161,8 +164,10 @@ func TestWidgetSpacing(t *testing.T) {
 		if got := tree(nil).RowsWidth(3, 2); got != 7 {
 			t.Fatalf("width = %d, want 7", got)
 		}
+	})
+	t.Run("rows width of spacing alone is 0", func(t *testing.T) {
 		if got := tree(nil).RowsWidth(5, 1); got != 0 {
-			t.Fatalf("width of spacing = %d, want 0", got)
+			t.Fatalf("width = %d, want 0", got)
 		}
 	})
 	t.Run("click on a node selects it", func(t *testing.T) {

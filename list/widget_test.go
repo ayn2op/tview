@@ -1,6 +1,7 @@
 package list
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -73,9 +74,30 @@ func TestWidgetHandle(t *testing.T) {
 	})
 	t.Run("passes other messages through", func(t *testing.T) {
 		for _, msg := range []tview.Msg{key(tcell.KeyEnter), mouse(1, 3, tview.MouseMove)} {
-			if got := numbers(-1, 10).Handle(msg, area); got != msg {
-				t.Fatalf("got %v", got)
-			}
+			t.Run(fmt.Sprintf("%T", msg), func(t *testing.T) {
+				if got := numbers(-1, 10).Handle(msg, area); got != msg {
+					t.Fatalf("got %v", got)
+				}
+			})
+		}
+	})
+	itemsArea := tview.Rectangle{Width: 3, Height: 2}
+	t.Run("the item clicked takes the click", func(t *testing.T) {
+		w := New(-1, 2, func(i int) tview.Widget {
+			return button.New(text.New("")).Height(layout.Fixed(1)).OnClick(i)
+		}).OnChange(func(cursor int) tview.Msg { return moved(cursor) })
+		// The click then does not select the item.
+		if got := w.Handle(mouse(0, 1, tview.MouseLeftDown), itemsArea); got != 1 {
+			t.Fatalf("got %v, want 1", got)
+		}
+	})
+	t.Run("a drag reaches the item dragged, wherever the pointer went", func(t *testing.T) {
+		sliders := New(-1, 2, func(i int) tview.Widget {
+			return slider.New(0, 2, 0, func(value int) tview.Msg { return value }).Dragging(i == 1)
+		}).OnChange(func(cursor int) tview.Msg { return moved(cursor) })
+		drag := tview.MouseMsg{EventMouse: tcell.NewEventMouse(9, 9, tcell.ButtonPrimary, tcell.ModNone), Action: tview.MouseMove}
+		if got := sliders.Handle(drag, itemsArea); got != 2 {
+			t.Fatalf("got %v, want 2", got)
 		}
 	})
 }
@@ -137,13 +159,35 @@ func (filled) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg { return msg
 
 func TestWidgetLayout(t *testing.T) {
 	limits := layout.Limits{Max: layout.Size{Width: 4, Height: 2}, Infinite: layout.Axes{Height: true}}
-	if got := numbers(-1, 5).Spacing(func(int) int { return 1 }).Layout(limits); got != (layout.Size{Width: 4, Height: 9}) {
-		t.Fatalf("size = %+v, want 4 by 9", got)
-	}
-	// Only the odd items have spacing above them.
-	if got := numbers(-1, 5).Spacing(func(i int) int { return i % 2 }).Layout(limits); got != (layout.Size{Width: 4, Height: 7}) {
-		t.Fatalf("size = %+v, want 4 by 7", got)
-	}
+	t.Run("spacing", func(t *testing.T) {
+		if got := numbers(-1, 5).Spacing(func(int) int { return 1 }).Layout(limits); got != (layout.Size{Width: 4, Height: 9}) {
+			t.Fatalf("size = %+v, want 4 by 9", got)
+		}
+	})
+	t.Run("spacing per item", func(t *testing.T) {
+		// Only the odd items have spacing above them.
+		if got := numbers(-1, 5).Spacing(func(i int) int { return i % 2 }).Layout(limits); got != (layout.Size{Width: 4, Height: 7}) {
+			t.Fatalf("size = %+v, want 4 by 7", got)
+		}
+	})
+	t.Run("item heights", func(t *testing.T) {
+		for _, tt := range []struct {
+			name string
+			item tview.Widget
+			want int
+		}{
+			{"one row", row(""), 1},
+			{"height for the width", wrapped{}, 2},
+			{"fixed height", sized{height: layout.Fixed(3)}, 3},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				list := New(-1, 1, func(int) tview.Widget { return tt.item })
+				if _, sizes, _ := list.layout(4); sizes[0] != tt.want {
+					t.Fatalf("rows = %d, want %d", sizes[0], tt.want)
+				}
+			})
+		}
+	})
 }
 
 func TestWidgetTarget(t *testing.T) {
@@ -167,44 +211,4 @@ type sized struct {
 
 func (s sized) Layout(limits layout.Limits) layout.Size {
 	return layout.Atomic(limits, layout.Fill, s.height)
-}
-
-func TestItemHeight(t *testing.T) {
-	for _, tt := range []struct {
-		name string
-		item tview.Widget
-		want int
-	}{
-		{"one row", row(""), 1},
-		{"height for the width", wrapped{}, 2},
-		{"fixed height", sized{height: layout.Fixed(3)}, 3},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			list := New(-1, 1, func(int) tview.Widget { return tt.item })
-			if _, sizes, _ := list.layout(4); sizes[0] != tt.want {
-				t.Fatalf("rows = %d, want %d", sizes[0], tt.want)
-			}
-		})
-	}
-}
-
-func TestWidgetHandleItem(t *testing.T) {
-	area := tview.Rectangle{Width: 3, Height: 2}
-	w := New(-1, 2, func(i int) tview.Widget {
-		return button.New(text.New("")).Height(layout.Fixed(1)).OnClick(i)
-	}).OnChange(func(cursor int) tview.Msg { return moved(cursor) })
-
-	// The item clicked takes the click, which then does not select it.
-	if got := w.Handle(mouse(0, 1, tview.MouseLeftDown), area); got != 1 {
-		t.Fatalf("got %v, want 1", got)
-	}
-
-	// A drag reaches the item dragged, wherever the pointer went.
-	sliders := New(-1, 2, func(i int) tview.Widget {
-		return slider.New(0, 2, 0, func(value int) tview.Msg { return value }).Dragging(i == 1)
-	}).OnChange(func(cursor int) tview.Msg { return moved(cursor) })
-	drag := tview.MouseMsg{EventMouse: tcell.NewEventMouse(9, 9, tcell.ButtonPrimary, tcell.ModNone), Action: tview.MouseMove}
-	if got := sliders.Handle(drag, area); got != 2 {
-		t.Fatalf("got %v, want 2", got)
-	}
 }

@@ -17,17 +17,28 @@ func TestNormalizeKey(t *testing.T) {
 		{"ctrl+ctrl+a", "ctrl+a"},
 		{"shift+backtab", "shift+tab"},
 	} {
-		if got := normalizeKey(tt.in); got != tt.want {
-			t.Fatalf("normalizeKey(%q) = %q, want %q", tt.in, got, tt.want)
+		t.Run(tt.in, func(t *testing.T) {
+			if got := normalizeKey(tt.in); got != tt.want {
+				t.Fatalf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMatches(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		if Matches(nil, NewSingleKeybind("a", "a")) {
+			t.Fatal("matched")
 		}
-	}
-	if Matches(nil, NewSingleKeybind("a", "a")) {
-		t.Fatal("Matches(nil) = true")
-	}
-	if !Matches(tcell.NewEventKey(tcell.KeyRune, "a", tcell.ModNone), NewSingleKeybind("a", "a")) {
-		t.Fatal("Matches(rune a) = false")
-	}
-	if !Matches(tcell.NewEventKey(tcell.KeyRune, " ", tcell.ModNone), New("space")) {
-		t.Fatal("Matches(space) = false")
-	}
+	})
+	t.Run("rune", func(t *testing.T) {
+		if !Matches(tcell.NewEventKey(tcell.KeyRune, "a", tcell.ModNone), NewSingleKeybind("a", "a")) {
+			t.Fatal("did not match")
+		}
+	})
+	t.Run("space", func(t *testing.T) {
+		if !Matches(tcell.NewEventKey(tcell.KeyRune, " ", tcell.ModNone), New("space")) {
+			t.Fatal("did not match")
+		}
+	})
 }

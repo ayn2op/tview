@@ -80,13 +80,17 @@ func TestWidgetHandle(t *testing.T) {
 			t.Fatalf("got %v", got)
 		}
 	})
-	t.Run("passes other keys and unfocused input through", func(t *testing.T) {
-		w := New("x", 1).OnInput(onInput)
-		for _, msg := range []tview.Msg{key(tcell.KeyUp, "", tcell.ModNone), key(tcell.KeyRune, "l", tcell.ModCtrl)} {
-			if got := w.Focused(true).Handle(msg, area); got != msg {
-				t.Fatalf("focused %v: got %v", msg, got)
-			}
+	w := New("x", 1).OnInput(onInput)
+	t.Run("passes other keys through", func(t *testing.T) {
+		for _, msg := range []tview.KeyMsg{key(tcell.KeyUp, "", tcell.ModNone), key(tcell.KeyRune, "l", tcell.ModCtrl)} {
+			t.Run(msg.Name(), func(t *testing.T) {
+				if got := w.Focused(true).Handle(msg, area); got != tview.Msg(msg) {
+					t.Fatalf("got %v", got)
+				}
+			})
 		}
+	})
+	t.Run("passes input through while unfocused", func(t *testing.T) {
 		if msg := typed("y"); w.Handle(msg, area) != msg {
 			t.Fatal("unfocused input took a key")
 		}

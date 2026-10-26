@@ -106,7 +106,7 @@ func wrap(value string, width int) []line {
 	width = max(width, 1)
 	var lines []line
 	start := 0
-	for _, logical := range strings.Split(value, "\n") {
+	for logical := range strings.SplitSeq(value, "\n") {
 		pos := start
 		for _, piece := range wordwrap.Split(logical, width, true) {
 			lines = append(lines, line{start: pos, end: pos + len(piece)})

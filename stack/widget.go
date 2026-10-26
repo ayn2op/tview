@@ -2,6 +2,8 @@
 package stack
 
 import (
+	"slices"
+
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/layout"
 )
@@ -49,8 +51,8 @@ func (w Widget) Draw(screen tview.Screen, area tview.Rectangle) {
 
 // Handle passes msg through the children from top to bottom. It stops when a child drops the message.
 func (w Widget) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
-	for i := len(w.children) - 1; i >= 0; i-- {
-		if msg = w.children[i].Handle(msg, area); msg == nil {
+	for _, v := range slices.Backward(w.children) {
+		if msg = v.Handle(msg, area); msg == nil {
 			return nil
 		}
 	}

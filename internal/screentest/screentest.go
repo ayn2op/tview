@@ -27,12 +27,12 @@ func New(t testing.TB, width, height int) tview.Screen {
 
 // Row returns the text of the first width cells of row y.
 func Row(screen tview.Screen, y, width int) string {
-	var s string
+	var s strings.Builder
 	for x := range width {
 		str, _, _ := screen.Get(x, y)
-		s += str
+		s.WriteString(str)
 	}
-	return s
+	return s.String()
 }
 
 // Print draws widget on a mock screen of the given size and prints its rows without trailing spaces, for examples to show what a widget draws.

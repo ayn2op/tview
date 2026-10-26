@@ -60,7 +60,7 @@ type longKeyMap struct{}
 
 func (longKeyMap) ShortHelp() []keybind.Keybind {
 	var keybinds []keybind.Keybind
-	for _, key := range strings.Fields("a b c d e f g h i j k l") {
+	for key := range strings.FieldsSeq("a b c d e f g h i j k l") {
 		keybinds = append(keybinds, keybind.NewSingleKeybind("ctrl+"+key, "action "+key))
 	}
 	return keybinds

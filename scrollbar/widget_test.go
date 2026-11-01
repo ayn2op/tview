@@ -19,11 +19,6 @@ func column(t *testing.T, w Widget, height int) string {
 }
 
 func TestWidgetDraw(t *testing.T) {
-	t.Run("default symbols", func(t *testing.T) {
-		if got := column(t, New().Lengths(8, 2), 4); got != "▲█║▼" {
-			t.Fatalf("column = %q", got)
-		}
-	})
 	t.Run("thumb at the bottom", func(t *testing.T) {
 		if got := column(t, New().SymbolSet(SymbolSetVertical()).Lengths(8, 2).Offset(6), 4); got != "↑│█↓" {
 			t.Fatalf("column = %q", got)

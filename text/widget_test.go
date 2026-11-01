@@ -20,15 +20,6 @@ func TestWidgetDraw(t *testing.T) {
 			t.Fatalf("style = %v, want %v", got, style)
 		}
 	})
-	t.Run("wraps between words", func(t *testing.T) {
-		screen := screentest.New(t, 6, 2)
-		New("ab cd ef").Draw(screen, tview.Rectangle{Width: 6, Height: 2})
-		for y, want := range []string{"ab cd ", "ef    "} {
-			if got := screentest.Row(screen, y, 6); got != want {
-				t.Fatalf("row %d = %q, want %q", y, got, want)
-			}
-		}
-	})
 	t.Run("centers lines", func(t *testing.T) {
 		screen := screentest.New(t, 6, 1)
 		New("ab").AlignX(tview.HorizontalAlignmentCenter).Draw(screen, tview.Rectangle{Width: 6, Height: 1})

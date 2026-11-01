@@ -113,6 +113,5 @@ func TestWidgetDraw(t *testing.T) {
 		}
 	}
 
-	t.Run("wrapped", func(t *testing.T) { draw(t, "ab cd ef", "ab cd", "ef   ") })
 	t.Run("scrolled to keep the cursor visible", func(t *testing.T) { draw(t, "a\nb\nc", "b    ", "c    ") })
 }

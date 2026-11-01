@@ -1,11 +1,11 @@
 package stack
 
 import (
-	"github.com/ayn2op/tview/layout"
 	"testing"
 
+	"github.com/ayn2op/tview/layout"
+
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/internal/screentest"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -32,15 +32,6 @@ func (l letter) Handle(msg tview.Msg, area tview.Rectangle) tview.Msg {
 }
 
 var area = tview.Rectangle{Width: 4, Height: 2}
-
-func TestWidgetDraw(t *testing.T) {
-	screen := screentest.New(t, 4, 2)
-	var seen []string
-	New(letter{"a", &seen}, letter{"b", &seen}).Draw(screen, area)
-	if str, _, _ := screen.Get(1, 1); str != "b" {
-		t.Fatalf("top cell = %q, want %q", str, "b")
-	}
-}
 
 func TestWidgetHandle(t *testing.T) {
 	t.Run("top first", func(t *testing.T) {

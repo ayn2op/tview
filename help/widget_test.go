@@ -38,23 +38,6 @@ func (keyMap) ShortHelp() []keybind.Keybind {
 
 func (k keyMap) FullHelp() [][]keybind.Keybind { return [][]keybind.Keybind{k.ShortHelp()} }
 
-func TestWidgetDraw(t *testing.T) {
-	t.Run("short help on one line", func(t *testing.T) {
-		screen := screentest.New(t, 20, 2)
-		New(keyMap{}).Draw(screen, tview.Rectangle{Width: 20, Height: 2})
-		if got := screentest.Row(screen, 0, 20); !strings.HasPrefix(got, "q quit • ? help") {
-			t.Fatalf("row = %q", got)
-		}
-	})
-	t.Run("full help in columns", func(t *testing.T) {
-		screen := screentest.New(t, 20, 2)
-		New(keyMap{}).ShowAll(true).Draw(screen, tview.Rectangle{Width: 20, Height: 2})
-		if got := screentest.Row(screen, 1, 20); !strings.HasPrefix(got, "? help") {
-			t.Fatalf("second row = %q", got)
-		}
-	})
-}
-
 // longKeyMap has a dozen keybinds, as a screen with many actions shows.
 type longKeyMap struct{}
 

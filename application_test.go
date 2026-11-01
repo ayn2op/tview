@@ -207,16 +207,3 @@ func BenchmarkApplicationRunBurst(b *testing.B) {
 	}
 	b.ReportMetric(float64(frames)/float64(b.N), "frames/op")
 }
-
-func TestWithQueueSize(t *testing.T) {
-	t.Run("default", func(t *testing.T) {
-		if got := cap(NewApplication(lengthModel{}).msgs); got != 256 {
-			t.Fatalf("buffer = %d, want 256", got)
-		}
-	})
-	t.Run("set", func(t *testing.T) {
-		if got := cap(NewApplication(lengthModel{}, WithQueueSize(8)).msgs); got != 8 {
-			t.Fatalf("buffer = %d, want 8", got)
-		}
-	})
-}

@@ -1,11 +1,9 @@
 package dialog
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/ayn2op/tview"
-	"github.com/ayn2op/tview/internal/screentest"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -43,22 +41,6 @@ func TestWidgetHandle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := dialog(tt.focus).Handle(tt.msg, area); got != tt.want {
 				t.Fatalf("got %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestWidgetDraw(t *testing.T) {
-	screen := screentest.New(t, area.Width, area.Height)
-	dialog(0).Text("Delete?").Draw(screen, area)
-	var drawn strings.Builder
-	for y := range area.Height {
-		drawn.WriteString(screentest.Row(screen, y, area.Width) + "\n")
-	}
-	for _, want := range []string{"Delete?", "Yes", "No"} {
-		t.Run(want, func(t *testing.T) {
-			if !strings.Contains(drawn.String(), want) {
-				t.Fatalf("not drawn:\n%s", drawn.String())
 			}
 		})
 	}

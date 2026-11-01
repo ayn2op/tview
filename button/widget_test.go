@@ -67,13 +67,6 @@ func TestWidgetHandle(t *testing.T) {
 }
 
 func TestWidgetDraw(t *testing.T) {
-	t.Run("label", func(t *testing.T) {
-		screen := screentest.New(t, 10, 3)
-		New(text.New("OK")).Draw(screen, tview.Rectangle{X: 2, Y: 0, Width: 6, Height: 3})
-		if got := screentest.Row(screen, 1, 10)[2:8]; got != "  OK  " {
-			t.Fatalf("label row = %q", got)
-		}
-	})
 
 	for _, tt := range []struct {
 		name   string

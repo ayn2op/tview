@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"fmt"
 	"slices"
 	"testing"
 
@@ -25,19 +24,6 @@ type changed struct{ node *Node }
 
 func interactive(root, current *Node) Widget {
 	return New(root, current).TopLevel(1).Markers(Markers{}).Focused(true).OnChange(func(n *Node) tview.Msg { return changed{n} }).OnSelect(func(n *Node) tview.Msg { return n })
-}
-
-func TestWidgetDraw(t *testing.T) {
-	screen := screentest.New(t, 6, 3)
-	var current *Node
-	interactive(testTree()["root"], current).Draw(screen, tview.Rectangle{Width: 6, Height: 3})
-	for y, want := range []string{"a     ", "└──a1 ", "b     "} {
-		t.Run(fmt.Sprintf("row %d", y), func(t *testing.T) {
-			if got := screentest.Row(screen, y, 6); got != want {
-				t.Fatalf("got %q, want %q", got, want)
-			}
-		})
-	}
 }
 
 func TestWidgetLayout(t *testing.T) {

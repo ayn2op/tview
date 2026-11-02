@@ -42,6 +42,13 @@ func TestWidgetHandle(t *testing.T) {
 			t.Fatalf("selected %v, want banana", got)
 		}
 	})
+	t.Run("select picks the item enter returns", func(t *testing.T) {
+		s := NewSearchState()
+		s.Select(1)
+		if got := send(&s, enter); itemText(got) != items[1].FilterText {
+			t.Fatalf("selected %v, want banana", got)
+		}
+	})
 	t.Run("no matches selects nothing", func(t *testing.T) {
 		s := NewSearchState()
 		send(&s, typed("z"))

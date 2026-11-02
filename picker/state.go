@@ -32,6 +32,12 @@ func (s *SearchState) Reset() {
 	s.matches = nil
 }
 
+// Select selects the ith match, which is the ith item while the query is empty, and scrolls it into view.
+func (s *SearchState) Select(i int) {
+	s.cursor = i
+	s.scroll.ScrollToTarget()
+}
+
 // Selected returns the selected item of items.
 func (s *SearchState) Selected(items Items) (Item, bool) {
 	i := s.cursor

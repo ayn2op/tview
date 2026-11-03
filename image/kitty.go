@@ -58,7 +58,7 @@ func (w Widget) Transmit() tview.Cmd {
 		if err != nil {
 			return nil
 		}
-		return tview.WriteRaw(data)()
+		return tview.WriteRaw(string(data))()
 	}
 }
 
@@ -67,7 +67,7 @@ func (w Widget) Delete() tview.Cmd {
 	if w.kitty == 0 {
 		return nil
 	}
-	return tview.WriteRaw(fmt.Appendf(nil, "\x1b_Ga=d,d=I,q=2,i=%d\x1b\\", w.imageID()))
+	return tview.WriteRaw(fmt.Sprintf("\x1b_Ga=d,d=I,q=2,i=%d\x1b\\", w.imageID()))
 }
 
 // transmission uses raw pixels, which encode several times faster than PNG.

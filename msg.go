@@ -11,10 +11,10 @@ type Msg any
 // Cmd is work done outside Update, such as I/O, whose result comes back as a message.
 type Cmd func() Msg
 
-type rawMsg []byte
+type rawMsg string
 
-// WriteRaw is a command that writes data to the underlying TTY as is.
-func WriteRaw(data []byte) Cmd {
+// WriteRaw is a command that writes data, such as escape sequences, to the terminal as is with the next frame, before its cells.
+func WriteRaw(data string) Cmd {
 	return func() Msg { return rawMsg(data) }
 }
 

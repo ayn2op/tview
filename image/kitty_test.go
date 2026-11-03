@@ -29,7 +29,7 @@ func TestWidgetKitty(t *testing.T) {
 	})
 	t.Run("deletes the image", func(t *testing.T) {
 		msg := New(column(red)).Kitty(257).Delete()()
-		if want := tview.WriteRaw([]byte("\x1b_Ga=d,d=I,q=2,i=16777232\x1b\\"))(); !reflect.DeepEqual(msg, want) {
+		if want := tview.WriteRaw("\x1b_Ga=d,d=I,q=2,i=16777232\x1b\\")(); !reflect.DeepEqual(msg, want) {
 			t.Fatalf("Delete = %v, want %v", msg, want)
 		}
 	})

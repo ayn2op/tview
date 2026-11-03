@@ -146,9 +146,9 @@ func (a *Application[M]) Run() error {
 			return msg
 
 		case rawMsg:
-			if tty, ok := a.screen.Tty(); ok {
-				_, _ = tty.Write(msg)
-			}
+			_, _ = a.screen.WriteString(string(msg))
+			// The next frame sends it.
+			redraw = true
 		case suspendMsg:
 			var next Msg
 			a.suspend(func() { next = Cmd(msg)() })

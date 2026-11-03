@@ -9,7 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ayn2op/tview/cmd"
 	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/color"
 )
 
 const (
@@ -69,7 +71,6 @@ func WithQueueSize(size int) ApplicationOption {
 // Application runs a model: it starts it, changes it with each message, and draws it.
 type Application[M Model[M]] struct {
 	msgs     chan Msg
-	cmds     chan Cmd
 	done     chan struct{}
 	doneOnce sync.Once
 
@@ -91,7 +92,6 @@ func NewApplication[M Model[M]](model M, options ...ApplicationOption) *Applicat
 	}
 	return &Application[M]{
 		msgs:  make(chan Msg, opts.queueSize),
-		cmds:  make(chan Cmd),
 		done:  make(chan struct{}),
 		model: model,
 
@@ -124,9 +124,10 @@ func (a *Application[M]) Run() error {
 	defer a.stop()
 
 	go a.handleEvents()
-	go a.handleCmds()
 
-	a.queueCmd(a.model.Init())
+	if a.handleCmd(a.model.Init()) {
+		return nil
+	}
 	a.draw()
 
 	var (
@@ -139,37 +140,12 @@ func (a *Application[M]) Run() error {
 		if msg == nil {
 			continue
 		}
+		var updated, quit bool
 		switch msg := msg.(type) {
-		case quitMsg:
-			return nil
 		case *tcell.EventError:
 			return msg
-
-		case rawMsg:
-			_, _ = a.screen.WriteString(string(msg))
-			// The next frame sends it.
-			redraw = true
-		case suspendMsg:
-			var next Msg
-			a.suspend(func() { next = Cmd(msg)() })
-			if next != nil {
-				a.queueCmd(func() Msg { return next })
-			}
-			// The screen is drawn again, as whatever ran meanwhile drew over it.
-			redraw = true
-		case setTitleMsg:
-			a.screen.SetTitle(string(msg))
-		case notifyMsg:
-			a.screen.ShowNotification(msg.title, msg.body)
-
-		case requestTerminalInfoMsg:
-			name, version := a.screen.Terminal()
-			redraw = a.handle(TerminalInfoMsg{Name: name, Version: version}) || redraw
-
-		case getClipboardMsg:
-			a.screen.GetClipboard()
-		case setClipboardMsg:
-			a.screen.SetClipboard([]byte(msg))
+		case Cmd:
+			quit = a.handleCmd(msg)
 
 		case KeyMsg:
 			// If we are pasting, collect runes, nothing else.
@@ -177,7 +153,7 @@ func (a *Application[M]) Run() error {
 				appendPasteKey(&pasteBuffer, msg)
 				break
 			}
-			redraw = a.handle(msg) || redraw
+			updated, quit = a.handle(msg)
 		case *tcell.EventPaste:
 			if msg.Start() {
 				pasting = true
@@ -185,7 +161,7 @@ func (a *Application[M]) Run() error {
 			} else if msg.End() {
 				pasting = false
 				if pasteBuffer.Len() > 0 {
-					redraw = a.handle(PasteMsg(pasteBuffer.String())) || redraw
+					updated, quit = a.handle(PasteMsg(pasteBuffer.String()))
 				}
 			}
 		case *tcell.EventResize:
@@ -198,15 +174,18 @@ func (a *Application[M]) Run() error {
 				})
 			}
 			lastRedraw = time.Now()
-			a.updateModel(msg)
-			redraw = true
+			updated, quit = true, a.updateModel(msg)
 		case *tcell.EventMouse:
-			redraw = a.fireMouseActions(msg) || redraw
+			updated, quit = a.fireMouseActions(msg)
 			a.lastMouseButtons = msg.Buttons()
 		default:
 			// Messages from commands reach the widget too.
-			redraw = a.handle(msg) || redraw
+			updated, quit = a.handle(msg)
 		}
+		if quit {
+			return nil
+		}
+		redraw = redraw || updated
 
 		// Queued events and messages are handled before drawing, so a burst of them, such as scrolling with a touchpad or images loading, is drawn once rather than a frame each, which would fall behind them.
 		if !redraw || len(a.screen.EventQ()) > 0 || len(a.msgs) > 0 {
@@ -235,63 +214,20 @@ func (a *Application[M]) handleEvents() {
 	}
 }
 
-func (a *Application[M]) handleCmds() {
-	for {
-		select {
-		case <-a.done:
-			return
-		case cmd := <-a.cmds:
-			go a.execCmd(cmd)
-		}
-	}
-}
-
-func (a *Application[M]) execCmd(cmd Cmd) {
-	if !a.disableCatchPanics {
-		defer func() {
-			if r := recover(); r != nil {
-				text := fmt.Sprintf("goroutine panicked: %v", r)
-				fmt.Fprintf(os.Stderr, "%s\nstack trace:\n%s\n", text, debug.Stack())
-				a.queueMsg(tcell.NewEventError(errors.New(text)))
-			}
-		}()
-	}
-
-	switch msg := cmd().(type) {
-	case batchMsg:
-		a.execBatchMsg(msg)
-	case sequenceMsg:
-		a.execSequenceMsg(msg)
-	default:
-		a.queueMsg(msg)
-	}
-}
-
-func (a *Application[M]) execSequenceMsg(msg sequenceMsg) {
-	for _, cmd := range msg {
-		a.execCmd(cmd)
-	}
-}
-
-func (a *Application[M]) execBatchMsg(msg batchMsg) {
-	var wg sync.WaitGroup
-	for _, cmd := range msg {
-		wg.Go(func() {
-			a.execCmd(cmd)
-		})
-	}
-	wg.Wait()
-}
-
-// fireMouseActions derives mouse actions from the provided mouse event and passes them through the root's widget, and reports whether any updated the model.
-func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (updated bool) {
+// fireMouseActions derives mouse actions from the provided mouse event and passes them through the root's widget.
+func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (updated, quit bool) {
 	x, y := event.Position()
 	fire := func(action MouseAction) {
+		if quit {
+			return
+		}
 		switch action {
 		case MouseLeftDown, MouseMiddleDown, MouseRightDown:
 			a.mouseDownX, a.mouseDownY = x, y
 		}
-		updated = a.handle(MouseMsg{EventMouse: event, Action: action}) || updated
+		var u bool
+		u, quit = a.handle(MouseMsg{EventMouse: event, Action: action})
+		updated = updated || u
 	}
 
 	buttons := event.Buttons()
@@ -337,7 +273,7 @@ func (a *Application[M]) fireMouseActions(event *tcell.EventMouse) (updated bool
 		}
 	}
 
-	return updated
+	return updated, quit
 }
 
 // stop finalizes the active screen and leaves terminal UI mode.
@@ -372,25 +308,24 @@ func (a *Application[M]) draw() {
 	screen.Show()
 }
 
-// handle passes a message through the model's widget before updating the model with what it makes of it, and reports whether it did.
+// handle passes a message through the model's widget before updating the model with what it makes of it.
 // Mouse input that no widget took is dropped, as no model reads it.
-func (a *Application[M]) handle(msg Msg) bool {
+func (a *Application[M]) handle(msg Msg) (updated, quit bool) {
 	if view := a.model.View(); view != nil {
 		width, height := a.screen.Size()
 		msg = view.Handle(msg, Rectangle{Width: width, Height: height})
 	}
 	if _, isMouse := msg.(MouseMsg); isMouse || msg == nil {
-		return false
+		return false, false
 	}
-	a.updateModel(msg)
-	return true
+	return true, a.updateModel(msg)
 }
 
-// updateModel replaces the model with the one its Update returns for msg and queues the returned command.
-func (a *Application[M]) updateModel(msg Msg) {
-	var cmd Cmd
-	a.model, cmd = a.model.Update(msg)
-	a.queueCmd(cmd)
+// updateModel replaces the model with the one its Update returns for msg and handles the returned command.
+func (a *Application[M]) updateModel(msg Msg) (quit bool) {
+	var c Cmd
+	a.model, c = a.model.Update(msg)
+	return a.handleCmd(c)
 }
 
 func (a *Application[M]) queueMsg(msg Msg) {
@@ -403,12 +338,54 @@ func (a *Application[M]) queueMsg(msg Msg) {
 	}
 }
 
-func (a *Application[M]) queueCmd(cmd Cmd) {
-	if cmd == nil {
-		return
+func (a *Application[M]) handleCmd(c Cmd) (quit bool) {
+	switch c := c.(type) {
+	case cmd.Quit:
+		return true
+	case cmd.WriteRaw:
+		// The next frame sends it.
+		_, _ = a.screen.WriteString(string(c))
+	case cmd.Suspend:
+		var next Msg
+		a.suspend(func() { next = c() })
+		a.queueMsg(next)
+	case cmd.SetForegroundColor:
+		a.screen.SetForegroundColor(color.Color(c))
+	case cmd.SetBackgroundColor:
+		a.screen.SetBackgroundColor(color.Color(c))
+	case cmd.SetTitle:
+		a.screen.SetTitle(string(c))
+	case cmd.Notify:
+		a.screen.ShowNotification(c.Title, c.Body)
+	case cmd.RequestTerminalInfo:
+		name, version := a.screen.Terminal()
+		_, quit := a.handle(TerminalInfoMsg{Name: name, Version: version})
+		return quit
+	case cmd.GetClipboard:
+		a.screen.GetClipboard()
+	case cmd.SetClipboard:
+		a.screen.SetClipboard(c)
+	case cmd.Task:
+		go a.runTask(c)
+	case cmd.Batch:
+		for _, c := range c {
+			if a.handleCmd(c) {
+				return true
+			}
+		}
 	}
-	select {
-	case <-a.done:
-	case a.cmds <- cmd:
+	return false
+}
+
+func (a *Application[M]) runTask(task cmd.Task) {
+	if !a.disableCatchPanics {
+		defer func() {
+			if r := recover(); r != nil {
+				text := fmt.Sprintf("goroutine panicked: %v", r)
+				fmt.Fprintf(os.Stderr, "%s\nstack trace:\n%s\n", text, debug.Stack())
+				a.queueMsg(tcell.NewEventError(errors.New(text)))
+			}
+		}()
 	}
+	a.queueMsg(task())
 }

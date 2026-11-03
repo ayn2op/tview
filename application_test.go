@@ -1,12 +1,14 @@
 package tview
 
 import (
+	"github.com/ayn2op/tview/cmd"
 	"github.com/ayn2op/tview/layout"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/color"
 	"github.com/gdamore/tcell/v3/vt"
 )
 
@@ -104,11 +106,11 @@ type lengthModel struct {
 	got *int
 }
 
-func (lengthModel) Init() Cmd { return func() Msg { return "abc" } }
+func (lengthModel) Init() Cmd { return cmd.Task(func() Msg { return "abc" }) }
 func (m lengthModel) Update(msg Msg) (lengthModel, Cmd) {
 	if n, ok := msg.(int); ok {
 		*m.got = n
-		return m, Quit()
+		return m, cmd.Quit{}
 	}
 	return m, nil
 }
@@ -138,7 +140,43 @@ func TestApplicationRun(t *testing.T) {
 			t.Fatalf("got %d, want 3", got)
 		}
 	})
+	t.Run("sets colors in the order returned", func(t *testing.T) {
+		tty := &recordingTty{MockTerm: vt.NewMockTerm(vt.MockOptSize{X: 4, Y: 2})}
+		screen, err := tcell.NewTerminfoScreenFromTty(tty)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := screen.Init(); err != nil {
+			t.Fatal(err)
+		}
+		if err := NewApplication(colorModel{}, WithScreen(screen)).Run(); err != nil {
+			t.Fatal(err)
+		}
+		written := tty.written.String()
+		if set, reset := strings.Index(written, "\x1b]11;#000080"), strings.Index(written, "\x1b]111"); set < 0 || reset < set {
+			t.Fatalf("background not set then restored: %q", written)
+		}
+	})
 }
+
+// recordingTty records what is written to the terminal.
+type recordingTty struct {
+	vt.MockTerm
+	written strings.Builder
+}
+
+func (r *recordingTty) Write(b []byte) (int, error) {
+	r.written.Write(b)
+	return r.MockTerm.Write(b)
+}
+
+// colorModel sets the background, restores it, and quits.
+type colorModel struct{ labelModel }
+
+func (colorModel) Init() Cmd {
+	return cmd.Batch{cmd.SetBackgroundColor(color.Navy), cmd.SetBackgroundColor(color.Default), cmd.Quit{}}
+}
+func (m colorModel) Update(Msg) (colorModel, Cmd) { return m, nil }
 
 func (cursorModel) Size() (width, height layout.Length) { return layout.Fill, layout.Fill }
 
@@ -162,15 +200,15 @@ const burstSize = 100
 func (burstModel) Init() Cmd {
 	cmds := make([]Cmd, burstSize)
 	for i := range cmds {
-		cmds[i] = func() Msg { return i }
+		cmds[i] = cmd.Task(func() Msg { return i })
 	}
-	return Batch(cmds...)
+	return cmd.Batch(cmds)
 }
 
 func (m burstModel) Update(msg Msg) (burstModel, Cmd) {
 	if _, ok := msg.(int); ok {
 		if *m.received++; *m.received == burstSize {
-			return m, Quit()
+			return m, cmd.Quit{}
 		}
 	}
 	return m, nil

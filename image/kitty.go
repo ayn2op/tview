@@ -10,6 +10,7 @@ import (
 	"io"
 
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/cmd"
 )
 
 // chunkSize is the most encoded data kitty takes in one escape code, which encodes rawChunkSize bytes.
@@ -53,13 +54,13 @@ func (w Widget) imageID() int {
 
 // Transmit returns a command that sends the image to the terminal for Draw to show.
 func (w Widget) Transmit() tview.Cmd {
-	return func() tview.Msg {
+	return cmd.Task(func() tview.Msg {
 		data, err := w.transmission()
 		if err != nil {
 			return nil
 		}
-		return tview.WriteRaw(string(data))()
-	}
+		return cmd.WriteRaw(data)
+	})
 }
 
 // Delete returns a command that deletes the image from the terminal and frees its data, or nil if it is not drawn with kitty's graphics protocol.
@@ -67,7 +68,7 @@ func (w Widget) Delete() tview.Cmd {
 	if w.kitty == 0 {
 		return nil
 	}
-	return tview.WriteRaw(fmt.Sprintf("\x1b_Ga=d,d=I,q=2,i=%d\x1b\\", w.imageID()))
+	return cmd.WriteRaw(fmt.Sprintf("\x1b_Ga=d,d=I,q=2,i=%d\x1b\\", w.imageID()))
 }
 
 // transmission uses raw pixels, which encode several times faster than PNG.

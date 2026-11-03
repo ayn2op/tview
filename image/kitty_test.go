@@ -8,11 +8,11 @@ import (
 	"image"
 	"io"
 	"math/rand/v2"
-	"reflect"
 	"strconv"
 	"testing"
 
 	"github.com/ayn2op/tview"
+	"github.com/ayn2op/tview/cmd"
 	"github.com/ayn2op/tview/internal/screentest"
 	"github.com/gdamore/tcell/v3/color"
 )
@@ -28,9 +28,9 @@ func TestWidgetKitty(t *testing.T) {
 		}
 	})
 	t.Run("deletes the image", func(t *testing.T) {
-		msg := New(column(red)).Kitty(257).Delete()()
-		if want := tview.WriteRaw("\x1b_Ga=d,d=I,q=2,i=16777232\x1b\\")(); !reflect.DeepEqual(msg, want) {
-			t.Fatalf("Delete = %v, want %v", msg, want)
+		got := New(column(red)).Kitty(257).Delete()
+		if want := cmd.WriteRaw("\x1b_Ga=d,d=I,q=2,i=16777232\x1b\\"); got != want {
+			t.Fatalf("Delete = %v, want %v", got, want)
 		}
 	})
 	t.Run("deletes nothing without kitty", func(t *testing.T) {

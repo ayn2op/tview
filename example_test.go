@@ -6,6 +6,7 @@ import (
 
 	"github.com/ayn2op/tview"
 	"github.com/ayn2op/tview/button"
+	"github.com/ayn2op/tview/cmd"
 	"github.com/ayn2op/tview/column"
 	"github.com/ayn2op/tview/keybind"
 	"github.com/ayn2op/tview/row"
@@ -19,7 +20,7 @@ type model struct{ count int }
 var _ tview.Model[model] = model{}
 
 func (m model) Init() tview.Cmd {
-	return tview.SetTitle("Counter")
+	return cmd.SetTitle("Counter")
 }
 
 func (m model) Update(msg tview.Msg) (model, tview.Cmd) {
@@ -28,7 +29,7 @@ func (m model) Update(msg tview.Msg) (model, tview.Cmd) {
 		m.count++
 	case tview.KeyMsg:
 		if keybind.String(msg) == "q" {
-			return m, tview.Quit()
+			return m, cmd.Quit{}
 		}
 	}
 	return m, nil

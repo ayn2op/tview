@@ -11,7 +11,6 @@ import (
 
 	"github.com/ayn2op/tview/cmd"
 	"github.com/gdamore/tcell/v3"
-	"github.com/gdamore/tcell/v3/color"
 )
 
 const (
@@ -343,16 +342,13 @@ func (a *Application[M]) handleCmd(c Cmd) (quit bool) {
 	case cmd.Quit:
 		return true
 	case cmd.WriteRaw:
-		// The next frame sends it.
-		_, _ = a.screen.WriteString(string(c))
+		if tty, ok := a.screen.Tty(); ok {
+			_, _ = tty.Write([]byte(c))
+		}
 	case cmd.Suspend:
 		var next Msg
 		a.suspend(func() { next = c() })
 		a.queueMsg(next)
-	case cmd.SetForegroundColor:
-		a.screen.SetForegroundColor(color.Color(c))
-	case cmd.SetBackgroundColor:
-		a.screen.SetBackgroundColor(color.Color(c))
 	case cmd.SetTitle:
 		a.screen.SetTitle(string(c))
 	case cmd.Notify:

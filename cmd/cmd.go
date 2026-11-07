@@ -5,7 +5,7 @@ type Msg any
 // Cmd is work done outside Update, such as I/O, whose result comes back as a message.
 type Cmd interface{ isCmd() }
 
-// WriteRaw writes data, such as escape sequences, to the terminal as is with the next frame, before its cells.
+// WriteRaw writes data, such as escape sequences, to the terminal as is.
 type WriteRaw string
 
 func (WriteRaw) isCmd() {}

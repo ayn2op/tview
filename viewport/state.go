@@ -28,6 +28,11 @@ func (s *ScrollState) ScrollToEnd() {
 	s.toTarget, s.atEnd = false, true
 }
 
+// Targeted reports whether the viewport keeps its target in the middle, until the user scrolls.
+func (s ScrollState) Targeted() bool {
+	return s.toTarget
+}
+
 // Viewport returns what the viewport showed when it produced the state, or the zero Viewport if a viewport did not produce it.
 func (s ScrollState) Viewport() Viewport {
 	return s.viewport

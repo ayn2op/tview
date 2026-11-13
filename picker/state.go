@@ -47,6 +47,21 @@ func (s *SearchState) Selected(items Items) (Item, bool) {
 	return items[s.index(i)], true
 }
 
+// Visible returns the matches shown in a list rows tall, of items one row tall.
+func (s *SearchState) Visible(items Items, rows int) Items {
+	top := s.scroll.Viewport().AbsoluteOffset().Y
+	if s.scroll.Targeted() {
+		top = s.cursor - rows/2
+	}
+	count := s.count(items)
+	top = min(max(top, 0), max(count-rows, 0))
+	var visible Items
+	for i := top; i < min(top+rows, count); i++ {
+		visible = append(visible, items[s.index(i)])
+	}
+	return visible
+}
+
 // count returns the number of items that match the query.
 func (s *SearchState) count(items Items) int {
 	if s.query == "" {
